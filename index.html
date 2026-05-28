@@ -92,15 +92,15 @@
         .date-row span { font-size: 1.4rem; flex: none; }
         .date-row input { flex: 1; margin-bottom: 0; }
 
-        .voice-row { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.75rem; }
-        .mic-btn { font-size: 1.3rem; padding: 0.5rem 0.7rem; flex: none; }
-        .mic-btn.recording {
-            background: #dc2626;
-            animation: pulse 0.9s ease-in-out infinite;
-        }
+        /* Eingabe + Mikrofon-Buttons nebeneinander */
+        .input-area { display: flex; gap: 0.5rem; align-items: flex-start; margin-bottom: 0.5rem; }
+        .input-area textarea { flex: 1; min-width: 0; margin-bottom: 0; }
+        .input-side { display: flex; flex-direction: column; gap: 0.4rem; flex: none; align-items: center; }
+        .mic-btn { font-size: 1.2rem; padding: 0.5rem 0.6rem; }
+        .mic-btn.recording { background: #dc2626; animation: pulse 0.9s ease-in-out infinite; }
         @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.5; } }
-        .rec-status { font-size: 0.85rem; color: #94a3b8; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-        .rec-status.active { color: #f87171; font-weight: 600; }
+        .rec-dot { width: 8px; height: 8px; border-radius: 50%; background: #475569; }
+        .rec-dot.active { background: #f87171; animation: pulse 0.9s ease-in-out infinite; }
 
         .buffer-box {
             background: #334155; border: 1px solid #475569;
@@ -285,13 +285,14 @@
 
     <!-- INPUT -->
     <div id="inputSection" class="section hidden">
-        <div class="voice-row">
-            <button id="micBtn" class="btn-amber mic-btn" onclick="toggleMic()" title="Aufnahme starten / stoppen">🎤</button>
-            <button class="btn-icon btn-dark" onclick="restartMic()" title="Wiederholen">🔄</button>
-            <span id="recStatus" class="rec-status">Bereit</span>
+        <div class="input-area">
+            <textarea id="inputText" placeholder="Sprechen oder schreiben…"></textarea>
+            <div class="input-side">
+                <button id="micBtn" class="btn-amber mic-btn" onclick="toggleMic()" title="Aufnahme starten / stoppen">🎤</button>
+                <button class="btn-icon btn-dark" onclick="restartMic()" title="Wiederholen">🔄</button>
+                <span id="recDot" class="rec-dot"></span>
+            </div>
         </div>
-
-        <textarea id="inputText" placeholder="Sprechen oder schreiben…"></textarea>
 
         <div id="bufferContainer" class="buffer-box hidden">
             <div class="buffer-label">📝 Zwischengespeichert</div>
@@ -304,8 +305,6 @@
             <button class="btn-gray btn-icon" onclick="clearInput()" title="Text löschen">✕</button>
             <button class="btn-purple" id="summarizeBtn" onclick="summarizeText()" style="flex:3;">✨ Zusammenfassen</button>
         </div>
-
-        <div class="tip">💡 Android: Tippe ins Feld und nutze das Mikrofon-Symbol der Tastatur.</div>
     </div>
 
     <!-- SUMMARY -->
@@ -576,7 +575,7 @@ function startMic() {
 
     recognition.onstart = () => {
         document.getElementById('micBtn').classList.add('recording');
-        setRecStatus(true, '🔴 Aufnahme läuft…');
+        setRecStatus(true);
     };
 
     recognition.onresult = (ev) => {
@@ -589,7 +588,7 @@ function startMic() {
         if (newFinal) final += newFinal;
         const sep = (base.trim() && (final || interim)) ? ' ' : '';
         ta.value = base + sep + final + interim;
-        if (interim) setRecStatus(true, '🔴 ' + interim.slice(0,60) + (interim.length>60?'…':''));
+        if (interim) setRecStatus(true);
     };
 
     recognition.onend = () => {
@@ -602,7 +601,7 @@ function startMic() {
             setTimeout(() => { if (isRecording) startMic(); }, 200);
         } else {
             document.getElementById('micBtn').classList.remove('recording');
-            setRecStatus(false, 'Bereit');
+            setRecStatus(false);
         }
     };
 
@@ -610,12 +609,12 @@ function startMic() {
         if (ev.error === 'not-allowed') {
             isRecording = false;
             document.getElementById('micBtn').classList.remove('recording');
-            setRecStatus(false, 'Mikrofon gesperrt');
+            setRecStatus(false);
             alert('Mikrofon-Zugriff verweigert.\nBitte in den Browser-Einstellungen für diese Seite erlauben.');
         } else if (ev.error === 'no-speech' || ev.error === 'aborted') {
             // Normal – wird automatisch neu gestartet
         } else {
-            setRecStatus(false, 'Fehler: ' + ev.error);
+            setRecStatus(false);
         }
     };
 
@@ -623,7 +622,7 @@ function startMic() {
     try { recognition.start(); }
     catch(e) {
         isRecording = false;
-        setRecStatus(false, 'Start fehlgeschlagen: ' + e.message);
+        setRecStatus(false);
     }
 }
 
@@ -631,15 +630,14 @@ function stopMic() {
     isRecording = false;
     try { recognition && recognition.stop(); } catch(e){}
     document.getElementById('micBtn').classList.remove('recording');
-    setRecStatus(false, 'Bereit');
+    setRecStatus(false);
 }
 
 function restartMic() { stopMic(); setTimeout(startMic, 300); }
 
-function setRecStatus(active, msg) {
-    const el = document.getElementById('recStatus');
-    el.textContent = msg;
-    el.className = 'rec-status' + (active ? ' active' : '');
+function setRecStatus(active) {
+    const dot = document.getElementById('recDot');
+    if (dot) dot.className = 'rec-dot' + (active ? ' active' : '');
 }
 
 // ── Buffer ────────────────────────────────────────────────────────────────────
