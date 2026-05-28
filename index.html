@@ -380,9 +380,6 @@
                 <span class="modal-title">⚙️ Einstellungen</span>
                 <button class="modal-close" onclick="closeSettings()">✕</button>
             </div>
-            <label class="form-label">🔑 Anthropic API-Key:</label>
-            <input type="password" id="apiKeyInput" placeholder="sk-ant-api03-...">
-            <p style="font-size:0.75rem;color:#64748b;margin-top:-0.5rem;margin-bottom:0.75rem;">Wird nur lokal im Browser gespeichert.</p>
             <label class="form-label">🔊 Sprachstimme:</label>
             <select id="voiceSelect"></select>
             <button class="btn-amber btn-full" onclick="testVoice()">🔊 Stimme testen</button>
@@ -843,7 +840,7 @@ function clearInput() {
 }
 
 // ── AI Summarization ──────────────────────────────────────────────────────────
-function getApiKey() { return localStorage.getItem('tagesnotizen-apikey') || ''; }
+const EDGE_FN_URL = 'https://bxwamphvycjfeexjzgyv.supabase.co/functions/v1/tagesnotizen-zusammenfassen';
 
 function collectText() {
     const cur = document.getElementById('inputText').value.trim();
@@ -856,37 +853,19 @@ async function summarizeText() {
     const allText = collectText();
     if (!allText) { alert('Bitte Text eingeben oder diktieren.'); return; }
 
-    const apiKey = getApiKey();
-    if (!apiKey) {
-        alert('Bitte zuerst den Anthropic API-Key in den Einstellungen (⚙️) eingeben.');
-        openSettings();
-        return;
-    }
-
     const btn = document.getElementById('summarizeBtn');
     btn.disabled = true;
     btn.textContent = '⏳ Wird zusammengefasst…';
 
     try {
-        const newSumm = await callClaude(apiKey,
-            `Fasse prägnant in ICH-Form zusammen. Nutze Namen. Erkenne wiederkehrende Begriffe, Namen und Themen und fasse dazu gehörige Gedanken zusammen. Behalte erkennbare zeitliche Reihenfolgen bei. Antworte nur mit der Zusammenfassung.\n\nText:\n${allText}`
-        );
-
-        // Vorhandenen Eintrag des Tages prüfen
+        // Vorhandenen Eintrag des Tages laden (für Zusammenführung)
         const { data: existing } = await sb.from('tagesnotizen_entries')
             .select('text')
             .eq('datum', selectedDate)
             .eq('category', selectedCategory)
             .maybeSingle();
 
-        if (existing && existing.text.trim()) {
-            currentSummary = await callClaude(apiKey,
-                `Fasse zwei Einträge desselben Tages zusammen. ICH-Form. Nutze Namen. Erkenne wiederkehrende Begriffe, Namen und Themen — fasse zusammen, was dazu gehört. Behalte zeitliche Reihenfolgen bei. Antworte nur mit der Zusammenfassung.\n\nNeuer Eintrag:\n${newSumm}\n\nBisheriger Eintrag:\n${existing.text}`
-            );
-        } else {
-            currentSummary = newSumm;
-        }
-
+        currentSummary = await callEdgeFunction(allText, existing?.text || '');
         currentSummaryDate = selectedDate;
         savedInputText = document.getElementById('inputText').value;
 
@@ -902,27 +881,15 @@ async function summarizeText() {
     }
 }
 
-async function callClaude(apiKey, prompt) {
-    const res = await fetch('https://api.anthropic.com/v1/messages', {
+async function callEdgeFunction(text, existingText) {
+    const res = await fetch(EDGE_FN_URL, {
         method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'x-api-key': apiKey,
-            'anthropic-version': '2023-06-01',
-            'anthropic-dangerous-direct-browser-access': 'true'
-        },
-        body: JSON.stringify({
-            model: 'claude-sonnet-4-20250514',
-            max_tokens: 1500,
-            messages: [{ role: 'user', content: prompt }]
-        })
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text, existingText })
     });
-    if (!res.ok) {
-        const err = await res.json().catch(() => ({}));
-        throw new Error(err.error?.message || `HTTP ${res.status}`);
-    }
     const data = await res.json();
-    return (data.content?.[0]?.text || '').trim();
+    if (!res.ok || data.error) throw new Error(data.error || `HTTP ${res.status}`);
+    return data.summary || '';
 }
 
 async function saveSummary() {
@@ -1106,14 +1073,10 @@ function testVoice() {
 
 // ── Settings ──────────────────────────────────────────────────────────────────
 function openSettings() {
-    document.getElementById('apiKeyInput').value =
-        localStorage.getItem('tagesnotizen-apikey') || '';
     document.getElementById('settingsModal').classList.add('active');
 }
 
 function closeSettings() {
-    const key = document.getElementById('apiKeyInput').value.trim();
-    if (key) localStorage.setItem('tagesnotizen-apikey', key);
     const idx = document.getElementById('voiceSelect').value;
     if (idx !== '') selectedVoiceIdx = parseInt(idx);
     document.getElementById('settingsModal').classList.remove('active');
