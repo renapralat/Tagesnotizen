@@ -1,0 +1,1127 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>📔 Tagesnotizen</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(to bottom right, #0f172a, #1e293b);
+            min-height: 100vh;
+            padding: 1rem;
+            color: #fff;
+        }
+
+        .container { max-width: 700px; margin: 0 auto; }
+
+        /* Header */
+        .header {
+            text-align: center;
+            margin-bottom: 1.5rem;
+            position: relative;
+            padding-top: 0.25rem;
+        }
+        .title { font-size: 2rem; margin-bottom: 0.25rem; }
+        .subtitle { color: #94a3b8; font-size: 0.875rem; margin-bottom: 0.5rem; }
+        .settings-btn {
+            position: absolute;
+            top: 0;
+            right: 0;
+            background: #475569;
+            border: none;
+            color: #fff;
+            padding: 0.45rem 0.7rem;
+            border-radius: 0.375rem;
+            cursor: pointer;
+            font-size: 1.1rem;
+        }
+        .settings-btn:hover { background: #64748b; }
+
+        /* Modal */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.75);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+            padding: 1rem;
+        }
+        .modal.active { display: flex; }
+        .modal-content {
+            background: #1e293b;
+            padding: 1.5rem;
+            border-radius: 0.5rem;
+            width: 100%;
+            max-width: 420px;
+            border: 1px solid #475569;
+        }
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.25rem;
+        }
+        .modal-title { font-size: 1.15rem; font-weight: 700; }
+        .modal-close {
+            background: none;
+            border: none;
+            color: #94a3b8;
+            font-size: 1.4rem;
+            cursor: pointer;
+            padding: 0.1rem 0.3rem;
+            line-height: 1;
+            flex: none;
+            min-width: auto;
+        }
+        .modal-close:hover { color: #fff; background: none; }
+
+        /* Section */
+        .section {
+            background: #1e293b;
+            border: 1px solid #475569;
+            border-radius: 0.5rem;
+            padding: 1.25rem;
+            margin-bottom: 1.25rem;
+        }
+
+        /* Inputs */
+        input[type="text"],
+        input[type="password"],
+        input[type="date"],
+        textarea,
+        select {
+            width: 100%;
+            background: #334155;
+            color: #fff;
+            border: 1px solid #475569;
+            border-radius: 0.375rem;
+            padding: 0.7rem 0.875rem;
+            font-family: inherit;
+            font-size: 1rem;
+            margin-bottom: 0.75rem;
+            display: block;
+        }
+        input:focus, textarea:focus, select:focus {
+            outline: none;
+            border-color: #3b82f6;
+        }
+        input[type="date"] { color-scheme: dark; }
+        textarea {
+            height: 130px;
+            resize: vertical;
+            line-height: 1.65;
+            font-size: 1.05rem;
+        }
+        select option { background: #334155; }
+
+        /* Buttons */
+        button {
+            border: none;
+            border-radius: 0.375rem;
+            color: #fff;
+            font-weight: 600;
+            cursor: pointer;
+            font-size: 1rem;
+            transition: opacity 0.15s;
+            padding: 0.65rem 1rem;
+        }
+        button:hover:not(:disabled) { opacity: 0.85; }
+        button:disabled { opacity: 0.45; cursor: not-allowed; }
+
+        .btn-green  { background: #10b981; }
+        .btn-purple { background: #8b5cf6; }
+        .btn-amber  { background: #f59e0b; }
+        .btn-red    { background: #ef4444; }
+        .btn-blue   { background: #3b82f6; }
+        .btn-gray   { background: #64748b; }
+        .btn-dark   { background: #475569; }
+        .btn-full   { width: 100%; display: block; margin-bottom: 0.5rem; }
+
+        .btn-icon {
+            padding: 0.4rem 0.65rem;
+            font-size: 1rem;
+            flex: none;
+            min-width: auto;
+        }
+
+        .btn-row {
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+            margin-top: 0.5rem;
+        }
+        .btn-row > button { flex: 1; min-width: 0; }
+
+        /* Categories */
+        .tag-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(118px, 1fr));
+            gap: 0.5rem;
+            margin-bottom: 0.75rem;
+        }
+        .tag-btn {
+            padding: 0.5rem 0.4rem;
+            background: #475569;
+            font-size: 0.875rem;
+            font-weight: 500;
+            text-align: center;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .tag-btn.active { background: #2563eb; }
+        .tag-btn:hover:not(.active) { background: #64748b; }
+        .cat-actions {
+            display: flex;
+            gap: 0.5rem;
+            padding-top: 0.75rem;
+            border-top: 1px solid #334155;
+        }
+        .cat-actions button { flex: 1; padding: 0.5rem; font-size: 0.9rem; }
+
+        /* Date row */
+        .date-row {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+        .date-row span { font-size: 1.4rem; flex: none; }
+        .date-row input { flex: 1; margin-bottom: 0; }
+
+        /* Voice row */
+        .voice-row {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-bottom: 0.75rem;
+        }
+        .mic-btn { font-size: 1.3rem; padding: 0.5rem 0.7rem; flex: none; }
+        .mic-btn.recording {
+            background: #dc2626;
+            animation: pulse 0.9s ease-in-out infinite;
+        }
+        @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.55; } }
+        .rec-status { font-size: 0.85rem; color: #94a3b8; flex: 1; }
+        .rec-status.active { color: #f87171; font-weight: 600; }
+
+        /* Buffer */
+        .buffer-box {
+            background: #334155;
+            border: 1px solid #475569;
+            border-radius: 0.375rem;
+            padding: 0.75rem;
+            margin-bottom: 0.75rem;
+        }
+        .buffer-label {
+            font-size: 0.75rem;
+            font-weight: 700;
+            color: #94a3b8;
+            text-transform: uppercase;
+            letter-spacing: 0.07em;
+            margin-bottom: 0.5rem;
+        }
+        .buffer-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 0.4rem;
+            margin-bottom: 0.35rem;
+            padding: 0.4rem 0.5rem;
+            background: #1e293b;
+            border-radius: 0.3rem;
+        }
+        .buffer-item-num {
+            font-size: 0.75rem;
+            color: #64748b;
+            flex: none;
+            padding-top: 0.15rem;
+            font-weight: 700;
+        }
+        .buffer-item-text {
+            flex: 1;
+            font-size: 0.9rem;
+            line-height: 1.55;
+            word-break: break-word;
+        }
+        .buffer-item-del {
+            background: none;
+            color: #475569;
+            padding: 0 0.2rem;
+            font-size: 0.9rem;
+            flex: none;
+            min-width: auto;
+        }
+        .buffer-item-del:hover { color: #ef4444; background: none; opacity: 1; }
+
+        /* Summary */
+        .summary-box {
+            background: #334155;
+            border: 1px solid #3b82f6;
+            border-radius: 0.375rem;
+            padding: 1rem;
+            margin-bottom: 1rem;
+            line-height: 1.75;
+            max-height: 320px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+            word-break: break-word;
+        }
+
+        /* Search row */
+        .search-row {
+            display: flex;
+            gap: 0.5rem;
+            align-items: center;
+            margin-bottom: 0.75rem;
+        }
+        .search-row input { flex: 1; margin-bottom: 0; }
+
+        /* Export blocks */
+        .export-block {
+            border-top: 1px solid #334155;
+            padding-top: 0.75rem;
+            margin-top: 0.75rem;
+        }
+        .export-label {
+            font-size: 0.78rem;
+            font-weight: 700;
+            color: #94a3b8;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            display: block;
+            margin-bottom: 0.5rem;
+        }
+        .export-row {
+            display: flex;
+            gap: 0.5rem;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        .export-row input,
+        .export-row select { flex: 1; margin-bottom: 0; min-width: 120px; }
+
+        /* Entries */
+        .section-title {
+            font-size: 1.05rem;
+            font-weight: 700;
+            margin-bottom: 1rem;
+            color: #e2e8f0;
+        }
+        .entry {
+            background: #334155;
+            border: 1px solid #475569;
+            border-radius: 0.4rem;
+            padding: 0.9rem;
+            margin-bottom: 0.65rem;
+        }
+        .entry-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.5rem;
+        }
+        .entry-date { color: #94a3b8; font-size: 0.875rem; font-weight: 700; }
+        .entry-actions { display: flex; gap: 0.4rem; }
+        .entry-text {
+            line-height: 1.65;
+            white-space: pre-wrap;
+            word-break: break-word;
+            font-size: 0.95rem;
+        }
+
+        /* Connection badge */
+        .conn-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.3rem;
+            font-size: 0.75rem;
+            padding: 0.2rem 0.55rem;
+            border-radius: 9999px;
+            background: #334155;
+            color: #94a3b8;
+        }
+        .conn-badge.ok { color: #34d399; }
+        .conn-badge.err { color: #f87171; }
+        .conn-dot { width: 7px; height: 7px; border-radius: 50%; background: currentColor; flex: none; }
+
+        /* Misc */
+        .empty-msg { color: #475569; text-align: center; padding: 1.25rem; font-size: 0.9rem; }
+        .hidden { display: none !important; }
+        .tip {
+            font-size: 0.8rem;
+            color: #94a3b8;
+            padding: 0.5rem 0.75rem;
+            background: #334155;
+            border-radius: 0.375rem;
+            border-left: 3px solid #3b82f6;
+            margin-top: 0.75rem;
+        }
+        .form-label {
+            display: block;
+            font-size: 0.875rem;
+            font-weight: 600;
+            margin-bottom: 0.4rem;
+            color: #cbd5e1;
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+
+    <!-- SETTINGS MODAL -->
+    <div id="settingsModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <span class="modal-title">⚙️ Einstellungen</span>
+                <button class="modal-close" onclick="closeSettings()">✕</button>
+            </div>
+            <label class="form-label">🔑 Anthropic API-Key:</label>
+            <input type="password" id="apiKeyInput" placeholder="sk-ant-api03-...">
+            <p style="font-size:0.75rem;color:#64748b;margin-top:-0.5rem;margin-bottom:0.75rem;">Wird nur lokal im Browser gespeichert.</p>
+            <label class="form-label">🔊 Sprachstimme:</label>
+            <select id="voiceSelect"></select>
+            <button class="btn-amber btn-full" onclick="testVoice()">🔊 Stimme testen</button>
+        </div>
+    </div>
+
+    <!-- NEW CATEGORY MODAL -->
+    <div id="newCatModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <span class="modal-title">+ Neue Kategorie</span>
+                <button class="modal-close" onclick="closeNewCatModal()">✕</button>
+            </div>
+            <label class="form-label">Name:</label>
+            <input type="text" id="newCatInput" placeholder="Kategorie-Name..."
+                   onkeydown="if(event.key==='Enter')addCategory()">
+            <div class="btn-row" style="margin-top:0;">
+                <button class="btn-gray" onclick="closeNewCatModal()">Abbrechen</button>
+                <button class="btn-green" onclick="addCategory()">+ Hinzufügen</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- HEADER -->
+    <div class="header">
+        <h1 class="title">📔 Tagesnotizen</h1>
+        <p class="subtitle">
+            <span id="connBadge" class="conn-badge">
+                <span class="conn-dot"></span>&nbsp;Verbinde…
+            </span>
+        </p>
+        <button class="settings-btn" onclick="openSettings()" title="Einstellungen">⚙️</button>
+    </div>
+
+    <!-- SEARCH & EXPORT (oben) -->
+    <div class="section">
+        <div class="search-row">
+            <input type="text" id="searchInput" placeholder="🔍 Suchen…"
+                   oninput="filterEntries()" style="margin-bottom:0;">
+            <button class="btn-icon btn-gray" onclick="clearSearch()" title="Suche löschen">✕</button>
+        </div>
+
+        <div class="export-block">
+            <span class="export-label">📥 Tag exportieren – alle Kategorien</span>
+            <div class="export-row">
+                <input type="date" id="exportDayDate" style="margin-bottom:0;">
+                <button class="btn-icon btn-gray" onclick="exportDay()" title="Herunterladen">📥</button>
+            </div>
+        </div>
+
+        <div class="export-block">
+            <span class="export-label">📥 Zeitraum exportieren – eine Kategorie</span>
+            <div class="export-row" style="margin-bottom:0.4rem;">
+                <input type="date" id="exportFrom" style="margin-bottom:0;">
+                <input type="date" id="exportTo"   style="margin-bottom:0;">
+            </div>
+            <div class="export-row">
+                <select id="exportCategory" style="margin-bottom:0;"></select>
+                <button class="btn-icon btn-gray" onclick="exportRange()" title="Herunterladen">📥</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- DATE SELECTION -->
+    <div class="section">
+        <div class="date-row">
+            <span>📅</span>
+            <input type="date" id="entryDate" onchange="onDateChange()">
+        </div>
+    </div>
+
+    <!-- CATEGORY SELECTION -->
+    <div class="section">
+        <div id="categoryGrid" class="tag-grid"></div>
+        <div class="cat-actions">
+            <button class="btn-green" onclick="openNewCatModal()">+ Kategorie</button>
+            <button class="btn-red"   onclick="deleteSelectedCategory()">✕ Löschen</button>
+        </div>
+    </div>
+
+    <!-- INPUT SECTION -->
+    <div id="inputSection" class="section hidden">
+        <div class="voice-row">
+            <button id="micBtn" class="btn-amber mic-btn" onclick="toggleMic()" title="Aufnahme starten / stoppen">🎤</button>
+            <button class="btn-icon btn-dark" onclick="restartMic()" title="Wiederholen">🔄</button>
+            <span id="recStatus" class="rec-status">Bereit</span>
+        </div>
+
+        <textarea id="inputText" placeholder="Sprechen oder hier schreiben…"></textarea>
+
+        <div id="bufferContainer" class="buffer-box hidden">
+            <div class="buffer-label">📝 Zwischengespeicherte Gedanken</div>
+            <div id="bufferList"></div>
+        </div>
+
+        <div class="btn-row">
+            <button class="btn-green btn-icon" onclick="addToBuffer()"
+                    title="Gedanke zwischenspeichern" style="font-size:1.4rem;padding:0.3rem 0.8rem;">+</button>
+            <button class="btn-gray btn-icon" onclick="clearInput()" title="Text löschen">✕</button>
+            <button class="btn-purple" onclick="summarizeText()" style="flex:3;" id="summarizeBtn">✨ Zusammenfassen</button>
+        </div>
+
+        <div class="tip">💡 Android: Tippe ins Feld und nutze das Mikrofon-Symbol der Tastatur.</div>
+    </div>
+
+    <!-- SUMMARY SECTION -->
+    <div id="summarySection" class="section hidden">
+        <div class="section-title">✨ Zusammenfassung</div>
+        <div class="summary-box" id="summaryText"></div>
+        <div class="btn-row">
+            <button class="btn-amber btn-icon" onclick="speakSummary()" title="Vorlesen">🔊</button>
+            <button class="btn-purple" onclick="saveSummary()" style="flex:2;">💾 Speichern</button>
+            <button class="btn-gray"   onclick="backToInput()">↩ Zurück</button>
+        </div>
+    </div>
+
+    <!-- ENTRIES LIST -->
+    <div class="section">
+        <div class="section-title">
+            Einträge:&nbsp;<span id="currentTagDisplay" style="color:#94a3b8;">—</span>
+        </div>
+        <div id="entriesContainer">
+            <p class="empty-msg">Bitte zuerst Datum und Kategorie wählen.</p>
+        </div>
+    </div>
+
+</div>
+
+<script>
+// ── Supabase ─────────────────────────────────────────────────────────────────
+const SUPABASE_URL = 'https://bxwamphvycjfeexjzgyv.supabase.co';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJ4d2FtcGh2eWNqZmVleGp6Z3l2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc4MjI1NjQsImV4cCI6MjA5MzM5ODU2NH0.LMEz3yuh8GmIZ6PfkTxer1yrAYpspNJOBPKTIV7T3qQ';
+const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+// ── State ─────────────────────────────────────────────────────────────────────
+let selectedDate     = getTodayDate();
+let selectedCategory = null;
+let categories       = [];
+let entries          = [];
+let buffer           = [];           // zwischengespeicherte Gedanken
+let currentSummary   = '';
+let currentSummaryDate = '';
+let savedInputText   = '';           // bewahrt Text beim Zurück-Klick
+let isRecording      = false;
+let recognition      = null;
+let selectedVoiceIdx = null;
+
+// ── Init ──────────────────────────────────────────────────────────────────────
+window.addEventListener('DOMContentLoaded', async () => {
+    document.getElementById('entryDate').value    = selectedDate;
+    document.getElementById('exportDayDate').value = selectedDate;
+
+    await loadCategories();
+    loadVoices();
+});
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+function getTodayDate() {
+    const d = new Date();
+    return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+}
+function pad(n) { return String(n).padStart(2,'0'); }
+
+function escHtml(s) {
+    return String(s)
+        .replace(/&/g,'&amp;').replace(/</g,'&lt;')
+        .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function setConnBadge(state, msg) {
+    const b = document.getElementById('connBadge');
+    b.className = 'conn-badge' + (state === 'ok' ? ' ok' : state === 'err' ? ' err' : '');
+    b.innerHTML = `<span class="conn-dot"></span>&nbsp;${msg}`;
+}
+
+// ── Date ──────────────────────────────────────────────────────────────────────
+function onDateChange() {
+    selectedDate = document.getElementById('entryDate').value;
+    if (selectedCategory) renderEntries();
+}
+
+// ── Categories ────────────────────────────────────────────────────────────────
+async function loadCategories() {
+    try {
+        const { data, error } = await sb
+            .from('tagesnotizen_categories')
+            .select('name')
+            .order('position');
+        if (error) throw error;
+        categories = data.map(r => r.name);
+        renderCategories();
+        updateExportSelect();
+        setConnBadge('ok', 'Cloud verbunden');
+    } catch (e) {
+        console.error(e);
+        setConnBadge('err', 'Offline – ' + e.message);
+    }
+}
+
+function renderCategories() {
+    const grid = document.getElementById('categoryGrid');
+    grid.innerHTML = '';
+    categories.forEach(cat => {
+        const btn = document.createElement('button');
+        btn.className = 'tag-btn' + (cat === selectedCategory ? ' active' : '');
+        btn.textContent = '#' + cat;
+        btn.onclick = () => selectCategory(cat);
+        grid.appendChild(btn);
+    });
+}
+
+function selectCategory(cat) {
+    selectedCategory = cat;
+    renderCategories();
+    document.getElementById('currentTagDisplay').textContent = '#' + cat;
+    document.getElementById('inputSection').classList.remove('hidden');
+    document.getElementById('summarySection').classList.add('hidden');
+    currentSummary = '';
+    // date is kept; only clear text + buffer if switching to a different category
+    document.getElementById('inputText').value = '';
+    buffer = [];
+    renderBuffer();
+    renderEntries();
+}
+
+function openNewCatModal() {
+    document.getElementById('newCatInput').value = '';
+    document.getElementById('newCatModal').classList.add('active');
+    setTimeout(() => document.getElementById('newCatInput').focus(), 120);
+}
+function closeNewCatModal() {
+    document.getElementById('newCatModal').classList.remove('active');
+}
+
+async function addCategory() {
+    const name = document.getElementById('newCatInput').value.trim();
+    if (!name) return;
+    if (categories.includes(name)) { alert('Diese Kategorie existiert bereits.'); return; }
+    try {
+        const { error } = await sb.from('tagesnotizen_categories')
+            .insert({ name, position: categories.length });
+        if (error) throw error;
+        categories.push(name);
+        closeNewCatModal();
+        renderCategories();
+        updateExportSelect();
+    } catch (e) { alert('Fehler: ' + e.message); }
+}
+
+async function deleteSelectedCategory() {
+    if (!selectedCategory) { alert('Bitte zuerst eine Kategorie auswählen.'); return; }
+    const cat = selectedCategory;
+    if (!confirm(`Kategorie „${cat}" und alle dazugehörigen Einträge wirklich löschen?`)) return;
+    try {
+        await sb.from('tagesnotizen_entries').delete().eq('category', cat);
+        const { error } = await sb.from('tagesnotizen_categories').delete().eq('name', cat);
+        if (error) throw error;
+        categories = categories.filter(c => c !== cat);
+        selectedCategory = null;
+        document.getElementById('currentTagDisplay').textContent = '—';
+        document.getElementById('inputSection').classList.add('hidden');
+        document.getElementById('summarySection').classList.add('hidden');
+        document.getElementById('entriesContainer').innerHTML =
+            '<p class="empty-msg">Kategorie gelöscht. Bitte neue Kategorie wählen.</p>';
+        buffer = [];
+        renderCategories();
+        updateExportSelect();
+    } catch (e) { alert('Fehler: ' + e.message); }
+}
+
+// ── Entries ───────────────────────────────────────────────────────────────────
+async function loadEntries() {
+    if (!selectedCategory) { entries = []; return; }
+    try {
+        const { data, error } = await sb
+            .from('tagesnotizen_entries')
+            .select('*')
+            .eq('category', selectedCategory)
+            .order('datum', { ascending: false });
+        if (error) throw error;
+        entries = data || [];
+    } catch (e) {
+        console.error(e);
+        entries = [];
+    }
+}
+
+async function renderEntries() {
+    await loadEntries();
+    displayEntries(entries);
+}
+
+function displayEntries(list) {
+    const c = document.getElementById('entriesContainer');
+    if (!list || list.length === 0) {
+        c.innerHTML = '<p class="empty-msg">Noch keine Einträge in dieser Kategorie.</p>';
+        return;
+    }
+    c.innerHTML = list.map(e => `
+        <div class="entry">
+            <div class="entry-header">
+                <span class="entry-date">📅 ${e.datum}</span>
+                <div class="entry-actions">
+                    <button class="btn-icon btn-blue" onclick="editEntry('${e.id}')" title="Bearbeiten">✏️</button>
+                    <button class="btn-icon btn-red"  onclick="deleteEntry('${e.id}','${e.datum}')" title="Löschen">✕</button>
+                </div>
+            </div>
+            <div class="entry-text">${escHtml(e.text)}</div>
+        </div>
+    `).join('');
+}
+
+async function saveEntry(datum, category, text) {
+    const { data: ex } = await sb.from('tagesnotizen_entries')
+        .select('id')
+        .eq('datum', datum)
+        .eq('category', category)
+        .maybeSingle();
+
+    if (ex) {
+        const { error } = await sb.from('tagesnotizen_entries')
+            .update({ text, updated_at: new Date().toISOString() })
+            .eq('id', ex.id);
+        if (error) throw error;
+    } else {
+        const { error } = await sb.from('tagesnotizen_entries')
+            .insert({ datum, category, text });
+        if (error) throw error;
+    }
+}
+
+async function deleteEntry(id, datum) {
+    if (!confirm(`Eintrag vom ${datum} löschen?`)) return;
+    const { error } = await sb.from('tagesnotizen_entries').delete().eq('id', id);
+    if (error) { alert('Fehler: ' + error.message); return; }
+    await renderEntries();
+}
+
+function editEntry(id) {
+    const e = entries.find(x => x.id === id);
+    if (!e) return;
+    // Set date to entry's date (user can change it manually if desired)
+    document.getElementById('entryDate').value = e.datum;
+    selectedDate = e.datum;
+    document.getElementById('inputText').value = e.text;
+    document.getElementById('summarySection').classList.add('hidden');
+    currentSummary = '';
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+// ── Voice Input ───────────────────────────────────────────────────────────────
+function toggleMic() { isRecording ? stopMic() : startMic(); }
+
+function startMic() {
+    const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SR) {
+        alert('Spracherkennung nicht verfügbar. Bitte Chrome verwenden oder Tastatur-Mikrofon nutzen.');
+        return;
+    }
+    if (recognition) { try { recognition.abort(); } catch(e){} }
+
+    recognition = new SR();
+    recognition.lang = 'de-DE';
+    recognition.continuous = true;
+    recognition.interimResults = true;
+
+    const ta = document.getElementById('inputText');
+    const baseText = ta.value;
+    let interimText = '';
+
+    recognition.onstart = () => {
+        isRecording = true;
+        document.getElementById('micBtn').classList.add('recording');
+        setRecStatus(true, '🔴 Aufnahme läuft…');
+    };
+
+    recognition.onresult = (ev) => {
+        let finalChunk = '';
+        interimText = '';
+        for (let i = ev.resultIndex; i < ev.results.length; i++) {
+            const t = ev.results[i][0].transcript;
+            if (ev.results[i].isFinal) finalChunk += t;
+            else interimText += t;
+        }
+        if (finalChunk) {
+            const sep = (baseText && !baseText.endsWith(' ') && !baseText.endsWith('\n')) ? ' ' : '';
+            ta.value = baseText + sep + finalChunk.trimStart();
+        }
+        // Show interim in status
+        if (interimText) setRecStatus(true, '🔴 ' + interimText.slice(0,60) + (interimText.length>60?'…':''));
+    };
+
+    recognition.onend = () => {
+        isRecording = false;
+        document.getElementById('micBtn').classList.remove('recording');
+        setRecStatus(false, 'Bereit');
+    };
+
+    recognition.onerror = (ev) => {
+        isRecording = false;
+        document.getElementById('micBtn').classList.remove('recording');
+        setRecStatus(false, 'Fehler: ' + ev.error);
+    };
+
+    recognition.start();
+}
+
+function stopMic() {
+    try { recognition && recognition.stop(); } catch(e){}
+    isRecording = false;
+    document.getElementById('micBtn').classList.remove('recording');
+    setRecStatus(false, 'Bereit');
+}
+
+function restartMic() {
+    stopMic();
+    setTimeout(startMic, 300);
+}
+
+function setRecStatus(active, msg) {
+    const el = document.getElementById('recStatus');
+    el.textContent = msg;
+    el.className = 'rec-status' + (active ? ' active' : '');
+}
+
+// ── Buffer ────────────────────────────────────────────────────────────────────
+function addToBuffer() {
+    const text = document.getElementById('inputText').value.trim();
+    if (!text) return;
+    buffer.push(text);
+    document.getElementById('inputText').value = '';
+    renderBuffer();
+}
+
+function removeFromBuffer(idx) {
+    buffer.splice(idx, 1);
+    renderBuffer();
+}
+
+function renderBuffer() {
+    const wrap = document.getElementById('bufferContainer');
+    const list = document.getElementById('bufferList');
+    if (buffer.length === 0) { wrap.classList.add('hidden'); return; }
+    wrap.classList.remove('hidden');
+    list.innerHTML = buffer.map((item, i) => `
+        <div class="buffer-item">
+            <span class="buffer-item-num">${i+1}.</span>
+            <span class="buffer-item-text">${escHtml(item)}</span>
+            <button class="buffer-item-del" onclick="removeFromBuffer(${i})" title="Entfernen">✕</button>
+        </div>
+    `).join('');
+}
+
+function clearInput() {
+    document.getElementById('inputText').value = '';
+    buffer = [];
+    renderBuffer();
+}
+
+// ── AI Summarization ──────────────────────────────────────────────────────────
+function getApiKey() { return localStorage.getItem('tagesnotizen-apikey') || ''; }
+
+function collectText() {
+    const cur = document.getElementById('inputText').value.trim();
+    const all = [...buffer];
+    if (cur) all.push(cur);
+    return all.join('\n\n');
+}
+
+async function summarizeText() {
+    const allText = collectText();
+    if (!allText) { alert('Bitte Text eingeben oder diktieren.'); return; }
+
+    const apiKey = getApiKey();
+    if (!apiKey) {
+        alert('Bitte zuerst den Anthropic API-Key in den Einstellungen (⚙️) eingeben.');
+        openSettings();
+        return;
+    }
+
+    const btn = document.getElementById('summarizeBtn');
+    btn.disabled = true;
+    btn.textContent = '⏳ Wird zusammengefasst…';
+
+    try {
+        const newSumm = await callClaude(apiKey,
+            `Fasse prägnant in ICH-Form zusammen. Nutze Namen. Erkenne wiederkehrende Begriffe, Namen und Themen und fasse dazu gehörige Gedanken zusammen. Behalte erkennbare zeitliche Reihenfolgen bei. Antworte nur mit der Zusammenfassung.\n\nText:\n${allText}`
+        );
+
+        // Vorhandenen Eintrag des Tages prüfen
+        const { data: existing } = await sb.from('tagesnotizen_entries')
+            .select('text')
+            .eq('datum', selectedDate)
+            .eq('category', selectedCategory)
+            .maybeSingle();
+
+        if (existing && existing.text.trim()) {
+            currentSummary = await callClaude(apiKey,
+                `Fasse zwei Einträge desselben Tages zusammen. ICH-Form. Nutze Namen. Erkenne wiederkehrende Begriffe, Namen und Themen — fasse zusammen, was dazu gehört. Behalte zeitliche Reihenfolgen bei. Antworte nur mit der Zusammenfassung.\n\nNeuer Eintrag:\n${newSumm}\n\nBisheriger Eintrag:\n${existing.text}`
+            );
+        } else {
+            currentSummary = newSumm;
+        }
+
+        currentSummaryDate = selectedDate;
+        savedInputText = document.getElementById('inputText').value;
+
+        document.getElementById('summaryText').textContent = currentSummary;
+        document.getElementById('summarySection').classList.remove('hidden');
+        document.getElementById('summarySection').scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+    } catch (e) {
+        alert('Fehler bei der Zusammenfassung:\n' + e.message);
+    } finally {
+        btn.disabled = false;
+        btn.textContent = '✨ Zusammenfassen';
+    }
+}
+
+async function callClaude(apiKey, prompt) {
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'x-api-key': apiKey,
+            'anthropic-version': '2023-06-01',
+            'anthropic-dangerous-direct-browser-access': 'true'
+        },
+        body: JSON.stringify({
+            model: 'claude-sonnet-4-20250514',
+            max_tokens: 1500,
+            messages: [{ role: 'user', content: prompt }]
+        })
+    });
+    if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.error?.message || `HTTP ${res.status}`);
+    }
+    const data = await res.json();
+    return (data.content?.[0]?.text || '').trim();
+}
+
+async function saveSummary() {
+    if (!currentSummary) return;
+    try {
+        await saveEntry(currentSummaryDate, selectedCategory, currentSummary);
+        buffer = [];
+        renderBuffer();
+        document.getElementById('inputText').value = '';
+        document.getElementById('summarySection').classList.add('hidden');
+        currentSummary = '';
+        savedInputText = '';
+        await renderEntries();
+        alert('✅ Eintrag gespeichert!');
+    } catch (e) {
+        alert('Fehler beim Speichern: ' + e.message);
+    }
+}
+
+function backToInput() {
+    document.getElementById('summarySection').classList.add('hidden');
+    document.getElementById('inputText').value = savedInputText;
+    currentSummary = '';
+}
+
+// ── Search ────────────────────────────────────────────────────────────────────
+function filterEntries() {
+    const q = document.getElementById('searchInput').value.toLowerCase().trim();
+    if (!q) { displayEntries(entries); return; }
+    displayEntries(entries.filter(e =>
+        e.text.toLowerCase().includes(q) || e.datum.includes(q)
+    ));
+}
+
+function clearSearch() {
+    document.getElementById('searchInput').value = '';
+    displayEntries(entries);
+}
+
+// ── Export ────────────────────────────────────────────────────────────────────
+function updateExportSelect() {
+    const sel = document.getElementById('exportCategory');
+    sel.innerHTML = categories.map(c => `<option value="${c}">${c}</option>`).join('');
+}
+
+async function exportDay() {
+    const datum = document.getElementById('exportDayDate').value;
+    if (!datum) { alert('Bitte Datum auswählen.'); return; }
+    try {
+        const { data, error } = await sb.from('tagesnotizen_entries')
+            .select('*').eq('datum', datum).order('category');
+        if (error) throw error;
+        if (!data || data.length === 0) { alert(`Keine Einträge für ${datum}.`); return; }
+        downloadExport(buildHtml(`Alle Kategorien · ${datum}`, data),
+            `tagesnotizen-${datum}.html`);
+    } catch (e) { alert('Fehler: ' + e.message); }
+}
+
+async function exportRange() {
+    const from = document.getElementById('exportFrom').value;
+    const to   = document.getElementById('exportTo').value;
+    const cat  = document.getElementById('exportCategory').value;
+    if (!from || !to) { alert('Bitte Von- und Bis-Datum auswählen.'); return; }
+    if (!cat) { alert('Bitte Kategorie auswählen.'); return; }
+    try {
+        const { data, error } = await sb.from('tagesnotizen_entries')
+            .select('*').eq('category', cat)
+            .gte('datum', from).lte('datum', to).order('datum');
+        if (error) throw error;
+        if (!data || data.length === 0) { alert('Keine Einträge für diesen Zeitraum.'); return; }
+        downloadExport(buildHtml(`${cat} · ${from} – ${to}`, data),
+            `tagesnotizen-${cat}-${from}-${to}.html`);
+    } catch (e) { alert('Fehler: ' + e.message); }
+}
+
+function buildHtml(title, rows) {
+    const today = new Date().toLocaleDateString('de-DE',
+        { weekday:'long', year:'numeric', month:'long', day:'numeric' });
+
+    let body = '';
+    let lastDate = '';
+
+    rows.forEach(r => {
+        if (r.datum !== lastDate) {
+            if (lastDate) body += '\n';
+            const d = new Date(r.datum + 'T12:00:00');
+            const ds = d.toLocaleDateString('de-DE',
+                { weekday:'long', year:'numeric', month:'long', day:'numeric' });
+            body += ds + '\n' + '─'.repeat(55) + '\n\n';
+            lastDate = r.datum;
+        }
+        // Show category name when exporting multiple categories
+        if (rows.some(x => x.datum === r.datum && x.category !== r.category)) {
+            body += '[' + r.category + ']\n\n';
+        }
+        body += r.text + '\n\n';
+    });
+
+    return `<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<title>${escHtml(title)}</title>
+<style>
+  body {
+    font-family: 'Courier New', Courier, monospace;
+    font-size: 12pt;
+    line-height: 1.85;
+    max-width: 680px;
+    margin: 2.5cm auto;
+    padding: 1.5cm 2cm;
+    color: #111;
+    background: #fff;
+  }
+  .doc-header { margin-bottom: 2em; padding-bottom: 0.75em; border-bottom: 2px solid #333; }
+  .doc-title  { font-size: 15pt; font-weight: bold; margin-bottom: 0.2em; }
+  .doc-meta   { font-size: 9pt; color: #666; }
+  pre { font-family: inherit; white-space: pre-wrap; word-break: break-word; margin: 0; }
+  @media print { body { margin: 1.5cm; } }
+</style>
+</head>
+<body>
+<div class="doc-header">
+  <div class="doc-title">📔 Tagesnotizen</div>
+  <div class="doc-meta">${escHtml(title)} &nbsp;·&nbsp; Erstellt am ${today}</div>
+</div>
+<pre>${escHtml(body.trimEnd())}</pre>
+</body>
+</html>`;
+}
+
+function downloadExport(html, filename) {
+    const blob = new Blob([html], { type: 'text/html;charset=utf-8;' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = filename;
+    a.style.display = 'none';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+}
+
+// ── TTS ───────────────────────────────────────────────────────────────────────
+function loadVoices() {
+    const synth  = window.speechSynthesis;
+    const voices = synth.getVoices();
+    const sel    = document.getElementById('voiceSelect');
+    sel.innerHTML = '<option value="">— Stimme wählen —</option>';
+    voices.forEach((v, i) => {
+        const o = document.createElement('option');
+        o.value = i;
+        o.textContent = v.name + (v.default ? ' ★' : '');
+        sel.appendChild(o);
+    });
+    const deIdx = voices.findIndex(v => v.lang.startsWith('de'));
+    if (deIdx >= 0) { sel.value = deIdx; selectedVoiceIdx = deIdx; }
+}
+
+function speak(text) {
+    if (!text) return;
+    const synth = window.speechSynthesis;
+    const utt = new SpeechSynthesisUtterance(text);
+    if (selectedVoiceIdx !== null) {
+        const voices = synth.getVoices();
+        if (voices[selectedVoiceIdx]) utt.voice = voices[selectedVoiceIdx];
+    }
+    synth.cancel();
+    synth.speak(utt);
+}
+
+function speakSummary() { speak(currentSummary); }
+function testVoice() {
+    const idx = parseInt(document.getElementById('voiceSelect').value);
+    const synth = window.speechSynthesis;
+    const utt = new SpeechSynthesisUtterance('Hallo, das ist ein Test der Sprachausgabe.');
+    const voices = synth.getVoices();
+    if (!isNaN(idx) && voices[idx]) utt.voice = voices[idx];
+    synth.cancel();
+    synth.speak(utt);
+}
+
+// ── Settings ──────────────────────────────────────────────────────────────────
+function openSettings() {
+    document.getElementById('apiKeyInput').value =
+        localStorage.getItem('tagesnotizen-apikey') || '';
+    document.getElementById('settingsModal').classList.add('active');
+}
+
+function closeSettings() {
+    const key = document.getElementById('apiKeyInput').value.trim();
+    if (key) localStorage.setItem('tagesnotizen-apikey', key);
+    const idx = document.getElementById('voiceSelect').value;
+    if (idx !== '') selectedVoiceIdx = parseInt(idx);
+    document.getElementById('settingsModal').classList.remove('active');
+}
+
+window.speechSynthesis.onvoiceschanged = () => {
+    if (document.getElementById('voiceSelect').children.length <= 1) loadVoices();
+};
+</script>
+</body>
+</html>
