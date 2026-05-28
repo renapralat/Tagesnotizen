@@ -935,7 +935,7 @@ async function exportDay() {
             .select('*').eq('datum', datum).order('category');
         if (error) throw error;
         if (!data || data.length === 0) { alert(`Keine Einträge für ${datum}.`); return; }
-        downloadExport(buildHtml(`Alle Kategorien · ${datum}`, data), `tagesnotizen-${datum}.html`);
+        downloadExport(buildTxt(`Alle Kategorien · ${datum}`, data), `tagesnotizen-${datum}.txt`);
     } catch (e) { alert('Fehler: ' + e.message); }
 }
 
@@ -952,51 +952,35 @@ async function exportRange() {
         if (error) throw error;
         if (!data || data.length === 0) { alert('Keine Einträge für diesen Zeitraum.'); return; }
         const label = cat || 'Alle';
-        downloadExport(buildHtml(`${label} · ${from} – ${to}`, data),
-            `tagesnotizen-${label}-${from}-${to}.html`);
+        downloadExport(buildTxt(`${label} · ${from} – ${to}`, data),
+            `tagesnotizen-${label}-${from}-${to}.txt`);
     } catch (e) { alert('Fehler: ' + e.message); }
 }
 
-function buildHtml(title, rows) {
+function buildTxt(title, rows) {
     const today = new Date().toLocaleDateString('de-DE',
         { weekday:'long', year:'numeric', month:'long', day:'numeric' });
-    let body = '';
+    let out = `Tagesnotizen – ${title}\nErstellt am ${today}\n${'='.repeat(55)}\n\n`;
     let lastDate = '';
     rows.forEach(r => {
         if (r.datum !== lastDate) {
-            if (lastDate) body += '\n';
+            if (lastDate) out += '\n';
             const ds = new Date(r.datum + 'T12:00:00')
                 .toLocaleDateString('de-DE', { weekday:'long', year:'numeric', month:'long', day:'numeric' });
-            body += ds + '\n' + '─'.repeat(55) + '\n\n';
+            out += ds + '\n' + '-'.repeat(55) + '\n\n';
             lastDate = r.datum;
         }
         if (rows.some(x => x.datum === r.datum && x.category !== r.category)) {
-            body += '[' + r.category + ']\n\n';
+            out += '[' + r.category + ']\n\n';
         }
-        body += r.text + '\n\n';
+        out += r.text + '\n\n';
     });
-    return `<!DOCTYPE html>
-<html lang="de"><head><meta charset="UTF-8"><title>${escHtml(title)}</title>
-<style>
-body { font-family:'Courier New',Courier,monospace; font-size:12pt; line-height:1.85;
-  max-width:680px; margin:2.5cm auto; padding:1.5cm 2cm; color:#111; background:#fff; }
-.dh { margin-bottom:2em; padding-bottom:.75em; border-bottom:2px solid #333; }
-.dt { font-size:15pt; font-weight:bold; margin-bottom:.2em; }
-.dm { font-size:9pt; color:#666; }
-pre { font-family:inherit; white-space:pre-wrap; word-break:break-word; margin:0; }
-@media print { body { margin:1.5cm; } }
-</style></head><body>
-<div class="dh">
-  <div class="dt">📔 Tagesnotizen</div>
-  <div class="dm">${escHtml(title)} · Erstellt am ${today}</div>
-</div>
-<pre>${escHtml(body.trimEnd())}</pre>
-</body></html>`;
+    return out.trimEnd() + '\n';
 }
 
-function downloadExport(html, filename) {
+function downloadExport(content, filename) {
     const a = document.createElement('a');
-    a.href = URL.createObjectURL(new Blob([html], { type:'text/html;charset=utf-8;' }));
+    a.href = URL.createObjectURL(new Blob([content], { type: 'text/plain;charset=utf-8;' }));
     a.download = filename;
     a.style.display = 'none';
     document.body.appendChild(a);
