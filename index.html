@@ -133,13 +133,24 @@
         .search-row { display: flex; gap: 0.5rem; align-items: center; margin-bottom: 0.75rem; }
         .search-row input { flex: 1; margin-bottom: 0; }
 
-        .export-block { border-top: 1px solid #334155; padding-top: 0.75rem; margin-top: 0.75rem; }
-        .export-label {
-            font-size: 0.78rem; font-weight: 700; color: #94a3b8;
-            text-transform: uppercase; letter-spacing: 0.06em; display: block; margin-bottom: 0.5rem;
+        /* Kompakte Export-Zeilen */
+        .export-line {
+            display: flex; align-items: center; gap: 0.35rem;
+            padding: 0.45rem 0; border-top: 1px solid #334155;
         }
-        .export-row { display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap; }
-        .export-row input, .export-row select { flex: 1; margin-bottom: 0; min-width: 120px; }
+        .exp-icon {
+            font-size: 0.75rem; color: #94a3b8; flex: none;
+            white-space: nowrap; font-weight: 700; min-width: 2.5rem;
+        }
+        .export-line input[type="date"] {
+            flex: 1; min-width: 0; margin-bottom: 0;
+            font-size: 0.78rem; padding: 0.3rem 0.25rem;
+        }
+        .export-line select {
+            flex: 2; min-width: 0; margin-bottom: 0;
+            font-size: 0.78rem; padding: 0.3rem 0.25rem;
+        }
+        .export-line button { flex: none; padding: 0.3rem 0.55rem; font-size: 0.9rem; }
 
         .section-title { font-size: 1.05rem; font-weight: 700; margin-bottom: 1rem; color: #e2e8f0; }
 
@@ -229,30 +240,29 @@
 
     <!-- SEARCH & EXPORT -->
     <div class="section">
+        <!-- Suche mit Mikrofon -->
         <div class="search-row">
             <input type="text" id="searchInput" placeholder="🔍 Suchen…"
                    oninput="filterEntries()" style="margin-bottom:0;">
+            <button id="searchMicBtn" class="btn-icon btn-amber"
+                    onclick="toggleSearchMic()" title="Sprachsuche">🎤</button>
             <button class="btn-icon btn-gray" onclick="clearSearch()" title="Suche löschen">✕</button>
         </div>
 
-        <div class="export-block">
-            <span class="export-label">📥 Tag exportieren – alle Kategorien</span>
-            <div class="export-row">
-                <input type="date" id="exportDayDate" style="margin-bottom:0;">
-                <button class="btn-icon btn-gray" onclick="exportDay()" title="Herunterladen">📥</button>
-            </div>
+        <!-- Export Tag (eine Zeile) -->
+        <div class="export-line" style="border-top:none;padding-top:0.25rem;">
+            <span class="exp-icon">📥 Tag</span>
+            <input type="date" id="exportDayDate">
+            <button class="btn-dark" onclick="exportDay()" title="Herunterladen">📥</button>
         </div>
 
-        <div class="export-block">
-            <span class="export-label">📥 Zeitraum – eine Kategorie</span>
-            <div class="export-row" style="margin-bottom:0.4rem;">
-                <input type="date" id="exportFrom" style="margin-bottom:0;">
-                <input type="date" id="exportTo"   style="margin-bottom:0;">
-            </div>
-            <div class="export-row">
-                <select id="exportCategory" style="margin-bottom:0;"></select>
-                <button class="btn-icon btn-gray" onclick="exportRange()" title="Herunterladen">📥</button>
-            </div>
+        <!-- Export Zeitraum (eine Zeile) -->
+        <div class="export-line">
+            <span class="exp-icon">📅</span>
+            <input type="date" id="exportFrom">
+            <input type="date" id="exportTo">
+            <select id="exportCategory"></select>
+            <button class="btn-dark" onclick="exportRange()" title="Herunterladen">📥</button>
         </div>
     </div>
 
@@ -825,6 +835,49 @@ function filterEntries() {
 function clearSearch() {
     document.getElementById('searchInput').value = '';
     displayEntries(entries);
+}
+
+// ── Suche per Mikrofon ────────────────────────────────────────────────────────
+let searchRecognition = null;
+let isSearchRecording = false;
+
+function toggleSearchMic() { isSearchRecording ? stopSearchMic() : startSearchMic(); }
+
+function startSearchMic() {
+    const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SR) { alert('Spracherkennung nicht verfügbar.'); return; }
+    if (searchRecognition) { try { searchRecognition.abort(); } catch(e){} }
+
+    searchRecognition = new SR();
+    searchRecognition.lang = 'de-DE';
+    searchRecognition.continuous = false;
+    searchRecognition.interimResults = false;
+
+    searchRecognition.onresult = (ev) => {
+        document.getElementById('searchInput').value = ev.results[0][0].transcript;
+        filterEntries();
+    };
+    searchRecognition.onend = () => {
+        isSearchRecording = false;
+        document.getElementById('searchMicBtn').classList.remove('recording');
+    };
+    searchRecognition.onerror = () => {
+        isSearchRecording = false;
+        document.getElementById('searchMicBtn').classList.remove('recording');
+    };
+
+    isSearchRecording = true;
+    document.getElementById('searchMicBtn').classList.add('recording');
+    try { searchRecognition.start(); } catch(e) {
+        isSearchRecording = false;
+        document.getElementById('searchMicBtn').classList.remove('recording');
+    }
+}
+
+function stopSearchMic() {
+    isSearchRecording = false;
+    try { searchRecognition && searchRecognition.stop(); } catch(e){}
+    document.getElementById('searchMicBtn').classList.remove('recording');
 }
 
 // ── Export ────────────────────────────────────────────────────────────────────
