@@ -269,16 +269,12 @@
         </div>
     </div>
 
-    <!-- DATE -->
+    <!-- DATE + CATEGORIES -->
     <div class="section">
-        <div class="date-row">
+        <div class="date-row" style="margin-bottom:0.5rem;">
             <span>📅</span>
             <input type="date" id="entryDate" onchange="onDateChange()">
         </div>
-    </div>
-
-    <!-- CATEGORIES -->
-    <div class="section">
         <div id="categoryGrid" class="tag-grid"></div>
         <div class="cat-actions">
             <button class="btn-green" onclick="openNewCatModal()">+ Kategorie</button>
@@ -925,6 +921,7 @@ function stopSearchMic() {
 // ── Export ────────────────────────────────────────────────────────────────────
 function updateExportSelect() {
     document.getElementById('exportCategory').innerHTML =
+        '<option value="">— Alle Kategorien —</option>' +
         categories.map(c => `<option value="${c}">${c}</option>`).join('');
 }
 
@@ -946,12 +943,15 @@ async function exportRange() {
     const cat  = document.getElementById('exportCategory').value;
     if (!from || !to) { alert('Bitte Von- und Bis-Datum auswählen.'); return; }
     try {
-        const { data, error } = await sb.from('tagesnotizen_entries')
-            .select('*').eq('category', cat).gte('datum', from).lte('datum', to).order('datum');
+        let q = sb.from('tagesnotizen_entries')
+            .select('*').gte('datum', from).lte('datum', to);
+        if (cat) q = q.eq('category', cat);
+        const { data, error } = await q.order('datum').order('category');
         if (error) throw error;
         if (!data || data.length === 0) { alert('Keine Einträge für diesen Zeitraum.'); return; }
-        downloadExport(buildHtml(`${cat} · ${from} – ${to}`, data),
-            `tagesnotizen-${cat}-${from}-${to}.html`);
+        const label = cat || 'Alle';
+        downloadExport(buildHtml(`${label} · ${from} – ${to}`, data),
+            `tagesnotizen-${label}-${from}-${to}.html`);
     } catch (e) { alert('Fehler: ' + e.message); }
 }
 
