@@ -241,7 +241,7 @@
         </span>
     </div>
 
-    <!-- SEARCH & EXPORT -->
+    <!-- SEARCH, EXPORT & CATEGORY MANAGEMENT -->
     <div class="section">
         <!-- Suche mit Mikrofon -->
         <div class="search-row">
@@ -267,6 +267,12 @@
             <select id="exportCategory"></select>
             <button class="btn-dark" onclick="exportRange()" title="Herunterladen">📥</button>
         </div>
+
+        <!-- Kategorie hinzufügen / löschen -->
+        <div class="export-line">
+            <button class="btn-green" onclick="openNewCatModal()">+ Kategorie</button>
+            <button class="btn-red"   onclick="deleteSelectedCategory()">✕ Löschen</button>
+        </div>
     </div>
 
     <!-- DATE + CATEGORIES -->
@@ -276,10 +282,6 @@
             <input type="date" id="entryDate" onchange="onDateChange()">
         </div>
         <div id="categoryGrid" class="tag-grid"></div>
-        <div class="cat-actions">
-            <button class="btn-green" onclick="openNewCatModal()">+ Kategorie</button>
-            <button class="btn-red"   onclick="deleteSelectedCategory()">✕ Löschen</button>
-        </div>
     </div>
 
     <!-- INPUT -->
@@ -921,7 +923,7 @@ function stopSearchMic() {
 // ── Export ────────────────────────────────────────────────────────────────────
 function updateExportSelect() {
     document.getElementById('exportCategory').innerHTML =
-        '<option value="">— Alle Kategorien —</option>' +
+        '<option value="" disabled selected>Kategorie…</option>' +
         categories.map(c => `<option value="${c}">${c}</option>`).join('');
 }
 
@@ -942,10 +944,10 @@ async function exportRange() {
     const to   = document.getElementById('exportTo').value;
     const cat  = document.getElementById('exportCategory').value;
     if (!from || !to) { alert('Bitte Von- und Bis-Datum auswählen.'); return; }
+    if (!cat) { alert('Bitte noch eine Kategorie auswählen.'); return; }
     try {
         let q = sb.from('tagesnotizen_entries')
-            .select('*').gte('datum', from).lte('datum', to);
-        if (cat) q = q.eq('category', cat);
+            .select('*').gte('datum', from).lte('datum', to).eq('category', cat);
         const { data, error } = await q.order('datum').order('category');
         if (error) throw error;
         if (!data || data.length === 0) { alert('Keine Einträge für diesen Zeitraum.'); return; }
