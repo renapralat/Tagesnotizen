@@ -32,7 +32,7 @@
 
         .section {
             background: #1e293b; border: 1px solid #475569;
-            border-radius: 0.5rem; padding: 1.25rem; margin-bottom: 1.25rem;
+            border-radius: 0.5rem; padding: 0.65rem 0.75rem; margin-bottom: 0.75rem;
         }
 
         input[type="text"], input[type="password"], input[type="date"],
@@ -46,7 +46,7 @@
             outline: none; border-color: #3b82f6;
         }
         input[type="date"] { color-scheme: dark; }
-        textarea { height: 130px; resize: vertical; line-height: 1.65; font-size: 1.05rem; padding: 0.65rem 0.875rem; margin-bottom: 0; }
+        textarea { height: 160px; resize: vertical; line-height: 1.65; font-size: 1.05rem; padding: 0.65rem 0.875rem; margin-bottom: 0; }
         select option { background: #334155; }
 
         button {
@@ -117,11 +117,14 @@
         }
         .buffer-num { font-size: 0.75rem; color: #64748b; flex: none; padding-top: 0.15rem; font-weight: 700; }
         .buffer-text { flex: 1; font-size: 0.9rem; line-height: 1.55; word-break: break-word; }
-        .buffer-del {
-            background: none; color: #475569; padding: 0 0.2rem;
+        .buffer-del, .buffer-edit {
+            background: none; padding: 0 0.2rem;
             font-size: 0.9rem; flex: none; min-width: auto;
         }
+        .buffer-del { color: #475569; }
         .buffer-del:hover { color: #ef4444; background: none; opacity: 1; }
+        .buffer-edit { color: #475569; }
+        .buffer-edit:hover { color: #3b82f6; background: none; opacity: 1; }
 
         .summary-box {
             background: #334155; border: 1px solid #3b82f6;
@@ -368,6 +371,8 @@ let currentSummaryDate = '';
 let savedInputText   = '';
 let isRecording      = false;
 let recognition      = null;
+let micBase          = '';    // committed text surviving mic session restarts
+let micDiscard       = false; // when true, onend discards current session text
 
 // ── Init ──────────────────────────────────────────────────────────────────────
 window.addEventListener('DOMContentLoaded', async () => {
@@ -553,24 +558,31 @@ function editEntry(id) {
 }
 
 // ── Voice (Mikrofon – bleibt dauerhaft an) ────────────────────────────────────
-function toggleMic() { isRecording ? stopMic() : startMic(); }
+function toggleMic() {
+    if (isRecording) {
+        stopMic();
+    } else {
+        micBase = document.getElementById('inputText').value;
+        startMic();
+    }
+}
 
 function startMic() {
     const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!SR) {
-        alert('Spracherkennung nicht verfügbar.\nBitte Chrome verwenden oder Tastatur-Mikrofon nutzen.');
+        alert('Spracherkennung nicht verfügbar.\nBitte Chrome verwenden.');
         return;
     }
-    if (recognition) { try { recognition.abort(); } catch(e){} }
+    // Kein recognition.abort() – alte Instanz ist bereits beendet (onend löste diesen
+    // Aufruf aus). abort() würde nochmals onend feuern → Kaskade + Textverdopplung.
 
     recognition = new SR();
     recognition.lang = 'de-DE';
     recognition.continuous = true;
     recognition.interimResults = true;
 
-    const ta    = document.getElementById('inputText');
-    const base  = ta.value;        // Text vor dieser Aufnahme-Runde
-    let   final = '';              // In dieser Runde endgültig erkannter Text
+    const ta = document.getElementById('inputText');
+    let sessionFinal = '';
 
     recognition.onstart = () => {
         document.getElementById('micBtn').classList.add('recording');
@@ -584,19 +596,21 @@ function startMic() {
             if (ev.results[i].isFinal) newFinal += ev.results[i][0].transcript;
             else                       interim  += ev.results[i][0].transcript;
         }
-        if (newFinal) final += newFinal;
-        const sep = (base.trim() && (final || interim)) ? ' ' : '';
-        ta.value = base + sep + final + interim;
+        if (newFinal) sessionFinal += newFinal;
+        const s1 = micBase && (sessionFinal || interim) ? ' ' : '';
+        const s2 = sessionFinal && interim ? ' ' : '';
+        ta.value = micBase + s1 + sessionFinal + s2 + interim;
         if (interim) setRecStatus(true);
     };
 
     recognition.onend = () => {
-        // Nur finale Zeichen im Textarea behalten (kein Interim)
-        const sep = (base.trim() && final) ? ' ' : '';
-        ta.value = base + sep + final.trim();
+        if (!micDiscard && sessionFinal.trim()) {
+            micBase += (micBase ? ' ' : '') + sessionFinal.trim();
+        }
+        micDiscard = false;
+        ta.value = micBase;
 
         if (isRecording) {
-            // Automatischer Neustart – Mikrofon bleibt dauerhaft an
             setTimeout(() => { if (isRecording) startMic(); }, 200);
         } else {
             document.getElementById('micBtn').classList.remove('recording');
@@ -609,20 +623,13 @@ function startMic() {
             isRecording = false;
             document.getElementById('micBtn').classList.remove('recording');
             setRecStatus(false);
-            alert('Mikrofon-Zugriff verweigert.\nBitte in den Browser-Einstellungen für diese Seite erlauben.');
-        } else if (ev.error === 'no-speech' || ev.error === 'aborted') {
-            // Normal – wird automatisch neu gestartet
-        } else {
-            setRecStatus(false);
+            alert('Mikrofon-Zugriff verweigert.\nBitte in den Browser-Einstellungen erlauben.');
         }
     };
 
     isRecording = true;
     try { recognition.start(); }
-    catch(e) {
-        isRecording = false;
-        setRecStatus(false);
-    }
+    catch(e) { isRecording = false; setRecStatus(false); }
 }
 
 function stopMic() {
@@ -631,8 +638,6 @@ function stopMic() {
     document.getElementById('micBtn').classList.remove('recording');
     setRecStatus(false);
 }
-
-function restartMic() { stopMic(); setTimeout(startMic, 300); }
 
 function setRecStatus(active) {
     const dot = document.getElementById('recDot');
@@ -644,12 +649,24 @@ function addToBuffer() {
     const text = document.getElementById('inputText').value.trim();
     if (!text) return;
     buffer.push(text);
-    document.getElementById('inputText').value = '';
     renderBuffer();
-    if (isRecording) { stopMic(); setTimeout(startMic, 300); }
+    micDiscard = true;
+    micBase = '';
+    document.getElementById('inputText').value = '';
+    if (isRecording) { stopMic(); setTimeout(() => { micBase = ''; startMic(); }, 350); }
 }
 
 function removeFromBuffer(idx) { buffer.splice(idx, 1); renderBuffer(); }
+
+function editBufferItem(idx) {
+    const ta = document.getElementById('inputText');
+    const text = buffer[idx];
+    buffer.splice(idx, 1);
+    renderBuffer();
+    const cur = ta.value.trim();
+    ta.value = cur ? cur + '\n' + text : text;
+    micBase = ta.value;
+}
 
 function renderBuffer() {
     const wrap = document.getElementById('bufferContainer');
@@ -659,17 +676,19 @@ function renderBuffer() {
         <div class="buffer-item">
             <span class="buffer-num">${i+1}.</span>
             <span class="buffer-text">${escHtml(item)}</span>
-            <button class="buffer-del" onclick="removeFromBuffer(${i})" title="Entfernen">✕</button>
+            <button class="buffer-edit" onclick="editBufferItem(${i})" title="Bearbeiten">✏️</button>
+            <button class="buffer-del"  onclick="removeFromBuffer(${i})" title="Entfernen">✕</button>
         </div>
     `).join('');
 }
 
 function clearInput() {
+    micDiscard = true;
+    micBase = '';
     document.getElementById('inputText').value = '';
     buffer = [];
     renderBuffer();
-    // Mic neu starten damit base-Variable zurückgesetzt wird
-    if (isRecording) { stopMic(); setTimeout(startMic, 300); }
+    if (isRecording) { stopMic(); setTimeout(() => { micBase = ''; startMic(); }, 350); }
 }
 
 // ── KI (GitHub Models API) ────────────────────────────────────────────────────
@@ -809,8 +828,17 @@ async function saveSummary() {
 
 function backToInput() {
     document.getElementById('summarySection').classList.add('hidden');
-    document.getElementById('inputText').value = savedInputText;
+    // Buffer-Einträge + gespeicherter Text ins Textfeld übernehmen
+    const parts = [];
+    if (savedInputText.trim()) parts.push(savedInputText.trim());
+    buffer.forEach(item => { if (item.trim()) parts.push(item.trim()); });
+    const merged = parts.join('\n\n');
+    document.getElementById('inputText').value = merged;
+    micBase = merged;
+    buffer = [];
+    renderBuffer();
     currentSummary = '';
+    savedInputText = '';
 }
 
 // ── TTS (Vorlesen) ────────────────────────────────────────────────────────────
