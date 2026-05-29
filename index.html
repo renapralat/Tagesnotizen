@@ -213,9 +213,22 @@
             background: #334155; border-radius: 0.375rem;
             border-left: 3px solid #3b82f6; margin-top: 0.75rem;
         }
+
+        /* Toast */
+        #toast {
+            position: fixed; bottom: 1.5rem; left: 50%; transform: translateX(-50%) translateY(4rem);
+            background: #10b981; color: #fff; font-weight: 600; font-size: 0.95rem;
+            padding: 0.65rem 1.4rem; border-radius: 2rem;
+            box-shadow: 0 4px 16px rgba(0,0,0,0.4);
+            transition: transform 0.3s ease, opacity 0.3s ease;
+            opacity: 0; z-index: 9999; pointer-events: none; white-space: nowrap;
+        }
+        #toast.show { transform: translateX(-50%) translateY(0); opacity: 1; }
+        #toast.err  { background: #ef4444; }
     </style>
 </head>
 <body>
+<div id="toast"></div>
 <div class="container">
 
     <!-- NEW CATEGORY MODAL -->
@@ -817,8 +830,9 @@ async function summarizeText() {
             .maybeSingle();
 
         const sysPrompt = 'Du bist ein persoenlicher Tagebuch-Assistent. ' +
-            'Behalte "ich" und "wir" exakt wie im Original: "ich" wenn die Person alleine handelt, ' +
-            '"wir" wenn sie mit anderen zusammen war. Veraendere die Perspektive niemals. ' +
+            'WICHTIG: Behalte Subjekt und Objekt jedes Satzes exakt: Wer handelt, und wer oder was die Empfaengerin ist. ' +
+            'Beispiel: "Ich habe ein Bild von Maria abgeholt" bedeutet ICH habe geholt, nicht Maria. ' +
+            'Behalte "ich" und "wir" exakt wie im Original. Veraendere die Perspektive niemals. ' +
             'Behalte alle Namen, Orte und konkreten Details. Antworte nur mit dem fertigen Text, ohne Einleitung.';
         let prompt;
         if (existing && existing.text.trim()) {
@@ -847,6 +861,15 @@ async function summarizeText() {
     }
 }
 
+let toastTimer = null;
+function showToast(msg, isErr = false) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.className = 'show' + (isErr ? ' err' : '');
+    if (toastTimer) clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => { t.className = ''; }, 2800);
+}
+
 async function saveSummary() {
     if (!currentSummary) return;
     try {
@@ -858,8 +881,8 @@ async function saveSummary() {
         currentSummary = '';
         savedInputText = '';
         await renderEntries();
-        alert('✅ Eintrag gespeichert!');
-    } catch (e) { alert('Fehler beim Speichern: ' + e.message); }
+        showToast('✅ Eintrag gespeichert!');
+    } catch (e) { showToast('❌ ' + e.message, true); }
 }
 
 function backToInput() {
