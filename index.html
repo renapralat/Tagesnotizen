@@ -860,20 +860,21 @@ function backToInput() {
 
 // ── TTS (Vorlesen) ────────────────────────────────────────────────────────────
 function speakEntry(id) {
+    const synth = window.speechSynthesis;
+    if (synth.speaking) { synth.cancel(); return; }
     const e = entries.find(x => x.id === id);
     if (!e) return;
-    const synth = window.speechSynthesis;
-    const utt   = new SpeechSynthesisUtterance(e.text);
-    utt.lang    = 'de-DE';
-    synth.cancel();
+    const utt = new SpeechSynthesisUtterance(e.text);
+    utt.lang  = 'de-DE';
     synth.speak(utt);
 }
 
 function speakSummary() {
-    if (!currentSummary) return;
     const synth = window.speechSynthesis;
-    const utt   = new SpeechSynthesisUtterance(currentSummary);
-    utt.lang    = 'de-DE';
+    if (synth.speaking) { synth.cancel(); return; }
+    if (!currentSummary) return;
+    const utt = new SpeechSynthesisUtterance(currentSummary);
+    utt.lang  = 'de-DE';
     synth.cancel();
     synth.speak(utt);
 }
