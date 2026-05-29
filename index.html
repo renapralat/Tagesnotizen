@@ -515,8 +515,9 @@ function displayEntries(list) {
             <div class="entry-header">
                 <span class="entry-date">📅 ${e.datum}</span>
                 <div class="entry-actions">
-                    <button class="btn-icon btn-blue" onclick="editEntry('${e.id}')" title="Bearbeiten">✏️</button>
-                    <button class="btn-icon btn-red"  onclick="deleteEntry('${e.id}','${e.datum}')" title="Löschen">✕</button>
+                    <button class="btn-icon btn-amber" onclick="speakEntry('${e.id}')" title="Vorlesen">🔊</button>
+                    <button class="btn-icon btn-blue"  onclick="editEntry('${e.id}')" title="Bearbeiten">✏️</button>
+                    <button class="btn-icon btn-red"   onclick="deleteEntry('${e.id}','${e.datum}')" title="Löschen">✕</button>
                 </div>
             </div>
             <div class="entry-text">${escHtml(e.text)}</div>
@@ -550,6 +551,7 @@ function editEntry(id) {
     document.getElementById('entryDate').value = e.datum;
     selectedDate = e.datum;
     document.getElementById('inputText').value = e.text;
+    micBase = e.text; // mic-Basis synchronisieren, damit aktives Mikrofon den Text nicht überschreibt
     document.getElementById('summarySection').classList.add('hidden');
     currentSummary = '';
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -776,6 +778,9 @@ function collectText() {
 }
 
 async function summarizeText() {
+    // Datum immer frisch aus dem Eingabefeld lesen, falls es nach editEntry() geändert wurde
+    selectedDate = document.getElementById('entryDate').value;
+
     const allText = collectText();
     if (!allText) { alert('Bitte Text eingeben oder diktieren.'); return; }
 
@@ -854,6 +859,16 @@ function backToInput() {
 }
 
 // ── TTS (Vorlesen) ────────────────────────────────────────────────────────────
+function speakEntry(id) {
+    const e = entries.find(x => x.id === id);
+    if (!e) return;
+    const synth = window.speechSynthesis;
+    const utt   = new SpeechSynthesisUtterance(e.text);
+    utt.lang    = 'de-DE';
+    synth.cancel();
+    synth.speak(utt);
+}
+
 function speakSummary() {
     if (!currentSummary) return;
     const synth = window.speechSynthesis;
