@@ -358,7 +358,7 @@ const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 // GitHub Models API
 const GH_MODELS_URL = 'https://models.inference.ai.azure.com/chat/completions';
-const GH_MODEL      = 'gpt-4o-mini';
+const GH_MODEL      = 'gpt-4o';
 
 // ── State ─────────────────────────────────────────────────────────────────────
 let selectedDate     = getTodayDate();
@@ -814,14 +814,18 @@ async function summarizeText() {
 
         let prompt;
         if (existing && existing.text.trim()) {
-            prompt = 'Fasse zwei Eintraege desselben Tages zusammen. ICH-Form. Nutze Namen. ' +
-                'Erkenne wiederkehrende Begriffe, Namen und Themen und fasse zusammen, was dazu gehoert. ' +
-                'Behalte zeitliche Reihenfolgen bei. Antworte nur mit der Zusammenfassung.\n\n' +
+            prompt = 'Du fasst ein persoenliches Tagebuch zusammen. ' +
+                'WICHTIG: Schreibe ausschliesslich in der ICH-Form (niemals "wir", immer "ich"). ' +
+                'Behalte alle Namen, Orte und konkreten Details. ' +
+                'Erkenne wiederkehrende Begriffe und fasse zusammen, was dazu gehoert. ' +
+                'Behalte zeitliche Reihenfolgen bei. Antworte nur mit der Zusammenfassung, ohne Einleitung.\n\n' +
                 'Neuer Eintrag:\n' + allText + '\n\nBisheriger Eintrag:\n' + existing.text;
         } else {
-            prompt = 'Fasse praegnant in ICH-Form zusammen. Nutze Namen. ' +
-                'Erkenne wiederkehrende Begriffe, Namen und Themen und fasse dazu gehoerige Gedanken zusammen. ' +
-                'Behalte erkennbare zeitliche Reihenfolgen bei. Antworte nur mit der Zusammenfassung.\n\nText:\n' + allText;
+            prompt = 'Du fasst ein persoenliches Tagebuch zusammen. ' +
+                'WICHTIG: Schreibe ausschliesslich in der ICH-Form (niemals "wir", immer "ich"). ' +
+                'Behalte alle Namen, Orte und konkreten Details. ' +
+                'Erkenne wiederkehrende Begriffe und fasse dazu gehoerige Gedanken zusammen. ' +
+                'Behalte erkennbare zeitliche Reihenfolgen bei. Antworte nur mit der Zusammenfassung, ohne Einleitung.\n\nText:\n' + allText;
         }
 
         currentSummary     = await callGithubModels(prompt);
