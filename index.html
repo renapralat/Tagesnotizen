@@ -756,9 +756,13 @@ function updateKiStatus() {
 
 function getGithubPat() { return localStorage.getItem('tagesnotizen-github-pat') || ''; }
 
-async function callGithubModels(prompt) {
+async function callGithubModels(prompt, systemPrompt) {
     const pat = getGithubPat();
     if (!pat) throw new Error('Kein GitHub Token gesetzt. Bitte unten eingeben.');
+
+    const messages = [];
+    if (systemPrompt) messages.push({ role: 'system', content: systemPrompt });
+    messages.push({ role: 'user', content: prompt });
 
     const res = await fetch(GH_MODELS_URL, {
         method: 'POST',
@@ -769,7 +773,7 @@ async function callGithubModels(prompt) {
         body: JSON.stringify({
             model:      GH_MODEL,
             max_tokens: 1500,
-            messages:   [{ role: 'user', content: prompt }]
+            messages
         })
     });
 
@@ -812,23 +816,22 @@ async function summarizeText() {
             .select('text').eq('datum', selectedDate).eq('category', selectedCategory)
             .maybeSingle();
 
+        const sysPrompt = 'Du bist ein persoenlicher Tagebuch-Assistent. ' +
+            'Behalte "ich" und "wir" exakt wie im Original: "ich" wenn die Person alleine handelt, ' +
+            '"wir" wenn sie mit anderen zusammen war. Veraendere die Perspektive niemals. ' +
+            'Behalte alle Namen, Orte und konkreten Details. Antworte nur mit dem fertigen Text, ohne Einleitung.';
         let prompt;
         if (existing && existing.text.trim()) {
-            prompt = 'Du fasst ein persoenliches Tagebuch zusammen. ' +
-                'WICHTIG: Schreibe ausschliesslich in der ICH-Form (niemals "wir", immer "ich"). ' +
-                'Behalte alle Namen, Orte und konkreten Details. ' +
-                'Erkenne wiederkehrende Begriffe und fasse zusammen, was dazu gehoert. ' +
-                'Behalte zeitliche Reihenfolgen bei. Antworte nur mit der Zusammenfassung, ohne Einleitung.\n\n' +
+            prompt = 'Fasse diese zwei Tagebucheintraege desselben Tages zu einem zusammen. ' +
+                'Erkenne wiederkehrende Begriffe, Namen und Themen. Behalte zeitliche Reihenfolgen.\n\n' +
                 'Neuer Eintrag:\n' + allText + '\n\nBisheriger Eintrag:\n' + existing.text;
         } else {
-            prompt = 'Du fasst ein persoenliches Tagebuch zusammen. ' +
-                'WICHTIG: Schreibe ausschliesslich in der ICH-Form (niemals "wir", immer "ich"). ' +
-                'Behalte alle Namen, Orte und konkreten Details. ' +
+            prompt = 'Fasse diesen Tagebucheintrag praegnant zusammen. ' +
                 'Erkenne wiederkehrende Begriffe und fasse dazu gehoerige Gedanken zusammen. ' +
-                'Behalte erkennbare zeitliche Reihenfolgen bei. Antworte nur mit der Zusammenfassung, ohne Einleitung.\n\nText:\n' + allText;
+                'Behalte erkennbare zeitliche Reihenfolgen.\n\nText:\n' + allText;
         }
 
-        currentSummary     = await callGithubModels(prompt);
+        currentSummary     = await callGithubModels(prompt, sysPrompt);
         currentSummaryDate = selectedDate;
         savedInputText     = document.getElementById('inputText').value;
 
