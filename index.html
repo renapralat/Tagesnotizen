@@ -370,8 +370,10 @@ let currentSummaryDate = '';
 let savedInputText   = '';
 let isRecording      = false;
 let recognition      = null;
-let micBase          = '';
-let micReset         = false; // when true, onresult skips commit, onend skips restart
+let micBefore = '';  // text before cursor position when mic started
+let micAfter  = '';  // text after cursor position when mic started
+let micDone   = '';  // text dictated since last mic start (across session restarts)
+let micReset  = false; // when true, onresult skips commit, onend skips restart
 let speakingId       = null;  // null | 'summary' | entry-uuid
 let speakResumeTimer = null;  // workaround for Android auto-pause bug
 
@@ -554,7 +556,6 @@ function editEntry(id) {
     document.getElementById('entryDate').value = e.datum;
     selectedDate = e.datum;
     document.getElementById('inputText').value = e.text;
-    micBase = e.text; // mic-Basis synchronisieren, damit aktives Mikrofon den Text nicht überschreibt
     document.getElementById('summarySection').classList.add('hidden');
     currentSummary = '';
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -565,7 +566,11 @@ function toggleMic() {
     if (isRecording) {
         stopMic();
     } else {
-        micBase = document.getElementById('inputText').value;
+        const ta  = document.getElementById('inputText');
+        const pos = ta.selectionStart;          // Cursorposition auslesen
+        micBefore = ta.value.substring(0, pos); // Text vor dem Cursor
+        micAfter  = ta.value.substring(pos);    // Text nach dem Cursor
+        micDone   = '';
         startMic();
     }
 }
@@ -602,18 +607,19 @@ function startMic() {
             else                       interim += ev.results[i][0].transcript;
         }
         if (final.trim()) {
-            micBase += (micBase ? ' ' : '') + final.trim();
+            micDone += (micDone || micBefore ? ' ' : '') + final.trim();
             curInterim = '';
         } else {
             curInterim = interim;
         }
-        ta.value = micBase + (micBase && curInterim ? ' ' : '') + curInterim;
+        const sep = (micDone || micBefore) && curInterim ? ' ' : '';
+        ta.value = micBefore + micDone + sep + curInterim + micAfter;
         if (curInterim) setRecStatus(true);
     };
 
     recognition.onend = () => {
         curInterim = '';
-        ta.value = micBase;
+        ta.value = micBefore + micDone + micAfter;
         micReset = false;
         if (isRecording) {
             setTimeout(() => { if (isRecording) startMic(); }, 80);
@@ -656,7 +662,7 @@ function addToBuffer() {
     buffer.push(text);
     renderBuffer();
     micReset = true;
-    micBase = '';
+    micBefore = micAfter = micDone = '';
     document.getElementById('inputText').value = '';
     if (isRecording) {
         isRecording = false;
@@ -676,7 +682,6 @@ function editBufferItem(idx) {
     renderBuffer();
     const cur = ta.value.trim();
     ta.value = cur ? cur + '\n' + text : text;
-    micBase = ta.value;
 }
 
 function renderBuffer() {
@@ -695,7 +700,7 @@ function renderBuffer() {
 
 function clearInput() {
     micReset = true;
-    micBase = '';
+    micBefore = micAfter = micDone = '';
     document.getElementById('inputText').value = '';
     buffer = [];
     renderBuffer();
@@ -854,7 +859,6 @@ function backToInput() {
     buffer.forEach(item => { if (item.trim()) parts.push(item.trim()); });
     const merged = parts.join('\n\n');
     document.getElementById('inputText').value = merged;
-    micBase = merged;
     buffer = [];
     renderBuffer();
     currentSummary = '';
@@ -1028,7 +1032,7 @@ function buildTxt(title, rows) {
 
 function downloadExport(content, filename) {
     const a = document.createElement('a');
-    a.href = URL.createObjectURL(new Blob([content], { type: 'text/plain;charset=utf-8;' }));
+    a.href = URL.createObjectURL(new Blob(['﻿' + content], { type: 'text/plain;charset=utf-8;' }));
     a.download = filename;
     a.style.display = 'none';
     document.body.appendChild(a);
