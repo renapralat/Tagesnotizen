@@ -343,21 +343,26 @@
         </div>
     </div>
 
-    <!-- KI-ANALYSE (wie Ernährung-App) -->
+    <!-- KI-ANALYSE -->
     <div class="section">
         <div class="ki-header">
             <span class="ki-title">🤖 KI-ANALYSE</span>
-            <span id="kiDot" class="ki-dot"></span>
+            <div style="display:flex;align-items:center;gap:0.5rem;">
+                <span id="kiDot" class="ki-dot"></span>
+                <button class="btn-dark" style="font-size:0.75rem;padding:0.2rem 0.55rem;" onclick="toggleTokenPanel()">Token verwalten</button>
+            </div>
         </div>
         <p id="kiStatus" class="ki-status"></p>
-        <input type="password" id="githubPatInput" placeholder="github_pat_…" style="margin-bottom:0.5rem;">
-        <div class="btn-row">
-            <button class="btn-gray" onclick="clearGithubPat()">Löschen</button>
-            <button class="btn-blue" onclick="saveGithubPat()">Speichern</button>
-        </div>
-        <div class="tip">
-            GitHub → Einstellungen → Developer settings → Personal access tokens (Classic) → Generate.<br>
-            Keine Berechtigungen nötig. Nur lokal gespeichert.
+        <div id="tokenPanel" class="hidden">
+            <input type="password" id="githubPatInput" placeholder="github_pat_…" style="margin-bottom:0.5rem;">
+            <div class="btn-row">
+                <button class="btn-gray" onclick="clearGithubPat()">Löschen</button>
+                <button class="btn-blue" onclick="saveGithubPat()">Speichern</button>
+            </div>
+            <div class="tip">
+                GitHub → Einstellungen → Developer settings → Personal access tokens (Classic) → Generate.<br>
+                Keine Berechtigungen nötig. Nur lokal gespeichert.
+            </div>
         </div>
     </div>
 
@@ -371,7 +376,7 @@ const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 // GitHub Models API
 const GH_MODELS_URL = 'https://models.inference.ai.azure.com/chat/completions';
-const GH_MODEL      = 'Mistral-large';
+const GH_MODEL      = 'Mistral-Large';
 
 // ── State ─────────────────────────────────────────────────────────────────────
 let selectedDate     = getTodayDate();
@@ -732,24 +737,34 @@ function clearInput() {
 
 // ── KI (GitHub Models API) ────────────────────────────────────────────────────
 function loadKiPat() {
-    const pat = localStorage.getItem('tagesnotizen-github-pat') || '';
-    document.getElementById('githubPatInput').value = pat ? '••••••••••••••••' : '';
     updateKiStatus();
+}
+
+function toggleTokenPanel() {
+    const panel = document.getElementById('tokenPanel');
+    const isHidden = panel.classList.toggle('hidden');
+    if (!isHidden) {
+        const pat = localStorage.getItem('tagesnotizen-github-pat');
+        document.getElementById('githubPatInput').value = pat ? '••••••••••••••••' : '';
+        document.getElementById('githubPatInput').focus();
+    }
 }
 
 function saveGithubPat() {
     const val = document.getElementById('githubPatInput').value.trim();
-    if (!val || val.startsWith('•')) { alert('Bitte gültigen GitHub Token eingeben.'); return; }
+    if (!val || val.startsWith('•')) { showToast('Bitte gültigen Token eingeben.', true); return; }
     localStorage.setItem('tagesnotizen-github-pat', val);
     document.getElementById('githubPatInput').value = '••••••••••••••••';
     updateKiStatus();
-    alert('✅ Token gespeichert!');
+    document.getElementById('tokenPanel').classList.add('hidden');
+    showToast('✅ Token gespeichert!');
 }
 
 function clearGithubPat() {
     localStorage.removeItem('tagesnotizen-github-pat');
     document.getElementById('githubPatInput').value = '';
     updateKiStatus();
+    showToast('Token gelöscht.');
 }
 
 function updateKiStatus() {
