@@ -98,6 +98,7 @@
         .input-side { display: flex; flex-direction: column; gap: 0.4rem; flex: none; align-items: center; }
         .mic-btn { font-size: 1.1rem; padding: 0.45rem 0.6rem; }
         .mic-btn.recording { background: #dc2626; animation: pulse 0.9s ease-in-out infinite; }
+        #inputText[readonly] { border-color: #f59e0b; cursor: not-allowed; }
         .speak-btn.speaking { background: #dc2626; animation: pulse 0.9s ease-in-out infinite; }
         @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.5; } }
         .rec-dot { width: 8px; height: 8px; border-radius: 50%; background: #475569; }
@@ -596,6 +597,7 @@ function startMic() {
 
     recognition.onstart = () => {
         document.getElementById('micBtn').classList.add('recording');
+        ta.readOnly = true;   // kein händisches Editieren während Aufnahme
         setRecStatus(true);
     };
 
@@ -624,6 +626,7 @@ function startMic() {
         if (isRecording) {
             setTimeout(() => { if (isRecording) startMic(); }, 80);
         } else {
+            ta.readOnly = false;
             document.getElementById('micBtn').classList.remove('recording');
             setRecStatus(false);
         }
@@ -646,6 +649,7 @@ function startMic() {
 function stopMic() {
     isRecording = false;
     try { recognition && recognition.stop(); } catch(e){}
+    document.getElementById('inputText').readOnly = false;
     document.getElementById('micBtn').classList.remove('recording');
     setRecStatus(false);
 }
