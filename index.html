@@ -130,9 +130,10 @@
 
         .summary-box {
             background: #334155; border: 1px solid #3b82f6;
-            border-radius: 0.375rem; padding: 1rem; margin-bottom: 1rem;
-            line-height: 1.75; max-height: 320px; overflow-y: auto;
+            border-radius: 0.375rem; padding: 1rem; margin-bottom: 0.5rem;
+            line-height: 1.75; height: 320px; resize: vertical;
             white-space: pre-wrap; word-break: break-word;
+            font-family: inherit; font-size: 0.95rem; color: #fff;
         }
 
         .search-row { display: flex; gap: 0.5rem; align-items: center; margin-bottom: 0.75rem; }
@@ -325,9 +326,10 @@
     <!-- SUMMARY -->
     <div id="summarySection" class="section hidden">
         <div class="section-title">✨ Zusammenfassung</div>
-        <div class="summary-box" id="summaryText"></div>
+        <textarea id="summaryText" class="summary-box"></textarea>
         <div class="btn-row">
-            <button id="speakSummaryBtn" class="btn-amber btn-icon speak-btn" onclick="speakSummary()" title="Vorlesen">🔊</button>
+            <button id="speakSummaryBtn" class="btn-amber btn-icon speak-btn" onclick="speakSummary()" title="Alles vorlesen">🔊</button>
+            <button class="btn-green btn-icon" onclick="speakFromCursor()" title="Von Cursor-Position vorlesen">▶ Von hier</button>
             <button class="btn-purple" onclick="saveSummary()" style="flex:2;">💾 Speichern</button>
             <button class="btn-gray"   onclick="backToInput()">↩ Zurück</button>
         </div>
@@ -872,7 +874,7 @@ async function summarizeText() {
         currentSummaryDate = selectedDate;
         savedInputText     = document.getElementById('inputText').value;
 
-        document.getElementById('summaryText').textContent = currentSummary;
+        document.getElementById('summaryText').value = currentSummary;
         document.getElementById('summarySection').classList.remove('hidden');
         document.getElementById('summarySection').scrollIntoView({ behavior: 'smooth', block: 'start' });
 
@@ -894,9 +896,11 @@ function showToast(msg, isErr = false) {
 }
 
 async function saveSummary() {
-    if (!currentSummary) return;
+    const edited = document.getElementById('summaryText').value.trim();
+    if (!edited && !currentSummary) return;
+    const textToSave = edited || currentSummary;
     try {
-        await saveEntry(currentSummaryDate, selectedCategory, currentSummary);
+        await saveEntry(currentSummaryDate, selectedCategory, textToSave);
         buffer = [];
         renderBuffer();
         document.getElementById('inputText').value = '';
@@ -975,8 +979,20 @@ function speakEntry(id) {
 function speakSummary() {
     const prev = speakingId;
     stopSpeaking();
-    if (prev !== null) return; // war aktiv → nur stoppen
-    if (currentSummary) startSpeaking(currentSummary, 'summary');
+    if (prev !== null) return;
+    const text = document.getElementById('summaryText').value || currentSummary;
+    if (text) startSpeaking(text, 'summary');
+}
+
+function speakFromCursor() {
+    const ta = document.getElementById('summaryText');
+    const pos = ta.selectionStart;
+    const text = ta.value.substring(pos).trim();
+    if (!text) return;
+    const prev = speakingId;
+    stopSpeaking();
+    if (prev !== null) return;
+    startSpeaking(text, 'summary');
 }
 
 // ── Search ────────────────────────────────────────────────────────────────────
