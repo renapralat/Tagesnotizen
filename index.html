@@ -309,10 +309,8 @@
             <button class="btn-dark btn-icon" onclick="exportRange()" title="Zeitraum herunterladen">📥</button>
             <button class="btn-red  btn-icon" onclick="deleteRange()"  title="Zeitraum löschen">🗑️</button>
         </div>
-        <!-- Kategorie-Auswahl für Export -->
-        <div id="exportCatChips" style="display:flex;flex-wrap:wrap;gap:0.3rem;margin-bottom:0.35rem;"></div>
         <!-- Zeile 2: +/- Kategorie | Tag-Export -->
-        <div style="display:flex;gap:0.35rem;align-items:center;margin-bottom:0.6rem;">
+        <div style="display:flex;gap:0.35rem;align-items:center;margin-bottom:0.5rem;">
             <button class="btn-icon btn-dark" onclick="openNewCatModal()" title="Neue Kategorie" style="font-size:0.85rem;">+🏷️</button>
             <button class="btn-icon btn-dark" onclick="deleteSelectedCategory()" title="Kategorie löschen" style="font-size:0.85rem;">−🏷️</button>
             <span style="flex:1;"></span>
@@ -326,7 +324,7 @@
             <span>📅</span>
             <input type="date" id="entryDate" onchange="onDateChange()" style="flex:1;margin-bottom:0;">
         </div>
-        <!-- Blaue Kategorie-Chips -->
+        <!-- Kategorie-Chips (Aufnahme + Export) -->
         <div id="categoryGrid" class="tag-grid"></div>
     </div>
 
@@ -486,6 +484,14 @@ async function loadCategories() {
 function renderCategories() {
     const grid = document.getElementById('categoryGrid');
     grid.innerHTML = '';
+    // "Alle"-Chip für Export (kein Mikro)
+    const alleBtn = document.createElement('button');
+    alleBtn.className = 'tag-btn' + (!selectedCategory ? ' active' : '');
+    alleBtn.textContent = 'Alle';
+    alleBtn.style.cssText = 'background:' + (!selectedCategory ? '#475569' : '#334155') + ';';
+    alleBtn.onclick = () => selectCategory(null);
+    grid.appendChild(alleBtn);
+    // Kategorie-Chips
     categories.forEach(cat => {
         const btn = document.createElement('button');
         btn.className = 'tag-btn' + (cat === selectedCategory ? ' active' : '');
@@ -498,13 +504,20 @@ function renderCategories() {
 function selectCategory(cat) {
     selectedCategory = cat;
     renderCategories();
-    document.getElementById('currentTagDisplay').textContent = '#' + cat;
-    document.getElementById('inputSection').classList.remove('hidden');
-    document.getElementById('summarySection').classList.add('hidden');
-    currentSummary = '';
-    document.getElementById('inputText').value = '';
-    buffer = [];
-    renderBuffer();
+    if (cat) {
+        document.getElementById('currentTagDisplay').textContent = '#' + cat;
+        document.getElementById('inputSection').classList.remove('hidden');
+        document.getElementById('summarySection').classList.add('hidden');
+        currentSummary = '';
+        document.getElementById('inputText').value = '';
+        buffer = [];
+        renderBuffer();
+    } else {
+        // "Alle" gewählt: Eingabe ausblenden
+        document.getElementById('inputSection').classList.add('hidden');
+        document.getElementById('summarySection').classList.add('hidden');
+        document.getElementById('currentTagDisplay').textContent = '—';
+    }
     renderEntries();
 }
 
@@ -1150,39 +1163,13 @@ function stopSearchMic() {
 }
 
 // ── Export ────────────────────────────────────────────────────────────────────
-let selectedExportCats = new Set(['__all__']);
-
-function updateExportSelect() {
-    const box = document.getElementById('exportCatChips');
-    if (!box) return;
-    const chips = [{ val: '__all__', label: 'Alle' }, ...categories.map(c => ({ val: c, label: c }))];
-    box.innerHTML = chips.map(({ val, label }) =>
-        `<button class="exp-cat-chip${selectedExportCats.has(val) ? ' active' : ''}"
-            onclick="toggleExportCat('${val}')">${label}</button>`
-    ).join('');
-}
-
-function toggleExportCat(val) {
-    if (val === '__all__') {
-        selectedExportCats = new Set(['__all__']);
-    } else {
-        selectedExportCats.delete('__all__');
-        if (selectedExportCats.has(val)) {
-            selectedExportCats.delete(val);
-            if (selectedExportCats.size === 0) selectedExportCats.add('__all__');
-        } else {
-            selectedExportCats.add(val);
-        }
-    }
-    updateExportSelect();
-}
+function updateExportSelect() { /* Chips werden über renderCategories() aktualisiert */ }
 
 function exportCatFilter(q) {
-    if (selectedExportCats.has('__all__')) return q;
-    return q.in('category', [...selectedExportCats]);
+    return selectedCategory ? q.eq('category', selectedCategory) : q;
 }
 function exportCatLabel() {
-    return selectedExportCats.has('__all__') ? 'Alle' : [...selectedExportCats].join('+');
+    return selectedCategory || 'Alle';
 }
 
 async function exportDay() {
