@@ -136,8 +136,31 @@
             font-family: inherit; font-size: 0.95rem; color: #fff;
         }
 
-        .search-row { display: flex; gap: 0.5rem; align-items: center; margin-bottom: 0.75rem; }
-        .search-row input { flex: 1; margin-bottom: 0; }
+        /* Globale Suche */
+        .global-results-box {
+            margin-top: 0.75rem; border-top: 1px solid #334155; padding-top: 0.75rem;
+        }
+        .global-results-title {
+            font-size: 0.8rem; font-weight: 700; color: #94a3b8;
+            text-transform: uppercase; letter-spacing: 0.07em; margin-bottom: 0.5rem;
+            display: flex; justify-content: space-between; align-items: center;
+        }
+        .global-result {
+            background: #334155; border: 1px solid #475569;
+            border-radius: 0.375rem; padding: 0.65rem 0.75rem; margin-bottom: 0.45rem;
+        }
+        .global-result-meta {
+            display: flex; gap: 0.45rem; align-items: center; margin-bottom: 0.3rem; flex-wrap: wrap;
+        }
+        .global-result-cat {
+            background: #2563eb; color: #fff; padding: 0.1rem 0.45rem;
+            border-radius: 9999px; font-weight: 700; font-size: 0.75rem;
+        }
+        .global-result-date { color: #94a3b8; font-size: 0.78rem; }
+        .global-result-snippet { font-size: 0.88rem; line-height: 1.6; color: #e2e8f0; }
+        .global-result-snippet mark {
+            background: #f59e0b; color: #000; border-radius: 2px; padding: 0 2px; font-weight: 600;
+        }
 
         /* Kompakte Export-Zeilen */
         .export-line {
@@ -260,13 +283,16 @@
     <!-- SEARCH, EXPORT & CATEGORY MANAGEMENT -->
     <div class="section">
         <!-- Suche mit Mikrofon -->
-        <div class="search-row">
+        <div class="search-row" style="display:flex;gap:0.5rem;align-items:center;margin-bottom:0.75rem;">
             <input type="text" id="searchInput" placeholder="🔍 Suchen…"
-                   oninput="filterEntries()" style="margin-bottom:0;">
+                   oninput="filterEntries()" style="margin-bottom:0;flex:1;">
             <button id="searchMicBtn" class="btn-icon btn-amber"
                     onclick="toggleSearchMic()" title="Sprachsuche">🎤</button>
+            <button class="btn-icon btn-blue" onclick="globalSearch()" title="Alle Kategorien durchsuchen">🌐</button>
             <button class="btn-icon btn-gray" onclick="clearSearch()" title="Suche löschen">✕</button>
         </div>
+        <!-- Globale Suchergebnisse -->
+        <div id="globalResultsBox" class="global-results-box hidden"></div>
 
         <!-- Export Tag (eine Zeile) -->
         <div class="export-line" style="border-top:none;padding-top:0.25rem;">
@@ -1006,7 +1032,66 @@ function filterEntries() {
 
 function clearSearch() {
     document.getElementById('searchInput').value = '';
+    document.getElementById('globalResultsBox').classList.add('hidden');
+    document.getElementById('globalResultsBox').innerHTML = '';
     displayEntries(entries);
+}
+
+function extractSnippet(text, query) {
+    const lower = text.toLowerCase();
+    const q = query.toLowerCase();
+    const idx = lower.indexOf(q);
+    if (idx === -1) return '';
+    // Satz-Grenzen suchen
+    let start = text.lastIndexOf('\n', idx);
+    start = start === -1 ? 0 : start + 1;
+    let end = text.indexOf('\n', idx + q.length);
+    if (end === -1) end = text.length;
+    let snippet = text.substring(start, end).trim();
+    if (snippet.length > 200) {
+        const local = Math.max(0, idx - start - 80);
+        snippet = (local > 0 ? '…' : '') + snippet.substring(local, local + 180) + '…';
+    }
+    // Treffer hervorheben
+    const re = new RegExp(query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi');
+    return snippet.replace(re, m => `<mark>${m}</mark>`);
+}
+
+async function globalSearch() {
+    const q = document.getElementById('searchInput').value.trim();
+    if (!q) { showToast('Bitte Suchbegriff eingeben.', true); return; }
+    const box = document.getElementById('globalResultsBox');
+    box.classList.remove('hidden');
+    box.innerHTML = '<div class="global-results-title">Suche läuft…</div>';
+    try {
+        const { data, error } = await sb.from('tagesnotizen_entries')
+            .select('datum, category, text')
+            .ilike('text', `%${q}%`)
+            .order('datum', { ascending: false });
+        if (error) throw error;
+        if (!data || data.length === 0) {
+            box.innerHTML = `<div class="global-results-title">Keine Ergebnisse für „${q}"
+                <button class="btn-gray btn-icon" style="font-size:0.8rem;padding:0.15rem 0.4rem;" onclick="clearSearch()">✕</button>
+            </div>`;
+            return;
+        }
+        let html = `<div class="global-results-title">
+            ${data.length} Treffer für „${q}"
+            <button class="btn-gray btn-icon" style="font-size:0.8rem;padding:0.15rem 0.4rem;" onclick="clearSearch()">✕</button>
+        </div>`;
+        for (const row of data) {
+            const snippet = extractSnippet(row.text, q);
+            html += `<div class="global-result">
+                <div class="global-result-meta">
+                    <span class="global-result-cat">${row.category}</span>
+                    <span class="global-result-date">${row.datum}</span>
+                </div>
+                <div class="global-result-snippet">${snippet}</div>
+            </div>`;
+        }
+        box.innerHTML = html;
+        box.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    } catch (e) { showToast('Fehler: ' + e.message, true); }
 }
 
 // ── Suche per Mikrofon ────────────────────────────────────────────────────────
@@ -1028,6 +1113,7 @@ function startSearchMic() {
     searchRecognition.onresult = (ev) => {
         document.getElementById('searchInput').value = ev.results[0][0].transcript;
         filterEntries();
+        globalSearch();
     };
     searchRecognition.onend = () => {
         isSearchRecording = false;
