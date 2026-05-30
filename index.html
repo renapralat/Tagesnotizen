@@ -305,6 +305,9 @@
             <button class="btn-icon btn-gray" onclick="clearSearch()" title="Suche löschen">✕</button>
         </div>
         <div id="globalResultsBox" class="global-results-box hidden"></div>
+        <div style="font-size:0.72rem;color:#64748b;margin-top:0.25rem;">
+            Genau: <b style="color:#94a3b8;">Ei</b> &nbsp;·&nbsp; Endung: <b style="color:#94a3b8;">*fee</b> &nbsp;·&nbsp; Anfang: <b style="color:#94a3b8;">Ka*</b> &nbsp;·&nbsp; Überall: <b style="color:#94a3b8;">*kaff*</b>
+        </div>
     </div>
 
     <!-- EXPORT + DATE + CATEGORIES -->
@@ -1075,40 +1078,45 @@ function clearSearch() {
     displayEntries(entries);
 }
 
-function extractSnippet(text, query) {
-    const lower = text.toLowerCase();
-    const q = query.toLowerCase();
-    const idx = lower.indexOf(q);
-    if (idx === -1) return '';
-    // Satz-Grenzen suchen
+function extractSnippet(text, re) {
+    re.lastIndex = 0;
+    const m = re.exec(text);
+    if (!m) return '';
+    const idx = m.index;
     let start = text.lastIndexOf('\n', idx);
     start = start === -1 ? 0 : start + 1;
-    let end = text.indexOf('\n', idx + q.length);
+    let end = text.indexOf('\n', idx + m[0].length);
     if (end === -1) end = text.length;
     let snippet = text.substring(start, end).trim();
     if (snippet.length > 200) {
         const local = Math.max(0, idx - start - 80);
         snippet = (local > 0 ? '…' : '') + snippet.substring(local, local + 180) + '…';
     }
-    // Treffer hervorheben
-    const re = new RegExp(query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi');
-    return snippet.replace(re, m => `<mark>${m}</mark>`);
+    re.lastIndex = 0;
+    return snippet.replace(re, hit => `<mark>${hit}</mark>`);
 }
 
 async function globalSearch() {
     const q = document.getElementById('searchInput').value.trim();
     if (!q) { showToast('Bitte Suchbegriff eingeben.', true); return; }
+    const hasLeading  = q.startsWith('*');
+    const hasTrailing = q.endsWith('*');
+    const term = q.replace(/^\*|\*$/g, '');
+    if (!term) { showToast('Bitte Suchbegriff eingeben.', true); return; }
+    const escaped = term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const pat = `${hasLeading ? '' : '\\b'}${escaped}${hasTrailing ? '' : '\\b'}`;
+    const makeRe = () => new RegExp(pat, 'gi');
+
     const box = document.getElementById('globalResultsBox');
     box.classList.remove('hidden');
     box.innerHTML = '<div class="global-results-title">Suche läuft…</div>';
     try {
         const { data, error } = await sb.from('tagesnotizen_entries')
             .select('datum, category, text')
-            .ilike('text', `%${q}%`)
+            .ilike('text', `%${term}%`)
             .order('datum', { ascending: false });
         if (error) throw error;
-        const wordRe = new RegExp(`\\b${q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'i');
-        const matches = (data || []).filter(row => wordRe.test(row.text));
+        const matches = (data || []).filter(row => makeRe().test(row.text));
         if (matches.length === 0) {
             box.innerHTML = `<div class="global-results-title">Keine Ergebnisse für „${q}"
                 <button class="btn-gray btn-icon" style="font-size:0.8rem;padding:0.15rem 0.4rem;" onclick="clearSearch()">✕</button>
@@ -1120,13 +1128,12 @@ async function globalSearch() {
             <button class="btn-gray btn-icon" style="font-size:0.8rem;padding:0.15rem 0.4rem;" onclick="clearSearch()">✕</button>
         </div>`;
         for (const row of matches) {
-            const snippet = extractSnippet(row.text, q);
             html += `<div class="global-result">
                 <div class="global-result-meta">
                     <span class="global-result-cat">${row.category}</span>
                     <span class="global-result-date">${row.datum}</span>
                 </div>
-                <div class="global-result-snippet">${snippet}</div>
+                <div class="global-result-snippet">${extractSnippet(row.text, makeRe())}</div>
             </div>`;
         }
         box.innerHTML = html;
