@@ -362,7 +362,7 @@
             <div class="tip">
                 GitHub → Einstellungen → Developer settings → Personal access tokens (Classic) → Generate.<br>
                 Keine Berechtigungen nötig. Nur lokal gespeichert.<br>
-                Modell: <strong>Mistral-Large-2411</strong>
+                Modell: <strong>AI21-Jamba-1.5-Large</strong>
             </div>
         </div>
     </div>
@@ -377,7 +377,7 @@ const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 // GitHub Models API
 const GH_MODELS_URL = 'https://models.inference.ai.azure.com/chat/completions';
-const GH_MODEL      = 'Mistral-Large-2411';
+const GH_MODEL      = 'AI21-Jamba-1.5-Large';
 
 // ── State ─────────────────────────────────────────────────────────────────────
 let selectedDate     = getTodayDate();
@@ -849,16 +849,19 @@ async function summarizeText() {
             'WICHTIG: Behalte Subjekt und Objekt jedes Satzes exakt: Wer handelt, und wer oder was die Empfaengerin ist. ' +
             'Beispiel: "Ich habe ein Bild von Maria abgeholt" bedeutet ICH habe geholt, nicht Maria. ' +
             'Behalte "ich" und "wir" exakt wie im Original. Veraendere die Perspektive niemals. ' +
-            'Behalte alle Namen, Orte und konkreten Details. Antworte nur mit dem fertigen Text, ohne Einleitung.';
+            'Behalte alle Namen, Orte und konkreten Details. ' +
+            'Gliedere den fertigen Text in kurze thematische Absaetze (z.B. Morgen, Einkauf, Mittag, Besuch). ' +
+            'Jeder Absatz hat eine fette Ueberschrift. Antworte nur mit dem fertigen Text, ohne Einleitung.';
         let prompt;
         if (existing && existing.text.trim()) {
             prompt = 'Fasse diese zwei Tagebucheintraege desselben Tages zu einem zusammen. ' +
-                'Erkenne wiederkehrende Begriffe, Namen und Themen. Behalte zeitliche Reihenfolgen.\n\n' +
+                'Erkenne wiederkehrende Begriffe, Namen und Themen. Behalte zeitliche Reihenfolgen. ' +
+                'Gliedere nach Themen.\n\n' +
                 'Neuer Eintrag:\n' + allText + '\n\nBisheriger Eintrag:\n' + existing.text;
         } else {
             prompt = 'Fasse diesen Tagebucheintrag praegnant zusammen. ' +
                 'Erkenne wiederkehrende Begriffe und fasse dazu gehoerige Gedanken zusammen. ' +
-                'Behalte erkennbare zeitliche Reihenfolgen.\n\nText:\n' + allText;
+                'Behalte erkennbare zeitliche Reihenfolgen. Gliedere nach Themen.\n\nText:\n' + allText;
         }
 
         currentSummary     = await callGithubModels(prompt, sysPrompt);
