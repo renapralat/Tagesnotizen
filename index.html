@@ -286,10 +286,9 @@
         </span>
     </div>
 
-    <!-- SEARCH & EXPORT -->
+    <!-- SEARCH -->
     <div class="section">
-        <!-- Suche -->
-        <div class="search-row" style="display:flex;gap:0.4rem;align-items:center;margin-bottom:0.5rem;">
+        <div style="display:flex;gap:0.4rem;align-items:center;">
             <input type="text" id="searchInput" placeholder="🔍 Suchen…"
                    oninput="filterEntries()" style="margin-bottom:0;flex:1;">
             <button id="searchMicBtn" class="btn-icon btn-amber"
@@ -297,35 +296,35 @@
             <button class="btn-icon btn-blue" onclick="globalSearch()" title="Alle Kategorien durchsuchen">🌐</button>
             <button class="btn-icon btn-gray" onclick="clearSearch()" title="Suche löschen">✕</button>
         </div>
-        <!-- Globale Suchergebnisse -->
         <div id="globalResultsBox" class="global-results-box hidden"></div>
-
-        <!-- Export Zeitraum (direkt unter Suche) -->
-        <div class="export-line" style="border-top:none;padding-top:0;">
-            <span class="exp-icon">📅</span>
-            <input type="date" id="exportFrom">
-            <input type="date" id="exportTo">
-            <button class="btn-dark" onclick="exportRange()" title="Herunterladen">📥</button>
-            <button class="btn-red"  onclick="deleteRange()"  title="Zeitraum löschen">🗑️</button>
-        </div>
-        <div id="exportCatChips" style="display:flex;flex-wrap:wrap;gap:0.35rem;padding-bottom:0.35rem;"></div>
-
-        <!-- Export Tag -->
-        <div class="export-line">
-            <span class="exp-icon">📥 Tag</span>
-            <input type="date" id="exportDayDate">
-            <button class="btn-dark" onclick="exportDay()" title="Herunterladen">📥</button>
-        </div>
     </div>
 
-    <!-- DATE + CATEGORIES -->
+    <!-- EXPORT + DATE + CATEGORIES -->
     <div class="section">
-        <div class="date-row" style="margin-bottom:0.5rem;">
-            <span>📅</span>
-            <input type="date" id="entryDate" onchange="onDateChange()">
-            <button class="btn-icon btn-dark" onclick="openNewCatModal()" title="Neue Kategorie" style="font-size:0.85rem;flex:none;">+🏷️</button>
-            <button class="btn-icon btn-dark" onclick="deleteSelectedCategory()" title="Gewählte Kategorie löschen" style="font-size:0.85rem;flex:none;">−🏷️</button>
+        <!-- Zeile 1: Von–Bis -->
+        <div style="display:flex;gap:0.35rem;align-items:center;margin-bottom:0.35rem;">
+            <span class="exp-icon" style="min-width:1.5rem;">📅</span>
+            <input type="date" id="exportFrom" style="flex:1;margin-bottom:0;font-size:0.78rem;padding:0.3rem 0.25rem;">
+            <input type="date" id="exportTo"   style="flex:1;margin-bottom:0;font-size:0.78rem;padding:0.3rem 0.25rem;">
+            <button class="btn-dark btn-icon" onclick="exportRange()" title="Zeitraum herunterladen">📥</button>
+            <button class="btn-red  btn-icon" onclick="deleteRange()"  title="Zeitraum löschen">🗑️</button>
         </div>
+        <!-- Zeile 2: +/- Kategorie | Tag-Export -->
+        <div style="display:flex;gap:0.35rem;align-items:center;margin-bottom:0.6rem;">
+            <button class="btn-icon btn-dark" onclick="openNewCatModal()" title="Neue Kategorie" style="font-size:0.85rem;">+🏷️</button>
+            <button class="btn-icon btn-dark" onclick="deleteSelectedCategory()" title="Kategorie löschen" style="font-size:0.85rem;">−🏷️</button>
+            <span style="flex:1;"></span>
+            <span class="exp-icon" style="white-space:nowrap;">📥 Tag</span>
+            <input type="date" id="exportDayDate" style="flex:1;margin-bottom:0;font-size:0.78rem;padding:0.3rem 0.25rem;">
+            <button class="btn-dark btn-icon" onclick="exportDay()" title="Tag herunterladen">📥</button>
+            <button class="btn-red  btn-icon" onclick="deleteDay()"  title="Tag löschen">🗑️</button>
+        </div>
+        <!-- Eintragsdatum -->
+        <div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.5rem;">
+            <span>📅</span>
+            <input type="date" id="entryDate" onchange="onDateChange()" style="flex:1;margin-bottom:0;">
+        </div>
+        <!-- Blaue Kategorie-Chips -->
         <div id="categoryGrid" class="tag-grid"></div>
     </div>
 
@@ -1149,42 +1148,41 @@ function stopSearchMic() {
 }
 
 // ── Export ────────────────────────────────────────────────────────────────────
-let selectedExportCats = new Set(['__all__']);
+function updateExportSelect() { /* Kategoriechips für Export entfallen — blaue Chips werden genutzt */ }
 
-function updateExportSelect() {
-    const box = document.getElementById('exportCatChips');
-    const chips = [{ val: '__all__', label: 'Alle' }, ...categories.map(c => ({ val: c, label: c }))];
-    box.innerHTML = chips.map(({ val, label }) =>
-        `<button class="exp-cat-chip${selectedExportCats.has(val) ? ' active' : ''}"
-            onclick="toggleExportCat('${val}')">${label}</button>`
-    ).join('');
+function exportCatFilter(q) {
+    return selectedCategory ? q.eq('category', selectedCategory) : q;
 }
-
-function toggleExportCat(val) {
-    if (val === '__all__') {
-        selectedExportCats = new Set(['__all__']);
-    } else {
-        selectedExportCats.delete('__all__');
-        if (selectedExportCats.has(val)) {
-            selectedExportCats.delete(val);
-            if (selectedExportCats.size === 0) selectedExportCats.add('__all__');
-        } else {
-            selectedExportCats.add(val);
-        }
-    }
-    updateExportSelect();
+function exportCatLabel() {
+    return selectedCategory || 'Alle';
 }
 
 async function exportDay() {
     const datum = document.getElementById('exportDayDate').value;
-    if (!datum) { alert('Bitte Datum auswählen.'); return; }
+    if (!datum) { showToast('Bitte Datum auswählen.', true); return; }
     try {
-        const { data, error } = await sb.from('tagesnotizen_entries')
-            .select('*').eq('datum', datum).order('category');
+        let q = sb.from('tagesnotizen_entries').select('*').eq('datum', datum);
+        q = exportCatFilter(q);
+        const { data, error } = await q.order('category');
         if (error) throw error;
-        if (!data || data.length === 0) { alert(`Keine Einträge für ${datum}.`); return; }
-        downloadExport(buildTxt(`Alle Kategorien · ${datum}`, data), `tagesnotizen-${datum}.txt`);
-    } catch (e) { alert('Fehler: ' + e.message); }
+        if (!data || data.length === 0) { showToast('Keine Einträge für diesen Tag.', true); return; }
+        downloadExport(buildTxt(`${exportCatLabel()} · ${datum}`, data), `tagesnotizen-${exportCatLabel()}-${datum}.txt`);
+    } catch (e) { showToast('Fehler: ' + e.message, true); }
+}
+
+async function deleteDay() {
+    const datum = document.getElementById('exportDayDate').value;
+    if (!datum) { showToast('Bitte Datum auswählen.', true); return; }
+    const ok = confirm(`Wirklich alle Einträge vom ${datum} (${exportCatLabel()}) unwiderruflich löschen?`);
+    if (!ok) return;
+    try {
+        let q = sb.from('tagesnotizen_entries').delete().eq('datum', datum);
+        q = exportCatFilter(q);
+        const { error } = await q;
+        if (error) throw error;
+        showToast('✅ Tag gelöscht.');
+        await renderEntries();
+    } catch (e) { showToast('Fehler: ' + e.message, true); }
 }
 
 async function exportRange() {
@@ -1193,15 +1191,12 @@ async function exportRange() {
     if (!from || !to) { showToast('Bitte Von- und Bis-Datum auswählen.', true); return; }
     try {
         let q = sb.from('tagesnotizen_entries').select('*').gte('datum', from).lte('datum', to);
-        if (!selectedExportCats.has('__all__') && selectedExportCats.size > 0) {
-            q = q.in('category', [...selectedExportCats]);
-        }
+        q = exportCatFilter(q);
         const { data, error } = await q.order('datum').order('category');
         if (error) throw error;
         if (!data || data.length === 0) { showToast('Keine Einträge für diesen Zeitraum.', true); return; }
-        const label = selectedExportCats.has('__all__') ? 'Alle' : [...selectedExportCats].join('+');
-        downloadExport(buildTxt(`${label} · ${from} – ${to}`, data),
-            `tagesnotizen-${label}-${from}-${to}.txt`);
+        const label = exportCatLabel();
+        downloadExport(buildTxt(`${label} · ${from} – ${to}`, data), `tagesnotizen-${label}-${from}-${to}.txt`);
     } catch (e) { showToast('Fehler: ' + e.message, true); }
 }
 
@@ -1209,14 +1204,11 @@ async function deleteRange() {
     const from = document.getElementById('exportFrom').value;
     const to   = document.getElementById('exportTo').value;
     if (!from || !to) { showToast('Bitte Von- und Bis-Datum auswählen.', true); return; }
-    const catLabel = selectedExportCats.has('__all__') ? 'alle Kategorien' : [...selectedExportCats].join(', ');
-    const ok = confirm(`Wirklich alle Einträge vom ${from} bis ${to} (${catLabel}) unwiderruflich löschen?`);
+    const ok = confirm(`Wirklich alle Einträge vom ${from} bis ${to} (${exportCatLabel()}) unwiderruflich löschen?`);
     if (!ok) return;
     try {
         let q = sb.from('tagesnotizen_entries').delete().gte('datum', from).lte('datum', to);
-        if (!selectedExportCats.has('__all__') && selectedExportCats.size > 0) {
-            q = q.in('category', [...selectedExportCats]);
-        }
+        q = exportCatFilter(q);
         const { error } = await q;
         if (error) throw error;
         showToast('✅ Einträge gelöscht.');
