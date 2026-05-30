@@ -261,6 +261,21 @@
 <div id="toast"></div>
 <div class="container">
 
+    <!-- CATEGORY PICKER MODAL (für Export/Löschen) -->
+    <div id="catPickerModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <span class="modal-title" id="catPickerTitle">Kategorien wählen</span>
+                <button class="modal-close" onclick="closeCatPicker()">✕</button>
+            </div>
+            <div id="catPickerList" style="display:flex;flex-direction:column;gap:0.5rem;margin-bottom:1rem;"></div>
+            <div class="btn-row">
+                <button class="btn-gray" onclick="closeCatPicker()">Abbrechen</button>
+                <button class="btn-blue" onclick="confirmCatPicker()">OK</button>
+            </div>
+        </div>
+    </div>
+
     <!-- NEW CATEGORY MODAL -->
     <div id="newCatModal" class="modal">
         <div class="modal-content">
@@ -1163,36 +1178,88 @@ function stopSearchMic() {
 }
 
 // ── Export ────────────────────────────────────────────────────────────────────
-function updateExportSelect() { /* Chips werden über renderCategories() aktualisiert */ }
+function updateExportSelect() {}
 
-function exportCatFilter(q) {
-    return selectedCategory ? q.eq('category', selectedCategory) : q;
+let _catPickerResolve = null;
+
+function openCatPicker(title) {
+    return new Promise(resolve => {
+        _catPickerResolve = resolve;
+        document.getElementById('catPickerTitle').textContent = title;
+        const list = document.getElementById('catPickerList');
+        const allChecked = !selectedCategory;
+        list.innerHTML = `
+            <label style="display:flex;align-items:center;gap:0.5rem;font-weight:700;">
+                <input type="checkbox" id="cpAll" ${allChecked ? 'checked' : ''}
+                    onchange="onCpAllChange(this)"> Alle Kategorien
+            </label>
+            <hr style="border-color:#475569;margin:0.25rem 0;">
+            ${categories.map(c => `
+            <label style="display:flex;align-items:center;gap:0.5rem;">
+                <input type="checkbox" class="cp-cat" value="${c}"
+                    ${selectedCategory === c || (!selectedCategory) ? 'checked' : ''}>
+                #${c}
+            </label>`).join('')}`;
+        document.getElementById('catPickerModal').classList.add('active');
+    });
 }
-function exportCatLabel() {
-    return selectedCategory || 'Alle';
+
+function onCpAllChange(cb) {
+    document.querySelectorAll('.cp-cat').forEach(c => c.checked = cb.checked);
+}
+
+function closeCatPicker() {
+    document.getElementById('catPickerModal').classList.remove('active');
+    if (_catPickerResolve) { _catPickerResolve(null); _catPickerResolve = null; }
+}
+
+function confirmCatPicker() {
+    document.getElementById('catPickerModal').classList.remove('active');
+    const allCb = document.getElementById('cpAll');
+    let cats;
+    if (allCb && allCb.checked) {
+        cats = null; // alle
+    } else {
+        const checked = [...document.querySelectorAll('.cp-cat:checked')].map(c => c.value);
+        cats = checked.length ? checked : null;
+    }
+    if (_catPickerResolve) { _catPickerResolve(cats); _catPickerResolve = null; }
+}
+
+function exportCatFilter(q, cats) {
+    if (!cats) return q;
+    return cats.length === 1 ? q.eq('category', cats[0]) : q.in('category', cats);
+}
+function exportCatLabel(cats) {
+    return cats ? cats.join('+') : 'Alle';
 }
 
 async function exportDay() {
     const datum = document.getElementById('exportDayDate').value;
     if (!datum) { showToast('Bitte Datum auswählen.', true); return; }
+    const cats = await openCatPicker('Welche Kategorien herunterladen?');
+    if (cats === undefined) return; // Abbrechen
     try {
         let q = sb.from('tagesnotizen_entries').select('*').eq('datum', datum);
-        q = exportCatFilter(q);
+        q = exportCatFilter(q, cats);
         const { data, error } = await q.order('category');
         if (error) throw error;
         if (!data || data.length === 0) { showToast('Keine Einträge für diesen Tag.', true); return; }
-        downloadExport(buildTxt(`${exportCatLabel()} · ${datum}`, data), `tagesnotizen-${exportCatLabel()}-${datum}.txt`);
+        const label = exportCatLabel(cats);
+        downloadExport(buildTxt(`${label} · ${datum}`, data), `tagesnotizen-${label}-${datum}.txt`);
     } catch (e) { showToast('Fehler: ' + e.message, true); }
 }
 
 async function deleteDay() {
     const datum = document.getElementById('exportDayDate').value;
     if (!datum) { showToast('Bitte Datum auswählen.', true); return; }
-    const ok = confirm(`Wirklich alle Einträge vom ${datum} (${exportCatLabel()}) unwiderruflich löschen?`);
+    const cats = await openCatPicker('Welche Kategorien löschen?');
+    if (cats === undefined) return;
+    const ok = confirm(`Wirklich Einträge vom ${datum} (${exportCatLabel(cats)}) löschen?`);
     if (!ok) return;
     try {
         let q = sb.from('tagesnotizen_entries').delete().eq('datum', datum);
-        q = exportCatFilter(q);
+        q = exportCatFilter(q, cats);
         const { error } = await q;
         if (error) throw error;
         showToast('✅ Tag gelöscht.');
@@ -1204,13 +1271,15 @@ async function exportRange() {
     const from = document.getElementById('exportFrom').value;
     const to   = document.getElementById('exportTo').value;
     if (!from || !to) { showToast('Bitte Von- und Bis-Datum auswählen.', true); return; }
+    const cats = await openCatPicker('Welche Kategorien herunterladen?');
+    if (cats === undefined) return;
     try {
         let q = sb.from('tagesnotizen_entries').select('*').gte('datum', from).lte('datum', to);
-        q = exportCatFilter(q);
+        q = exportCatFilter(q, cats);
         const { data, error } = await q.order('datum').order('category');
         if (error) throw error;
         if (!data || data.length === 0) { showToast('Keine Einträge für diesen Zeitraum.', true); return; }
-        const label = exportCatLabel();
+        const label = exportCatLabel(cats);
         downloadExport(buildTxt(`${label} · ${from} – ${to}`, data), `tagesnotizen-${label}-${from}-${to}.txt`);
     } catch (e) { showToast('Fehler: ' + e.message, true); }
 }
@@ -1219,11 +1288,13 @@ async function deleteRange() {
     const from = document.getElementById('exportFrom').value;
     const to   = document.getElementById('exportTo').value;
     if (!from || !to) { showToast('Bitte Von- und Bis-Datum auswählen.', true); return; }
-    const ok = confirm(`Wirklich alle Einträge vom ${from} bis ${to} (${exportCatLabel()}) unwiderruflich löschen?`);
+    const cats = await openCatPicker('Welche Kategorien löschen?');
+    if (cats === undefined) return;
+    const ok = confirm(`Wirklich Einträge vom ${from} bis ${to} (${exportCatLabel(cats)}) löschen?`);
     if (!ok) return;
     try {
         let q = sb.from('tagesnotizen_entries').delete().gte('datum', from).lte('datum', to);
-        q = exportCatFilter(q);
+        q = exportCatFilter(q, cats);
         const { error } = await q;
         if (error) throw error;
         showToast('✅ Einträge gelöscht.');
