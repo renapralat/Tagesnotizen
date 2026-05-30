@@ -309,6 +309,8 @@
             <button class="btn-dark btn-icon" onclick="exportRange()" title="Zeitraum herunterladen">📥</button>
             <button class="btn-red  btn-icon" onclick="deleteRange()"  title="Zeitraum löschen">🗑️</button>
         </div>
+        <!-- Export-Kategorie-Auswahl (Alle + Mehrfachauswahl) -->
+        <div id="exportCatChips" style="display:flex;flex-wrap:wrap;gap:0.3rem;margin-bottom:0.35rem;"></div>
         <!-- Zeile 2: +/- Kategorie | Tag-Export -->
         <div style="display:flex;gap:0.35rem;align-items:center;margin-bottom:0.5rem;">
             <button class="btn-icon btn-dark" onclick="openNewCatModal()" title="Neue Kategorie" style="font-size:0.85rem;">+🏷️</button>
@@ -484,14 +486,6 @@ async function loadCategories() {
 function renderCategories() {
     const grid = document.getElementById('categoryGrid');
     grid.innerHTML = '';
-    // "Alle"-Chip für Export (kein Mikro)
-    const alleBtn = document.createElement('button');
-    alleBtn.className = 'tag-btn' + (!selectedCategory ? ' active' : '');
-    alleBtn.textContent = 'Alle';
-    alleBtn.style.cssText = 'background:' + (!selectedCategory ? '#475569' : '#334155') + ';';
-    alleBtn.onclick = () => selectCategory(null);
-    grid.appendChild(alleBtn);
-    // Kategorie-Chips
     categories.forEach(cat => {
         const btn = document.createElement('button');
         btn.className = 'tag-btn' + (cat === selectedCategory ? ' active' : '');
@@ -504,20 +498,13 @@ function renderCategories() {
 function selectCategory(cat) {
     selectedCategory = cat;
     renderCategories();
-    if (cat) {
-        document.getElementById('currentTagDisplay').textContent = '#' + cat;
-        document.getElementById('inputSection').classList.remove('hidden');
-        document.getElementById('summarySection').classList.add('hidden');
-        currentSummary = '';
-        document.getElementById('inputText').value = '';
-        buffer = [];
-        renderBuffer();
-    } else {
-        // "Alle" gewählt: Eingabe ausblenden
-        document.getElementById('inputSection').classList.add('hidden');
-        document.getElementById('summarySection').classList.add('hidden');
-        document.getElementById('currentTagDisplay').textContent = '—';
-    }
+    document.getElementById('currentTagDisplay').textContent = '#' + cat;
+    document.getElementById('inputSection').classList.remove('hidden');
+    document.getElementById('summarySection').classList.add('hidden');
+    currentSummary = '';
+    document.getElementById('inputText').value = '';
+    buffer = [];
+    renderBuffer();
     renderEntries();
 }
 
@@ -1163,13 +1150,40 @@ function stopSearchMic() {
 }
 
 // ── Export ────────────────────────────────────────────────────────────────────
-function updateExportSelect() {}
+let selectedExportCats = new Set(['__all__']);
+
+function updateExportSelect() {
+    const box = document.getElementById('exportCatChips');
+    if (!box) return;
+    const chips = [{ val: '__all__', label: 'Alle' }, ...categories.map(c => ({ val: c, label: c }))];
+    box.innerHTML = chips.map(({ val, label }) =>
+        `<button class="exp-cat-chip${selectedExportCats.has(val) ? ' active' : ''}"
+            onclick="toggleExportCat('${val}')">${label}</button>`
+    ).join('');
+}
+
+function toggleExportCat(val) {
+    if (val === '__all__') {
+        selectedExportCats = new Set(['__all__']);
+    } else {
+        selectedExportCats.delete('__all__');
+        if (selectedExportCats.has(val)) {
+            selectedExportCats.delete(val);
+            if (selectedExportCats.size === 0) selectedExportCats.add('__all__');
+        } else {
+            selectedExportCats.add(val);
+        }
+    }
+    updateExportSelect();
+}
 
 function exportCatFilter(q) {
-    return selectedCategory ? q.eq('category', selectedCategory) : q;
+    if (selectedExportCats.has('__all__')) return q;
+    const cats = [...selectedExportCats];
+    return cats.length === 1 ? q.eq('category', cats[0]) : q.in('category', cats);
 }
 function exportCatLabel() {
-    return selectedCategory || 'Alle Kategorien';
+    return selectedExportCats.has('__all__') ? 'Alle' : [...selectedExportCats].join('+');
 }
 
 async function exportDay() {
@@ -1230,15 +1244,13 @@ async function deleteRange() {
 async function exportDay() {
     const datum = document.getElementById('exportDayDate').value;
     if (!datum) { showToast('Bitte Datum auswählen.', true); return; }
-    const cats = await openCatPicker('Welche Kategorien herunterladen?');
-    if (cats === undefined) return; // Abbrechen
     try {
         let q = sb.from('tagesnotizen_entries').select('*').eq('datum', datum);
-        q = exportCatFilter(q, cats);
+        q = exportCatFilter(q);
         const { data, error } = await q.order('category');
         if (error) throw error;
         if (!data || data.length === 0) { showToast('Keine Einträge für diesen Tag.', true); return; }
-        const label = exportCatLabel(cats);
+        const label = exportCatLabel();
         downloadExport(buildTxt(`${label} · ${datum}`, data), `tagesnotizen-${label}-${datum}.txt`);
     } catch (e) { showToast('Fehler: ' + e.message, true); }
 }
@@ -1246,13 +1258,11 @@ async function exportDay() {
 async function deleteDay() {
     const datum = document.getElementById('exportDayDate').value;
     if (!datum) { showToast('Bitte Datum auswählen.', true); return; }
-    const cats = await openCatPicker('Welche Kategorien löschen?');
-    if (cats === undefined) return;
-    const ok = confirm(`Wirklich Einträge vom ${datum} (${exportCatLabel(cats)}) löschen?`);
+    const ok = confirm(`Wirklich Einträge vom ${datum} (${exportCatLabel()}) löschen?`);
     if (!ok) return;
     try {
         let q = sb.from('tagesnotizen_entries').delete().eq('datum', datum);
-        q = exportCatFilter(q, cats);
+        q = exportCatFilter(q);
         const { error } = await q;
         if (error) throw error;
         showToast('✅ Tag gelöscht.');
@@ -1264,15 +1274,13 @@ async function exportRange() {
     const from = document.getElementById('exportFrom').value;
     const to   = document.getElementById('exportTo').value;
     if (!from || !to) { showToast('Bitte Von- und Bis-Datum auswählen.', true); return; }
-    const cats = await openCatPicker('Welche Kategorien herunterladen?');
-    if (cats === undefined) return;
     try {
         let q = sb.from('tagesnotizen_entries').select('*').gte('datum', from).lte('datum', to);
-        q = exportCatFilter(q, cats);
+        q = exportCatFilter(q);
         const { data, error } = await q.order('datum').order('category');
         if (error) throw error;
         if (!data || data.length === 0) { showToast('Keine Einträge für diesen Zeitraum.', true); return; }
-        const label = exportCatLabel(cats);
+        const label = exportCatLabel();
         downloadExport(buildTxt(`${label} · ${from} – ${to}`, data), `tagesnotizen-${label}-${from}-${to}.txt`);
     } catch (e) { showToast('Fehler: ' + e.message, true); }
 }
@@ -1281,13 +1289,11 @@ async function deleteRange() {
     const from = document.getElementById('exportFrom').value;
     const to   = document.getElementById('exportTo').value;
     if (!from || !to) { showToast('Bitte Von- und Bis-Datum auswählen.', true); return; }
-    const cats = await openCatPicker('Welche Kategorien löschen?');
-    if (cats === undefined) return;
-    const ok = confirm(`Wirklich Einträge vom ${from} bis ${to} (${exportCatLabel(cats)}) löschen?`);
+    const ok = confirm(`Wirklich Einträge vom ${from} bis ${to} (${exportCatLabel()}) löschen?`);
     if (!ok) return;
     try {
         let q = sb.from('tagesnotizen_entries').delete().gte('datum', from).lte('datum', to);
-        q = exportCatFilter(q, cats);
+        q = exportCatFilter(q);
         const { error } = await q;
         if (error) throw error;
         showToast('✅ Einträge gelöscht.');
