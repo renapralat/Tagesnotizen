@@ -288,14 +288,16 @@
 
     <!-- SEARCH, EXPORT & CATEGORY MANAGEMENT -->
     <div class="section">
-        <!-- Suche mit Mikrofon -->
-        <div class="search-row" style="display:flex;gap:0.5rem;align-items:center;margin-bottom:0.75rem;">
+        <!-- Suche + Kategorie-Verwaltung in einer Zeile -->
+        <div class="search-row" style="display:flex;gap:0.4rem;align-items:center;margin-bottom:0.75rem;">
             <input type="text" id="searchInput" placeholder="🔍 Suchen…"
                    oninput="filterEntries()" style="margin-bottom:0;flex:1;">
             <button id="searchMicBtn" class="btn-icon btn-amber"
                     onclick="toggleSearchMic()" title="Sprachsuche">🎤</button>
             <button class="btn-icon btn-blue" onclick="globalSearch()" title="Alle Kategorien durchsuchen">🌐</button>
             <button class="btn-icon btn-gray" onclick="clearSearch()" title="Suche löschen">✕</button>
+            <button class="btn-icon btn-dark" onclick="openNewCatModal()" title="Neue Kategorie" style="font-size:0.85rem;">+🏷️</button>
+            <button class="btn-icon btn-dark" onclick="deleteSelectedCategory()" title="Gewählte Kategorie löschen" style="font-size:0.85rem;">−🏷️</button>
         </div>
         <!-- Globale Suchergebnisse -->
         <div id="globalResultsBox" class="global-results-box hidden"></div>
@@ -317,11 +319,6 @@
         </div>
         <div id="exportCatChips" style="display:flex;flex-wrap:wrap;gap:0.35rem;margin-bottom:0.5rem;"></div>
 
-        <!-- Kategorie hinzufügen / löschen -->
-        <div class="export-line">
-            <button class="btn-green" onclick="openNewCatModal()">+ Kategorie</button>
-            <button class="btn-red"   onclick="deleteSelectedCategory()">✕ Löschen</button>
-        </div>
     </div>
 
     <!-- DATE + CATEGORIES -->
