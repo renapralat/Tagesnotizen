@@ -297,7 +297,7 @@
     <!-- SEARCH -->
     <div class="section">
         <div style="display:flex;gap:0.4rem;align-items:center;">
-            <input type="text" id="searchInput" placeholder="🔍 Suchen…"
+            <input type="text" id="searchInput" placeholder="🔍 Suchen…  Genau: Ei · *Endung · Anfang* · *überall*"
                    oninput="filterEntries()" style="margin-bottom:0;flex:1;">
             <button id="searchMicBtn" class="btn-icon btn-amber"
                     onclick="toggleSearchMic()" title="Sprachsuche">🎤</button>
@@ -305,9 +305,6 @@
             <button class="btn-icon btn-gray" onclick="clearSearch()" title="Suche löschen">✕</button>
         </div>
         <div id="globalResultsBox" class="global-results-box hidden"></div>
-        <div style="font-size:0.72rem;color:#64748b;margin-top:0.25rem;">
-            Genau: <b style="color:#94a3b8;">Ei</b> &nbsp;·&nbsp; Endung: <b style="color:#94a3b8;">*fee</b> &nbsp;·&nbsp; Anfang: <b style="color:#94a3b8;">Ka*</b> &nbsp;·&nbsp; Überall: <b style="color:#94a3b8;">*kaff*</b>
-        </div>
     </div>
 
     <!-- EXPORT + DATE + CATEGORIES -->
