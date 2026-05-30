@@ -180,6 +180,12 @@
             font-size: 0.78rem; padding: 0.3rem 0.25rem;
         }
         .export-line button { flex: none; padding: 0.3rem 0.55rem; font-size: 0.9rem; }
+        .exp-cat-chip {
+            padding: 0.2rem 0.55rem; border-radius: 9999px; font-size: 0.78rem;
+            font-weight: 600; background: #475569; color: #fff; cursor: pointer;
+            border: none; transition: background 0.15s;
+        }
+        .exp-cat-chip.active { background: #2563eb; }
 
         .section-title { font-size: 1.05rem; font-weight: 700; margin-bottom: 1rem; color: #e2e8f0; }
 
@@ -301,14 +307,14 @@
             <button class="btn-dark" onclick="exportDay()" title="Herunterladen">📥</button>
         </div>
 
-        <!-- Export Zeitraum (eine Zeile) -->
+        <!-- Export Zeitraum -->
         <div class="export-line">
             <span class="exp-icon">📅</span>
             <input type="date" id="exportFrom">
             <input type="date" id="exportTo">
-            <select id="exportCategory"></select>
             <button class="btn-dark" onclick="exportRange()" title="Herunterladen">📥</button>
         </div>
+        <div id="exportCatChips" style="display:flex;flex-wrap:wrap;gap:0.35rem;margin-bottom:0.5rem;"></div>
 
         <!-- Kategorie hinzufügen / löschen -->
         <div class="export-line">
@@ -429,6 +435,12 @@ let speakResumeTimer = null;  // workaround for Android auto-pause bug
 window.addEventListener('DOMContentLoaded', async () => {
     document.getElementById('entryDate').value     = selectedDate;
     document.getElementById('exportDayDate').value = selectedDate;
+    // Aktuellen Monat vorbelegen
+    const now = new Date();
+    const y = now.getFullYear(), m = pad(now.getMonth() + 1);
+    const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+    document.getElementById('exportFrom').value = `${y}-${m}-01`;
+    document.getElementById('exportTo').value   = `${y}-${m}-${pad(lastDay)}`;
     loadKiPat();
     await loadCategories();
 });
@@ -1140,10 +1152,30 @@ function stopSearchMic() {
 }
 
 // ── Export ────────────────────────────────────────────────────────────────────
+let selectedExportCats = new Set(['__all__']);
+
 function updateExportSelect() {
-    document.getElementById('exportCategory').innerHTML =
-        '<option value="" disabled selected>Kategorie…</option>' +
-        categories.map(c => `<option value="${c}">${c}</option>`).join('');
+    const box = document.getElementById('exportCatChips');
+    const chips = [{ val: '__all__', label: 'Alle' }, ...categories.map(c => ({ val: c, label: c }))];
+    box.innerHTML = chips.map(({ val, label }) =>
+        `<button class="exp-cat-chip${selectedExportCats.has(val) ? ' active' : ''}"
+            onclick="toggleExportCat('${val}')">${label}</button>`
+    ).join('');
+}
+
+function toggleExportCat(val) {
+    if (val === '__all__') {
+        selectedExportCats = new Set(['__all__']);
+    } else {
+        selectedExportCats.delete('__all__');
+        if (selectedExportCats.has(val)) {
+            selectedExportCats.delete(val);
+            if (selectedExportCats.size === 0) selectedExportCats.add('__all__');
+        } else {
+            selectedExportCats.add(val);
+        }
+    }
+    updateExportSelect();
 }
 
 async function exportDay() {
@@ -1161,19 +1193,19 @@ async function exportDay() {
 async function exportRange() {
     const from = document.getElementById('exportFrom').value;
     const to   = document.getElementById('exportTo').value;
-    const cat  = document.getElementById('exportCategory').value;
-    if (!from || !to) { alert('Bitte Von- und Bis-Datum auswählen.'); return; }
-    if (!cat) { alert('Bitte noch eine Kategorie auswählen.'); return; }
+    if (!from || !to) { showToast('Bitte Von- und Bis-Datum auswählen.', true); return; }
     try {
-        let q = sb.from('tagesnotizen_entries')
-            .select('*').gte('datum', from).lte('datum', to).eq('category', cat);
+        let q = sb.from('tagesnotizen_entries').select('*').gte('datum', from).lte('datum', to);
+        if (!selectedExportCats.has('__all__') && selectedExportCats.size > 0) {
+            q = q.in('category', [...selectedExportCats]);
+        }
         const { data, error } = await q.order('datum').order('category');
         if (error) throw error;
-        if (!data || data.length === 0) { alert('Keine Einträge für diesen Zeitraum.'); return; }
-        const label = cat || 'Alle';
+        if (!data || data.length === 0) { showToast('Keine Einträge für diesen Zeitraum.', true); return; }
+        const label = selectedExportCats.has('__all__') ? 'Alle' : [...selectedExportCats].join('+');
         downloadExport(buildTxt(`${label} · ${from} – ${to}`, data),
             `tagesnotizen-${label}-${from}-${to}.txt`);
-    } catch (e) { alert('Fehler: ' + e.message); }
+    } catch (e) { showToast('Fehler: ' + e.message, true); }
 }
 
 function buildTxt(title, rows) {
