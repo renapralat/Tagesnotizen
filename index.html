@@ -309,13 +309,13 @@
             <button class="btn-dark btn-icon" onclick="exportRange()" title="Zeitraum herunterladen">📥</button>
             <button class="btn-red  btn-icon" onclick="deleteRange()"  title="Zeitraum löschen">🗑️</button>
         </div>
-        <!-- Export-Kategorie-Auswahl (Alle + Mehrfachauswahl) -->
-        <div id="exportCatChips" style="display:flex;flex-wrap:wrap;gap:0.3rem;margin-bottom:0.35rem;"></div>
-        <!-- Zeile 2: +/- Kategorie | Tag-Export -->
+        <!-- Zeile 2: +/- Kategorie | Kategorie-Auswahl | Tag-Export -->
         <div style="display:flex;gap:0.35rem;align-items:center;margin-bottom:0.5rem;">
             <button class="btn-icon btn-dark" onclick="openNewCatModal()" title="Neue Kategorie" style="font-size:0.85rem;">+🏷️</button>
             <button class="btn-icon btn-dark" onclick="deleteSelectedCategory()" title="Kategorie löschen" style="font-size:0.85rem;">−🏷️</button>
-            <span style="flex:1;"></span>
+            <select id="exportCatSelect" style="flex:1;margin-bottom:0;font-size:0.78rem;padding:0.3rem 0.25rem;background:#1e293b;color:#f1f5f9;border:1px solid #334155;border-radius:0.5rem;">
+                <option value="__all__">Alle</option>
+            </select>
             <span class="exp-icon" style="white-space:nowrap;">📥 Tag</span>
             <input type="date" id="exportDayDate" style="flex:1;margin-bottom:0;font-size:0.78rem;padding:0.3rem 0.25rem;">
             <button class="btn-dark btn-icon" onclick="exportDay()" title="Tag herunterladen">📥</button>
@@ -1164,40 +1164,23 @@ function stopSearchMic() {
 }
 
 // ── Export ────────────────────────────────────────────────────────────────────
-let selectedExportCats = new Set(['__all__']);
-
 function updateExportSelect() {
-    const box = document.getElementById('exportCatChips');
-    if (!box) return;
-    const chips = [{ val: '__all__', label: 'Alle' }, ...categories.map(c => ({ val: c, label: c }))];
-    box.innerHTML = chips.map(({ val, label }) =>
-        `<button class="exp-cat-chip${selectedExportCats.has(val) ? ' active' : ''}"
-            onclick="toggleExportCat('${val}')">${label}</button>`
-    ).join('');
-}
-
-function toggleExportCat(val) {
-    if (val === '__all__') {
-        selectedExportCats = new Set(['__all__']);
-    } else {
-        selectedExportCats.delete('__all__');
-        if (selectedExportCats.has(val)) {
-            selectedExportCats.delete(val);
-            if (selectedExportCats.size === 0) selectedExportCats.add('__all__');
-        } else {
-            selectedExportCats.add(val);
-        }
-    }
-    updateExportSelect();
+    const sel = document.getElementById('exportCatSelect');
+    if (!sel) return;
+    const current = sel.value;
+    sel.innerHTML = '<option value="__all__">Alle</option>' +
+        categories.map(c => `<option value="${c}">${c}</option>`).join('');
+    if ([...sel.options].some(o => o.value === current)) sel.value = current;
 }
 
 function exportCatFilter(q) {
-    if (selectedExportCats.has('__all__')) return q;
-    const cats = [...selectedExportCats];
-    return cats.length === 1 ? q.eq('category', cats[0]) : q.in('category', cats);
+    const val = document.getElementById('exportCatSelect').value;
+    if (val === '__all__') return q;
+    return q.eq('category', val);
 }
 function exportCatLabel() {
-    return selectedExportCats.has('__all__') ? 'Alle' : [...selectedExportCats].join('+');
+    const val = document.getElementById('exportCatSelect').value;
+    return val === '__all__' ? 'Alle' : val;
 }
 
 async function exportDay() {
