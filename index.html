@@ -313,6 +313,7 @@
             <input type="date" id="exportFrom">
             <input type="date" id="exportTo">
             <button class="btn-dark" onclick="exportRange()" title="Herunterladen">📥</button>
+            <button class="btn-red"  onclick="deleteRange()"  title="Zeitraum löschen">🗑️</button>
         </div>
         <div id="exportCatChips" style="display:flex;flex-wrap:wrap;gap:0.35rem;margin-bottom:0.5rem;"></div>
 
@@ -1205,6 +1206,25 @@ async function exportRange() {
         const label = selectedExportCats.has('__all__') ? 'Alle' : [...selectedExportCats].join('+');
         downloadExport(buildTxt(`${label} · ${from} – ${to}`, data),
             `tagesnotizen-${label}-${from}-${to}.txt`);
+    } catch (e) { showToast('Fehler: ' + e.message, true); }
+}
+
+async function deleteRange() {
+    const from = document.getElementById('exportFrom').value;
+    const to   = document.getElementById('exportTo').value;
+    if (!from || !to) { showToast('Bitte Von- und Bis-Datum auswählen.', true); return; }
+    const catLabel = selectedExportCats.has('__all__') ? 'alle Kategorien' : [...selectedExportCats].join(', ');
+    const ok = confirm(`Wirklich alle Einträge vom ${from} bis ${to} (${catLabel}) unwiderruflich löschen?`);
+    if (!ok) return;
+    try {
+        let q = sb.from('tagesnotizen_entries').delete().gte('datum', from).lte('datum', to);
+        if (!selectedExportCats.has('__all__') && selectedExportCats.size > 0) {
+            q = q.in('category', [...selectedExportCats]);
+        }
+        const { error } = await q;
+        if (error) throw error;
+        showToast('✅ Einträge gelöscht.');
+        await renderEntries();
     } catch (e) { showToast('Fehler: ' + e.message, true); }
 }
 
