@@ -1113,11 +1113,12 @@ function startSearchMic() {
     searchRecognition.onresult = (ev) => {
         document.getElementById('searchInput').value = ev.results[0][0].transcript;
         filterEntries();
-        globalSearch();
     };
     searchRecognition.onend = () => {
         isSearchRecording = false;
         document.getElementById('searchMicBtn').classList.remove('recording');
+        const q = document.getElementById('searchInput').value.trim();
+        if (q) globalSearch();
     };
     searchRecognition.onerror = () => {
         isSearchRecording = false;
