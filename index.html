@@ -345,6 +345,9 @@
             <div id="bufferList"></div>
         </div>
 
+        <div style="display:flex; margin-bottom:0.3rem;">
+            <button id="headingsToggle" onclick="toggleHeadings()" class="exp-cat-chip active">≡ Mit Überschriften</button>
+        </div>
         <div class="btn-row">
             <button class="btn-green btn-icon" onclick="addToBuffer()"
                     title="Zwischenspeichern" style="font-size:1.4rem;padding:0.3rem 0.8rem;">+</button>
@@ -860,6 +863,14 @@ function collectText() {
     return all.join('\n\n');
 }
 
+let summaryWithHeadings = true;
+function toggleHeadings() {
+    summaryWithHeadings = !summaryWithHeadings;
+    const btn = document.getElementById('headingsToggle');
+    btn.textContent = summaryWithHeadings ? '≡ Mit Überschriften' : '¶ Fließtext';
+    btn.classList.toggle('active', summaryWithHeadings);
+}
+
 async function summarizeText() {
     // Datum immer frisch aus dem Eingabefeld lesen, falls es nach editEntry() geändert wurde
     selectedDate = document.getElementById('entryDate').value;
@@ -883,6 +894,9 @@ async function summarizeText() {
             .select('text').eq('datum', selectedDate).eq('category', selectedCategory)
             .maybeSingle();
 
+        const structure = summaryWithHeadings
+            ? 'Gliedere den fertigen Text in kurze thematische Absaetze (z.B. Morgen, Einkauf, Mittag, Besuch). Jeder Absatz hat eine fette Ueberschrift. '
+            : 'Schreibe einen zusammenhaengenden Fliesstext ohne Ueberschriften und ohne fette Hervorhebungen. Trenne verschiedene Gedanken durch Leerzeilen. ';
         const sysPrompt = 'Du bist ein persoenlicher Tagebuch-Assistent. ' +
             'Die schreibende Person verwendet "ich" fuer sich selbst. ' +
             '"ich" ist NIEMALS ein Name und wird NIEMALS durch einen Namen ersetzt. ' +
@@ -892,8 +906,8 @@ async function summarizeText() {
             'Beispiel: "Ich habe Norbert abgeholt" = ICH habe gehandelt, Norbert wurde abgeholt — niemals umgekehrt. ' +
             'Behalte "wir" wenn beide zusammen handelten. Veraendere die Perspektive niemals. ' +
             'Behalte alle Namen, Orte und konkreten Details unveraendert. ' +
-            'Gliedere den fertigen Text in kurze thematische Absaetze (z.B. Morgen, Einkauf, Mittag, Besuch). ' +
-            'Jeder Absatz hat eine fette Ueberschrift. Antworte nur mit dem fertigen Text, ohne Einleitung.';
+            structure +
+            'Antworte nur mit dem fertigen Text, ohne Einleitung.';
         let prompt;
         if (existing && existing.text.trim()) {
             prompt = 'Fasse diese zwei Tagebucheintraege desselben Tages zu einem zusammen. ' +
