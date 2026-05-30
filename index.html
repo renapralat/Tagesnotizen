@@ -1195,61 +1195,6 @@ async function exportDay() {
         const { data, error } = await q.order('category');
         if (error) throw error;
         if (!data || data.length === 0) { showToast('Keine Einträge für diesen Tag.', true); return; }
-        downloadExport(buildTxt(`${exportCatLabel()} · ${datum}`, data), `tagesnotizen-${exportCatLabel()}-${datum}.txt`);
-    } catch (e) { showToast('Fehler: ' + e.message, true); }
-}
-
-async function deleteDay() {
-    const datum = document.getElementById('exportDayDate').value;
-    if (!datum) { showToast('Bitte Datum auswählen.', true); return; }
-    if (!confirm(`Einträge vom ${datum} (${exportCatLabel()}) wirklich löschen?`)) return;
-    try {
-        const { error } = await exportCatFilter(
-            sb.from('tagesnotizen_entries').delete().eq('datum', datum));
-        if (error) throw error;
-        showToast('✅ Tag gelöscht.');
-        await renderEntries();
-    } catch (e) { showToast('Fehler: ' + e.message, true); }
-}
-
-async function exportRange() {
-    const from = document.getElementById('exportFrom').value;
-    const to   = document.getElementById('exportTo').value;
-    if (!from || !to) { showToast('Bitte Von- und Bis-Datum auswählen.', true); return; }
-    try {
-        let q = sb.from('tagesnotizen_entries').select('*').gte('datum', from).lte('datum', to);
-        q = exportCatFilter(q);
-        const { data, error } = await q.order('datum').order('category');
-        if (error) throw error;
-        if (!data || data.length === 0) { showToast('Keine Einträge für diesen Zeitraum.', true); return; }
-        const label = exportCatLabel();
-        downloadExport(buildTxt(`${label} · ${from} – ${to}`, data), `tagesnotizen-${label}-${from}-${to}.txt`);
-    } catch (e) { showToast('Fehler: ' + e.message, true); }
-}
-
-async function deleteRange() {
-    const from = document.getElementById('exportFrom').value;
-    const to   = document.getElementById('exportTo').value;
-    if (!from || !to) { showToast('Bitte Von- und Bis-Datum auswählen.', true); return; }
-    if (!confirm(`Einträge vom ${from} bis ${to} (${exportCatLabel()}) wirklich löschen?`)) return;
-    try {
-        let q = sb.from('tagesnotizen_entries').delete().gte('datum', from).lte('datum', to);
-        const { error } = await exportCatFilter(q);
-        if (error) throw error;
-        showToast('✅ Einträge gelöscht.');
-        await renderEntries();
-    } catch (e) { showToast('Fehler: ' + e.message, true); }
-}
-
-async function exportDay() {
-    const datum = document.getElementById('exportDayDate').value;
-    if (!datum) { showToast('Bitte Datum auswählen.', true); return; }
-    try {
-        let q = sb.from('tagesnotizen_entries').select('*').eq('datum', datum);
-        q = exportCatFilter(q);
-        const { data, error } = await q.order('category');
-        if (error) throw error;
-        if (!data || data.length === 0) { showToast('Keine Einträge für diesen Tag.', true); return; }
         const label = exportCatLabel();
         downloadExport(buildTxt(`${label} · ${datum}`, data), `tagesnotizen-${label}-${datum}.txt`);
     } catch (e) { showToast('Fehler: ' + e.message, true); }
