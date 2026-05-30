@@ -341,7 +341,7 @@
                 <button id="headingsToggle" onclick="toggleHeadings()" class="btn-dark side-btn" title="Überschriften / Fließtext" style="font-size:0.8rem;">ÜE</button>
                 <button class="btn-green side-btn" onclick="addToBuffer()" title="Zwischenspeichern" style="font-size:1.3rem;">+</button>
                 <button class="btn-gray side-btn" onclick="clearInput()" title="Text löschen" style="font-size:1.1rem;">−</button>
-                <button class="btn-purple side-btn" id="summarizeBtn" onclick="summarizeText()" title="Zusammenfassen" style="font-size:1.2rem;">∑</button>
+                <button class="btn-purple side-btn" id="summarizeBtn" onclick="summarizeText()" title="Zusammenfassen" style="font-size:1.2rem;">🪄</button>
             </div>
         </div>
         <div id="bufferContainer" class="buffer-box hidden">
@@ -927,7 +927,7 @@ async function summarizeText() {
         alert('Fehler:\n' + e.message);
     } finally {
         btn.disabled = false;
-        btn.textContent = '∑';
+        btn.textContent = '🪄';
     }
 }
 
