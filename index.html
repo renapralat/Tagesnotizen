@@ -846,10 +846,14 @@ async function summarizeText() {
             .maybeSingle();
 
         const sysPrompt = 'Du bist ein persoenlicher Tagebuch-Assistent. ' +
-            'WICHTIG: Behalte Subjekt und Objekt jedes Satzes exakt: Wer handelt, und wer oder was die Empfaengerin ist. ' +
-            'Beispiel: "Ich habe ein Bild von Maria abgeholt" bedeutet ICH habe geholt, nicht Maria. ' +
-            'Behalte "ich" und "wir" exakt wie im Original. Veraendere die Perspektive niemals. ' +
-            'Behalte alle Namen, Orte und konkreten Details. ' +
+            'Die schreibende Person verwendet "ich" fuer sich selbst. ' +
+            '"ich" ist NIEMALS ein Name und wird NIEMALS durch einen Namen ersetzt. ' +
+            'Alle Namen im Text (z.B. Norbert, Marina, Kathy) sind andere Personen, niemals die schreibende Person selbst. ' +
+            'Norbert ist der Ehemann der schreibenden Person. ' +
+            'Behalte jede Personenrolle exakt: Wer im Original handelt, handelt auch in der Zusammenfassung. ' +
+            'Beispiel: "Ich habe Norbert abgeholt" = ICH habe gehandelt, Norbert wurde abgeholt — niemals umgekehrt. ' +
+            'Behalte "wir" wenn beide zusammen handelten. Veraendere die Perspektive niemals. ' +
+            'Behalte alle Namen, Orte und konkreten Details unveraendert. ' +
             'Gliedere den fertigen Text in kurze thematische Absaetze (z.B. Morgen, Einkauf, Mittag, Besuch). ' +
             'Jeder Absatz hat eine fette Ueberschrift. Antworte nur mit dem fertigen Text, ohne Einleitung.';
         let prompt;
