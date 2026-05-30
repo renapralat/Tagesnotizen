@@ -309,6 +309,8 @@
             <button class="btn-dark btn-icon" onclick="exportRange()" title="Zeitraum herunterladen">📥</button>
             <button class="btn-red  btn-icon" onclick="deleteRange()"  title="Zeitraum löschen">🗑️</button>
         </div>
+        <!-- Kategorie-Auswahl für Export -->
+        <div id="exportCatChips" style="display:flex;flex-wrap:wrap;gap:0.3rem;margin-bottom:0.35rem;"></div>
         <!-- Zeile 2: +/- Kategorie | Tag-Export -->
         <div style="display:flex;gap:0.35rem;align-items:center;margin-bottom:0.6rem;">
             <button class="btn-icon btn-dark" onclick="openNewCatModal()" title="Neue Kategorie" style="font-size:0.85rem;">+🏷️</button>
@@ -1148,13 +1150,39 @@ function stopSearchMic() {
 }
 
 // ── Export ────────────────────────────────────────────────────────────────────
-function updateExportSelect() { /* Kategoriechips für Export entfallen — blaue Chips werden genutzt */ }
+let selectedExportCats = new Set(['__all__']);
+
+function updateExportSelect() {
+    const box = document.getElementById('exportCatChips');
+    if (!box) return;
+    const chips = [{ val: '__all__', label: 'Alle' }, ...categories.map(c => ({ val: c, label: c }))];
+    box.innerHTML = chips.map(({ val, label }) =>
+        `<button class="exp-cat-chip${selectedExportCats.has(val) ? ' active' : ''}"
+            onclick="toggleExportCat('${val}')">${label}</button>`
+    ).join('');
+}
+
+function toggleExportCat(val) {
+    if (val === '__all__') {
+        selectedExportCats = new Set(['__all__']);
+    } else {
+        selectedExportCats.delete('__all__');
+        if (selectedExportCats.has(val)) {
+            selectedExportCats.delete(val);
+            if (selectedExportCats.size === 0) selectedExportCats.add('__all__');
+        } else {
+            selectedExportCats.add(val);
+        }
+    }
+    updateExportSelect();
+}
 
 function exportCatFilter(q) {
-    return selectedCategory ? q.eq('category', selectedCategory) : q;
+    if (selectedExportCats.has('__all__')) return q;
+    return q.in('category', [...selectedExportCats]);
 }
 function exportCatLabel() {
-    return selectedCategory || 'Alle';
+    return selectedExportCats.has('__all__') ? 'Alle' : [...selectedExportCats].join('+');
 }
 
 async function exportDay() {
