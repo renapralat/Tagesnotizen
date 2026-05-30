@@ -187,6 +187,13 @@
             border: none; transition: background 0.15s;
         }
         .exp-cat-chip.active { background: #2563eb; }
+        .export-cat-item {
+            display: flex; align-items: center; gap: 0.9rem;
+            padding: 0.85rem 1rem; font-size: 1rem; color: #f1f5f9;
+            cursor: pointer; border-bottom: 1px solid #2d3f55; user-select: none;
+        }
+        .export-cat-item:active { background: #2d3f55; }
+        .export-cat-dot { font-size: 1.2rem; color: #3b82f6; width: 1.4rem; text-align: center; }
 
         .section-title { font-size: 1.05rem; font-weight: 700; margin-bottom: 1rem; color: #e2e8f0; }
 
@@ -314,7 +321,15 @@
         <div style="display:flex;gap:0.35rem;align-items:center;margin-bottom:0.5rem;">
             <button class="btn-icon btn-dark" onclick="openNewCatModal()" title="Neue Kategorie" style="font-size:0.85rem;">+🏷️</button>
             <button class="btn-icon btn-dark" onclick="deleteSelectedCategory()" title="Kategorie löschen" style="font-size:0.85rem;">−🏷️</button>
-            <select id="exportCatSelect" multiple style="flex:1;margin-bottom:0;font-size:0.78rem;background:#1e293b;color:#f1f5f9;border:1px solid #334155;border-radius:0.5rem;padding:0.1rem 0.25rem;"></select>
+            <div style="position:relative;flex:1;">
+                <button id="exportCatBtn" onclick="toggleExportCatDropdown()"
+                        style="width:100%;display:flex;justify-content:space-between;align-items:center;font-size:0.78rem;padding:0.3rem 0.5rem;background:#1e293b;color:#f1f5f9;border:1px solid #334155;border-radius:0.5rem;cursor:pointer;">
+                    <span id="exportCatBtnLabel">Alle Kategorien</span><span>▼</span>
+                </button>
+                <div id="exportCatDropdown" class="hidden"
+                     style="position:absolute;top:calc(100% + 4px);left:0;min-width:100%;background:#1e293b;border:1px solid #334155;border-radius:0.5rem;z-index:200;box-shadow:0 4px 20px rgba(0,0,0,0.6);overflow:hidden;">
+                </div>
+            </div>
             <span class="exp-icon" style="white-space:nowrap;">📥 Tag</span>
             <input type="date" id="exportDayDate" style="flex:1;margin-bottom:0;font-size:0.78rem;padding:0.3rem 0.25rem;">
             <button class="btn-dark btn-icon" onclick="exportDay()" title="Tag herunterladen">📥</button>
@@ -437,6 +452,12 @@ window.addEventListener('DOMContentLoaded', async () => {
     document.getElementById('exportTo').value   = `${y}-${m}-${pad(lastDay)}`;
     loadKiPat();
     await loadCategories();
+    document.addEventListener('click', e => {
+        const btn = document.getElementById('exportCatBtn');
+        const dd  = document.getElementById('exportCatDropdown');
+        if (dd && !dd.classList.contains('hidden') && btn && !btn.contains(e.target) && !dd.contains(e.target))
+            closeExportCatDropdown();
+    });
 });
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -1158,26 +1179,65 @@ function stopSearchMic() {
     document.getElementById('searchMicBtn').classList.remove('recording');
 }
 
-// ── Export ────────────────────────────────────────────────────────────────────
+// ── Export Kategorie-Dropdown ─────────────────────────────────────────────────
+let selectedExportCats = new Set();   // leer = alle
+
 function updateExportSelect() {
-    const sel = document.getElementById('exportCatSelect');
-    if (!sel) return;
-    const prev = new Set([...sel.selectedOptions].map(o => o.value));
-    sel.innerHTML = categories.map(c => `<option value="${c}">${c}</option>`).join('');
-    [...sel.options].forEach(o => { o.selected = prev.size === 0 || prev.has(o.value); });
+    // Entfernte Kategorien aus Auswahl löschen, Label aktualisieren
+    [...selectedExportCats].forEach(c => { if (!categories.includes(c)) selectedExportCats.delete(c); });
+    refreshExportCatLabel();
+}
+
+function refreshExportCatLabel() {
+    const btn = document.getElementById('exportCatBtnLabel');
+    if (!btn) return;
+    const n = selectedExportCats.size;
+    btn.textContent = n === 0 ? 'Alle Kategorien' : n === 1 ? [...selectedExportCats][0] : `${n} gewählt`;
+}
+
+function toggleExportCatDropdown() {
+    const dd = document.getElementById('exportCatDropdown');
+    const isOpen = !dd.classList.contains('hidden');
+    if (isOpen) { dd.classList.add('hidden'); return; }
+    renderExportCatDropdown();
+    dd.classList.remove('hidden');
+}
+
+function renderExportCatDropdown() {
+    const dd = document.getElementById('exportCatDropdown');
+    dd.innerHTML = categories.map(c =>
+        `<div class="export-cat-item" onclick="toggleExportCatItem('${c}')">
+            <span class="export-cat-dot">${selectedExportCats.has(c) ? '●' : '○'}</span>
+            <span>${c}</span>
+        </div>`
+    ).join('') +
+    `<div style="padding:0.5rem;border-top:1px solid #334155;">
+        <button onclick="closeExportCatDropdown()"
+                style="width:100%;padding:0.65rem;font-size:0.95rem;background:#2563eb;color:#fff;border:none;border-radius:0.4rem;cursor:pointer;font-weight:600;">
+            ✓ Fertig
+        </button>
+     </div>`;
+}
+
+function toggleExportCatItem(cat) {
+    if (selectedExportCats.has(cat)) selectedExportCats.delete(cat);
+    else selectedExportCats.add(cat);
+    renderExportCatDropdown();
+    refreshExportCatLabel();
+}
+
+function closeExportCatDropdown() {
+    document.getElementById('exportCatDropdown').classList.add('hidden');
 }
 
 function exportCatFilter(q) {
-    const sel = document.getElementById('exportCatSelect');
-    const selected = [...sel.selectedOptions].map(o => o.value);
-    if (selected.length === 0 || selected.length === categories.length) return q;
-    return selected.length === 1 ? q.eq('category', selected[0]) : q.in('category', selected);
+    if (selectedExportCats.size === 0) return q;
+    const cats = [...selectedExportCats];
+    return cats.length === 1 ? q.eq('category', cats[0]) : q.in('category', cats);
 }
 function exportCatLabel() {
-    const sel = document.getElementById('exportCatSelect');
-    const selected = [...sel.selectedOptions].map(o => o.value);
-    if (selected.length === 0 || selected.length === categories.length) return 'Alle';
-    return selected.join('+');
+    if (selectedExportCats.size === 0) return 'Alle';
+    return [...selectedExportCats].join('+');
 }
 
 async function exportDay() {
