@@ -351,11 +351,11 @@
             <div class="input-side">
                 <button id="micBtn" class="btn-amber mic-btn side-btn" onclick="toggleMic()" title="Aufnahme starten / stoppen">🎤</button>
                 <span id="recDot" class="rec-dot" style="align-self:center;"></span>
-                <button id="headingsToggle" onclick="toggleHeadings()" class="btn-dark side-btn" title="Überschriften / Fließtext" style="font-size:0.8rem;">ÜE</button>
+                <button class="btn-purple side-btn" id="summarizeBtn" onclick="summarizeText()" title="Zusammenfassen" style="font-size:1.2rem;">🪄</button>
+                <button id="headingsToggle" onclick="toggleHeadings()" class="btn-dark side-btn" title="Überschriften / Fließtext" style="font-size:0.8rem;">UE</button>
                 <button class="btn-green side-btn" onclick="addToBuffer()" title="Zwischenspeichern" style="font-size:1.3rem;">+</button>
                 <button class="btn-gray side-btn" onclick="clearInput()" title="Text löschen" style="font-size:1.1rem;">−</button>
                 <button class="btn-green side-btn" onclick="saveDirectly()" title="Direkt speichern (ohne KI)" style="font-size:1rem;">💾</button>
-                <button class="btn-purple side-btn" id="summarizeBtn" onclick="summarizeText()" title="Zusammenfassen" style="font-size:1.2rem;">🪄</button>
             </div>
         </div>
         <div id="bufferContainer" class="buffer-box hidden">
@@ -886,7 +886,7 @@ let summaryWithHeadings = true;
 function toggleHeadings() {
     summaryWithHeadings = !summaryWithHeadings;
     const btn = document.getElementById('headingsToggle');
-    btn.textContent = summaryWithHeadings ? 'ÜE' : 'FT';
+    btn.textContent = summaryWithHeadings ? 'UE' : 'FT';
     btn.title = summaryWithHeadings ? 'Überschriften aktiv – klicken für Fließtext' : 'Fließtext aktiv – klicken für Überschriften';
 }
 
