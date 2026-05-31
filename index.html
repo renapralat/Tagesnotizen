@@ -428,6 +428,7 @@ let selectedCategory = null;
 let categories       = [];
 let entries          = [];
 let buffer           = [];
+let bufferByCategory = {};
 let currentSummary   = '';
 let currentSummaryDate = '';
 let savedInputText   = '';
@@ -513,6 +514,7 @@ function renderCategories() {
 }
 
 function selectCategory(cat) {
+    if (selectedCategory) bufferByCategory[selectedCategory] = [...buffer];
     selectedCategory = cat;
     renderCategories();
     document.getElementById('currentTagDisplay').textContent = '#' + cat;
@@ -520,7 +522,7 @@ function selectCategory(cat) {
     document.getElementById('summarySection').classList.add('hidden');
     currentSummary = '';
     document.getElementById('inputText').value = '';
-    buffer = [];
+    buffer = bufferByCategory[cat] ? [...bufferByCategory[cat]] : [];
     renderBuffer();
     renderEntries();
 }
@@ -556,6 +558,7 @@ async function deleteSelectedCategory() {
         const { error } = await sb.from('tagesnotizen_categories').delete().eq('name', cat);
         if (error) throw error;
         categories = categories.filter(c => c !== cat);
+        delete bufferByCategory[cat];
         selectedCategory = null;
         document.getElementById('currentTagDisplay').textContent = '—';
         document.getElementById('inputSection').classList.add('hidden');
@@ -781,6 +784,7 @@ function clearInput() {
     micBefore = micAfter = micDone = '';
     document.getElementById('inputText').value = '';
     buffer = [];
+    if (selectedCategory) bufferByCategory[selectedCategory] = [];
     renderBuffer();
     if (isRecording) {
         isRecording = false;
@@ -966,6 +970,7 @@ async function saveSummary() {
     try {
         await saveEntry(currentSummaryDate, selectedCategory, textToSave);
         buffer = [];
+        if (selectedCategory) bufferByCategory[selectedCategory] = [];
         renderBuffer();
         document.getElementById('inputText').value = '';
         document.getElementById('summarySection').classList.add('hidden');
@@ -985,6 +990,7 @@ function backToInput() {
     const merged = parts.join('\n\n');
     document.getElementById('inputText').value = merged;
     buffer = [];
+    if (selectedCategory) bufferByCategory[selectedCategory] = [];
     renderBuffer();
     currentSummary = '';
     savedInputText = '';
