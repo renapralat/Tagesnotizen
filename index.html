@@ -354,6 +354,7 @@
                 <button id="headingsToggle" onclick="toggleHeadings()" class="btn-dark side-btn" title="Überschriften / Fließtext" style="font-size:0.8rem;">ÜE</button>
                 <button class="btn-green side-btn" onclick="addToBuffer()" title="Zwischenspeichern" style="font-size:1.3rem;">+</button>
                 <button class="btn-gray side-btn" onclick="clearInput()" title="Text löschen" style="font-size:1.1rem;">−</button>
+                <button class="btn-green side-btn" onclick="saveDirectly()" title="Direkt speichern (ohne KI)" style="font-size:1rem;">💾</button>
                 <button class="btn-purple side-btn" id="summarizeBtn" onclick="summarizeText()" title="Zusammenfassen" style="font-size:1.2rem;">🪄</button>
             </div>
         </div>
@@ -887,6 +888,25 @@ function toggleHeadings() {
     const btn = document.getElementById('headingsToggle');
     btn.textContent = summaryWithHeadings ? 'ÜE' : 'FT';
     btn.title = summaryWithHeadings ? 'Überschriften aktiv – klicken für Fließtext' : 'Fließtext aktiv – klicken für Überschriften';
+}
+
+async function saveDirectly() {
+    selectedDate = document.getElementById('entryDate').value;
+    const text = collectText();
+    if (!text) { showToast('Bitte Text eingeben.', true); return; }
+    if (!selectedCategory) { showToast('Bitte zuerst eine Kategorie wählen.', true); return; }
+    try {
+        const { data: ex } = await sb.from('tagesnotizen_entries')
+            .select('id, text').eq('datum', selectedDate).eq('category', selectedCategory).maybeSingle();
+        const textToSave = (ex && ex.text.trim()) ? ex.text.trim() + '\n\n' + text : text;
+        await saveEntry(selectedDate, selectedCategory, textToSave);
+        buffer = [];
+        if (selectedCategory) bufferByCategory[selectedCategory] = [];
+        document.getElementById('inputText').value = '';
+        renderBuffer();
+        showToast('✅ Gespeichert.');
+        await renderEntries();
+    } catch(e) { showToast('Fehler: ' + e.message, true); }
 }
 
 async function summarizeText() {
