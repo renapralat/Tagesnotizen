@@ -1216,7 +1216,7 @@ function toggleExportCatDropdown() {
 function renderExportCatDropdown() {
     const dd = document.getElementById('exportCatDropdown');
     dd.innerHTML = categories.map(c =>
-        `<div class="export-cat-item" onclick="toggleExportCatItem('${c}')">
+        `<div class="export-cat-item" onclick="toggleExportCatItem(event,'${c}')">
             <span class="export-cat-dot">${selectedExportCats.has(c) ? '●' : '○'}</span>
             <span>${c}</span>
         </div>`
@@ -1229,7 +1229,8 @@ function renderExportCatDropdown() {
      </div>`;
 }
 
-function toggleExportCatItem(cat) {
+function toggleExportCatItem(e, cat) {
+    e.stopPropagation();
     if (selectedExportCats.has(cat)) selectedExportCats.delete(cat);
     else selectedExportCats.add(cat);
     renderExportCatDropdown();
