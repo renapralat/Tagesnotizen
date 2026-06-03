@@ -860,8 +860,9 @@ async function callGithubModels(prompt, systemPrompt) {
             'Authorization': 'Bearer ' + pat
         },
         body: JSON.stringify({
-            model:      GH_MODEL,
-            max_tokens: 1500,
+            model:       GH_MODEL,
+            max_tokens:  1500,
+            temperature: 0.3,
             messages
         })
     });
