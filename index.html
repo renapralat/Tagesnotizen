@@ -316,6 +316,7 @@
             <input type="date" id="exportTo"   style="flex:1;margin-bottom:0;font-size:0.78rem;padding:0.3rem 0.25rem;">
             <button class="btn-dark btn-icon" onclick="exportRange()" title="Zeitraum herunterladen">📥</button>
             <button class="btn-red  btn-icon" onclick="deleteRange()"  title="Zeitraum löschen">🗑️</button>
+            <button class="btn-blue btn-icon" onclick="generateZeitraumGeschichte()" title="Zeitraum als Prosa">📖</button>
         </div>
         <!-- Zeile 2: +/- Kategorie | Kategorie-Auswahl | Tag-Export -->
         <div style="display:flex;gap:0.35rem;align-items:center;margin-bottom:0.5rem;">
@@ -920,6 +921,60 @@ async function generateTagesgeschichte() {
         const story = await callGithubModels(prompt, sysPrompt, 0.3, 2000);
         currentSummary     = story;
         currentSummaryDate = datum;
+        document.getElementById('summaryText').value = story;
+        document.getElementById('summarySection').classList.remove('hidden');
+        document.getElementById('inputSection').classList.add('hidden');
+        document.getElementById('summarySection').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    } catch(e) { showToast('Fehler: ' + e.message, true); }
+}
+
+async function generateZeitraumGeschichte() {
+    const from = document.getElementById('exportFrom').value;
+    const to   = document.getElementById('exportTo').value;
+    if (!from || !to) { showToast('Bitte Von- und Bis-Datum auswählen.', true); return; }
+    if (!selectedCategory) { showToast('Bitte Ziel-Kategorie wählen (z.B. #Monatsgeschichte).', true); return; }
+    if (!getGithubPat()) { showToast('Bitte GitHub Token eingeben.', true); return; }
+
+    showToast('📖 Geschichte wird geschrieben…');
+    try {
+        let q = sb.from('tagesnotizen_entries')
+            .select('datum, category, text')
+            .gte('datum', from).lte('datum', to);
+        q = exportCatFilter(q);
+        const { data, error } = await q.order('datum').order('category');
+        if (error) throw error;
+        if (!data || data.length === 0) { showToast('Keine Einträge für diesen Zeitraum.', true); return; }
+
+        // Nach Datum gruppieren
+        const byDate = {};
+        data.forEach(r => {
+            if (!byDate[r.datum]) byDate[r.datum] = [];
+            byDate[r.datum].push(r.text.trim());
+        });
+        const inputText = Object.entries(byDate)
+            .map(([datum, texts]) => `[${datum}]\n${texts.join('\n\n')}`)
+            .join('\n\n---\n\n');
+
+        // Warnung bei sehr langem Text
+        const estTokens = Math.round(inputText.length / 4);
+        if (estTokens > 10000) {
+            if (!confirm(`Der Text ist sehr lang (ca. ${estTokens} Tokens). Trotzdem fortfahren?`)) return;
+        }
+
+        const sysPrompt =
+            'Du bist ein einfühlsamer Schriftsteller, der aus mehreren Tagebuchgeschichten eine übergreifende Lebenserzählung erschafft. ' +
+            'Die schreibende Person ist immer "ich" und wird niemals durch einen Namen ersetzt. ' +
+            'Norbert ist der Ehemann der schreibenden Person. ' +
+            'Alle anderen genannten Personen sind reale Menschen im Text. ' +
+            'Fasse alle Einträge zu einer einzigen fließenden Geschichte zusammen, die den gesamten Zeitraum als Ganzes erlebbar macht. ' +
+            'Behalte alle Details, Namen und Ereignisse — erfinde nichts hinzu. ' +
+            'Schreibe ohne Überschriften als fließenden literarischen Text in Prosa. ' +
+            'Antworte nur mit dem fertigen Text.';
+        const prompt = `Schreibe aus diesen Einträgen vom ${from} bis ${to} eine zusammenhängende Geschichte in Prosa:\n\n${inputText}`;
+
+        const story = await callGithubModels(prompt, sysPrompt, 0.4, 2000);
+        currentSummary     = story;
+        currentSummaryDate = to;
         document.getElementById('summaryText').value = story;
         document.getElementById('summarySection').classList.remove('hidden');
         document.getElementById('inputSection').classList.add('hidden');
