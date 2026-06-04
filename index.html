@@ -334,6 +334,7 @@
             <input type="date" id="exportDayDate" style="flex:1;margin-bottom:0;font-size:0.78rem;padding:0.3rem 0.25rem;">
             <button class="btn-dark btn-icon" onclick="exportDay()" title="Tag herunterladen">📥</button>
             <button class="btn-red  btn-icon" onclick="deleteDay()"  title="Tag löschen">🗑️</button>
+            <button class="btn-blue btn-icon" onclick="generateTagesgeschichte()" title="Tagesgeschichte als Prosa">📖</button>
         </div>
         <!-- Eintragsdatum -->
         <div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.5rem;">
@@ -845,7 +846,7 @@ function updateKiStatus() {
 
 function getGithubPat() { return localStorage.getItem('tagesnotizen-github-pat') || ''; }
 
-async function callGithubModels(prompt, systemPrompt) {
+async function callGithubModels(prompt, systemPrompt, temperature = 0.1, maxTokens = 1500) {
     const pat = getGithubPat();
     if (!pat) throw new Error('Kein GitHub Token gesetzt. Bitte unten eingeben.');
 
@@ -861,8 +862,8 @@ async function callGithubModels(prompt, systemPrompt) {
         },
         body: JSON.stringify({
             model:       GH_MODEL,
-            max_tokens:  1500,
-            temperature: 0.1,
+            max_tokens:  maxTokens,
+            temperature: temperature,
             messages
         })
     });
@@ -889,6 +890,41 @@ function toggleHeadings() {
     const btn = document.getElementById('headingsToggle');
     btn.textContent = summaryWithHeadings ? 'UE' : 'FT';
     btn.title = summaryWithHeadings ? 'Überschriften aktiv – klicken für Fließtext' : 'Fließtext aktiv – klicken für Überschriften';
+}
+
+async function generateTagesgeschichte() {
+    const datum = document.getElementById('exportDayDate').value;
+    if (!datum) { showToast('Bitte Tag-Datum auswählen.', true); return; }
+    if (!selectedCategory) { showToast('Bitte zuerst eine Kategorie wählen (z.B. #Prosa).', true); return; }
+    if (!getGithubPat()) { showToast('Bitte GitHub Token eingeben.', true); return; }
+
+    showToast('📖 Geschichte wird geschrieben…');
+    try {
+        const { data, error } = await sb.from('tagesnotizen_entries')
+            .select('category, text').eq('datum', datum).order('category');
+        if (error) throw error;
+        if (!data || data.length === 0) { showToast('Keine Einträge für diesen Tag.', true); return; }
+
+        const inputText = data.map(r => `[${r.category}]\n${r.text.trim()}`).join('\n\n');
+        const sysPrompt =
+            'Du bist ein einfühlsamer Schriftsteller, der aus Tagebuchnotizen lebendige Prosa erschafft. ' +
+            'Die schreibende Person ist immer "ich" und wird niemals durch einen Namen ersetzt. ' +
+            'Norbert ist der Ehemann der schreibenden Person. ' +
+            'Alle anderen genannten Personen sind reale Menschen im Text. ' +
+            'Fasse alle Kategorien zu einer einzigen fließenden Geschichte zusammen. ' +
+            'Behalte alle Details, Orte, Namen und Ereignisse — nichts darf erfunden werden. ' +
+            'Schreibe ohne Überschriften, ohne Kategorienamen, nur als fließenden literarischen Text in Prosa. ' +
+            'Antworte nur mit dem fertigen Text, ohne Einleitung oder Kommentar.';
+        const prompt = `Schreibe aus diesen Tagebucheinträgen vom ${datum} eine Geschichte in Prosa:\n\n${inputText}`;
+
+        const story = await callGithubModels(prompt, sysPrompt, 0.3, 2000);
+        currentSummary     = story;
+        currentSummaryDate = datum;
+        document.getElementById('summaryText').value = story;
+        document.getElementById('summarySection').classList.remove('hidden');
+        document.getElementById('inputSection').classList.add('hidden');
+        document.getElementById('summarySection').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    } catch(e) { showToast('Fehler: ' + e.message, true); }
 }
 
 async function saveDirectly() {
