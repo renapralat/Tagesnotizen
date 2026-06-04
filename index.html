@@ -701,7 +701,9 @@ function startMic() {
 
     recognition.onend = () => {
         curInterim = '';
-        ta.value = micBefore + micDone + micAfter;
+        if (!micReset) {
+            ta.value = micBefore + micDone + micAfter;
+        }
         micReset = false;
         if (isRecording) {
             setTimeout(() => { if (isRecording) startMic(); }, 80);
@@ -751,7 +753,13 @@ function addToBuffer() {
     if (isRecording) {
         isRecording = false;
         try { recognition && recognition.stop(); } catch(e) {}
-        setTimeout(() => startMic(), 400);
+        setTimeout(() => {
+            const ta2 = document.getElementById('inputText');
+            micBefore = ta2.value;
+            micAfter = '';
+            micDone = '';
+            startMic();
+        }, 400);
     } else {
         micReset = false;
     }
