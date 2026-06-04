@@ -862,7 +862,7 @@ async function callGithubModels(prompt, systemPrompt) {
         body: JSON.stringify({
             model:       GH_MODEL,
             max_tokens:  1500,
-            temperature: 0.3,
+            temperature: 0.1,
             messages
         })
     });
