@@ -406,15 +406,16 @@
                 <button class="btn-blue" onclick="saveGithubPat()">Speichern</button>
             </div>
             <div style="margin-top:0.6rem;">
-                <label style="font-size:0.8rem;color:#aaa;display:block;margin-bottom:0.25rem;">
-                    KI-Modell <span id="modelLoadStatus" style="color:#888;font-size:0.75rem;"></span>
-                </label>
+                <label style="font-size:0.8rem;color:#aaa;display:block;margin-bottom:0.25rem;">KI-Modell</label>
                 <select id="modelSelect" onchange="saveModelChoice()" style="width:100%;padding:0.35rem 0.5rem;background:#2a2a2a;color:#eee;border:1px solid #444;border-radius:6px;font-size:0.85rem;">
-                    <option value="Llama-3.3-70B-Instruct">Llama-3.3-70B-Instruct (Meta)</option>
                     <option value="gpt-4o-mini">gpt-4o-mini (OpenAI)</option>
                     <option value="gpt-4o">gpt-4o (OpenAI)</option>
-                    <option value="Mistral-Large">Mistral-Large</option>
                     <option value="Phi-4">Phi-4 (Microsoft)</option>
+                    <option value="Phi-3.5-MoE-instruct">Phi-3.5-MoE-instruct (Microsoft)</option>
+                    <option value="Llama-3.3-70B-Instruct">Llama-3.3-70B-Instruct (Meta)</option>
+                    <option value="Mistral-large-2411">Mistral-large-2411</option>
+                    <option value="Mistral-Large">Mistral-Large</option>
+                    <option value="AI21-Jamba-1.5-Large">AI21-Jamba-1.5-Large</option>
                 </select>
             </div>
             <div class="tip" style="margin-top:0.4rem;">
@@ -829,42 +830,13 @@ function toggleTokenPanel() {
         document.getElementById('githubPatInput').focus();
         const saved = localStorage.getItem('tagesnotizen-model') || GH_MODEL_DEFAULT;
         document.getElementById('modelSelect').value = saved;
-        if (pat) loadModelList(pat, saved);
     }
 }
 
 function saveModelChoice() {
     const val = document.getElementById('modelSelect').value;
     localStorage.setItem('tagesnotizen-model', val);
-    showToast('Modell gespeichert: ' + val);
-}
-
-async function loadModelList(pat, currentModel) {
-    const status = document.getElementById('modelLoadStatus');
-    status.textContent = '⏳ lade…';
-    try {
-        const res = await fetch('https://models.inference.ai.azure.com/models', {
-            headers: { 'Authorization': 'Bearer ' + pat }
-        });
-        if (!res.ok) throw new Error('HTTP ' + res.status);
-        const data = await res.json();
-        const models = (data.data || data)
-            .map(m => m.id || m.name)
-            .filter(Boolean)
-            .sort();
-        if (!models.length) throw new Error('Keine Modelle');
-        const sel = document.getElementById('modelSelect');
-        sel.innerHTML = models.map(id =>
-            `<option value="${id}"${id === currentModel ? ' selected' : ''}>${id}</option>`
-        ).join('');
-        if (!models.includes(currentModel)) {
-            sel.value = models[0];
-            localStorage.setItem('tagesnotizen-model', models[0]);
-        }
-        status.textContent = `(${models.length} verfügbar)`;
-    } catch(e) {
-        status.textContent = '(Offline-Liste)';
-    }
+    showToast('Modell: ' + val);
 }
 
 function saveGithubPat() {
