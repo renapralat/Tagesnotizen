@@ -385,6 +385,8 @@
         <div style="display:flex;gap:0.35rem;align-items:center;margin-bottom:0.5rem;">
             <button class="btn-icon btn-dark" onclick="openNewCatModal()" title="Neue Kategorie" style="font-size:0.85rem;">+🏷️</button>
             <button class="btn-icon btn-dark" onclick="deleteSelectedCategory()" title="Kategorie löschen" style="font-size:0.85rem;">−🏷️</button>
+            <button class="btn-icon btn-dark" onclick="moveCategory(-1)" title="Gewählte Kategorie nach links" style="font-size:0.85rem;">◀</button>
+            <button class="btn-icon btn-dark" onclick="moveCategory(1)" title="Gewählte Kategorie nach rechts" style="font-size:0.85rem;">▶</button>
             <div style="position:relative;flex:1;">
                 <button id="exportCatBtn" onclick="toggleExportCatDropdown()"
                         style="width:100%;display:flex;justify-content:space-between;align-items:center;font-size:0.78rem;padding:0.3rem 0.5rem;background:#1e293b;color:#f1f5f9;border:1px solid #334155;border-radius:0.5rem;cursor:pointer;">
@@ -528,6 +530,11 @@ function getGhModel() { return localStorage.getItem('tagesnotizen-model') || GH_
 let selectedDate     = getTodayDate();
 let selectedCategory = null;
 let categories       = [];
+
+// Geschützte Kategorien: können nicht gelöscht werden (siehe deleteSelectedCategory).
+const PROTECTED_CATEGORIES = ['Bilder', 'Tagesprotokoll', 'Prosa'];
+function isProtectedCategory(cat) { return PROTECTED_CATEGORIES.includes(cat); }
+
 let entries          = [];
 let buffer           = [];
 let bufferByCategory = {};
@@ -620,7 +627,7 @@ function renderCategories() {
     categories.forEach(cat => {
         const btn = document.createElement('button');
         btn.className = 'tag-btn' + (cat === selectedCategory ? ' active' : '');
-        btn.textContent = '#' + cat;
+        btn.textContent = '#' + cat + (isProtectedCategory(cat) ? ' 🔒' : '');
         btn.onclick = () => selectCategory(cat);
         grid.appendChild(btn);
     });
@@ -662,10 +669,38 @@ async function addCategory() {
     } catch (e) { alert('Fehler: ' + e.message); }
 }
 
+// Verschiebt die aktuell gewählte Kategorie in der Reihenfolge nach links/rechts.
+async function moveCategory(direction) {
+    if (!selectedCategory) { alert('Bitte zuerst eine Kategorie auswählen, die Du verschieben möchtest.'); return; }
+    const i = categories.indexOf(selectedCategory);
+    const j = i + direction;
+    if (i < 0 || j < 0 || j >= categories.length) return; // schon am Rand
+    [categories[i], categories[j]] = [categories[j], categories[i]];
+    renderCategories();
+    updateExportSelect();
+    try {
+        // Reihenfolge sauber durchnummerieren und in der Datenbank speichern
+        await Promise.all(categories.map((name, idx) =>
+            sb.from('tagesnotizen_categories').update({ position: idx }).eq('name', name)));
+    } catch (e) { showToast('Reihenfolge konnte nicht gespeichert werden: ' + e.message, true); }
+}
+
 async function deleteSelectedCategory() {
     if (!selectedCategory) { alert('Bitte zuerst eine Kategorie auswählen.'); return; }
     const cat = selectedCategory;
-    if (!confirm(`Kategorie „${cat}" und alle Einträge wirklich löschen?`)) return;
+    if (isProtectedCategory(cat)) {
+        alert(`🔒 Die Kategorie „${cat}" ist geschützt und kann nicht gelöscht werden.\n\nDeine Bilder, das Tagesprotokoll und die Prosa bleiben so immer erhalten.`);
+        return;
+    }
+    // Anzahl der betroffenen Einträge ermitteln, damit klar ist, was verloren geht
+    let count = 0;
+    try {
+        const { count: c } = await sb.from('tagesnotizen_entries')
+            .select('id', { count: 'exact', head: true }).eq('category', cat);
+        count = c || 0;
+    } catch (e) {}
+    if (!confirm(`Kategorie „${cat}" löschen?\n\nDazu gehören ${count} Eintrag/Einträge, die ebenfalls gelöscht werden.`)) return;
+    if (!confirm(`Wirklich endgültig löschen?\n\n„${cat}" und alle ${count} Einträge sind danach für immer weg.\nDieser Schritt kann NICHT rückgängig gemacht werden.`)) return;
     try {
         await sb.from('tagesnotizen_entries').delete().eq('category', cat);
         const { error } = await sb.from('tagesnotizen_categories').delete().eq('name', cat);
@@ -713,6 +748,7 @@ function displayEntries(list) {
                 <div class="entry-actions">
                     <button id="speak-${e.id}" class="btn-icon btn-amber speak-btn" onclick="speakEntry('${e.id}')" title="Vorlesen">🔊</button>
                     <button class="btn-icon btn-blue"  onclick="editEntry('${e.id}')" title="Bearbeiten">✏️</button>
+                    <button class="btn-icon btn-dark"  onclick="moveEntry('${e.id}')" title="In andere Kategorie verschieben">📦</button>
                     <button class="btn-icon btn-red"   onclick="deleteEntry('${e.id}','${e.datum}')" title="Löschen">✕</button>
                 </div>
             </div>
@@ -750,6 +786,34 @@ function editEntry(id) {
     document.getElementById('summarySection').classList.add('hidden');
     currentSummary = '';
     window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+// Verschiebt einen Eintrag in eine andere Kategorie ("umziehen").
+async function moveEntry(id) {
+    const e = entries.find(x => x.id === id);
+    if (!e) return;
+    const targets = categories.filter(c => c !== selectedCategory);
+    if (targets.length === 0) { alert('Es gibt keine andere Kategorie zum Verschieben.'); return; }
+    const list = targets.map((c, i) => `${i + 1}. ${c}`).join('\n');
+    const answer = prompt(`Eintrag vom ${e.datum} in welche Kategorie verschieben?\n\nBitte die Nummer eingeben:\n\n${list}`);
+    if (answer === null) return;
+    const idx = parseInt(String(answer).trim(), 10) - 1;
+    if (isNaN(idx) || idx < 0 || idx >= targets.length) { alert('Ungültige Auswahl – bitte eine der angezeigten Nummern eingeben.'); return; }
+    const target = targets[idx];
+    try {
+        // Pro Tag und Kategorie ist nur ein Eintrag erlaubt – Ziel prüfen
+        const { data: existing } = await sb.from('tagesnotizen_entries')
+            .select('id').eq('datum', e.datum).eq('category', target).maybeSingle();
+        if (existing) {
+            alert(`In „${target}" gibt es für den ${e.datum} bereits einen Eintrag.\nBitte dort zuerst Platz schaffen oder die Texte von Hand zusammenführen.`);
+            return;
+        }
+        const { error } = await sb.from('tagesnotizen_entries')
+            .update({ category: target }).eq('id', id);
+        if (error) throw error;
+        showToast(`✅ Eintrag nach „${target}" verschoben.`);
+        await renderEntries();
+    } catch (err) { alert('Fehler beim Verschieben: ' + err.message); }
 }
 
 // ── Voice (Mikrofon – bleibt dauerhaft an) ────────────────────────────────────
