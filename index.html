@@ -199,12 +199,12 @@
 
         /* Media Gallery */
         .media-upload-row {
-            display: flex; gap: 0.5rem; align-items: center; margin-bottom: 0.75rem;
+            display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center; margin-bottom: 0.75rem;
         }
         .media-upload-row label {
-            flex: 1; display: flex; align-items: center; justify-content: center;
+            flex: 1 1 30%; min-width: 110px; display: flex; align-items: center; justify-content: center;
             gap: 0.4rem; background: #3b82f6; color: #fff; font-weight: 600;
-            font-size: 0.85rem; padding: 0.35rem 0.75rem; border-radius: 0.375rem;
+            font-size: 0.9rem; padding: 0.5rem 0.75rem; border-radius: 0.375rem;
             cursor: pointer; transition: opacity 0.15s;
         }
         .media-upload-row label:hover { opacity: 0.85; }
@@ -414,6 +414,10 @@
             <label>
                 <input type="file" id="mediaFileInput" accept="image/*,audio/*,video/*" multiple onchange="uploadMediaFiles(this.files)">
                 📎 Hochladen
+            </label>
+            <label style="background:#8b5cf6;">
+                <input type="file" id="mediaSelfieInput" accept="image/*" capture="user" onchange="uploadMediaFiles(this.files)">
+                🤳 Selfie
             </label>
             <label style="background:#10b981;">
                 <input type="file" id="mediaCameraInput" accept="image/*" capture="environment" onchange="uploadMediaFiles(this.files)">
@@ -1646,6 +1650,7 @@ async function uploadMediaFiles(files) {
     progress.classList.add('hidden');
     document.getElementById('mediaFileInput').value = '';
     document.getElementById('mediaCameraInput').value = '';
+    document.getElementById('mediaSelfieInput').value = '';
 
     if (ok > 0) showToast(`✅ ${ok} Datei${ok > 1 ? 'en' : ''} hochgeladen.`);
     await loadMediaForDate(selectedDate);
