@@ -197,6 +197,64 @@
 
         .section-title { font-size: 1.05rem; font-weight: 700; margin-bottom: 1rem; color: #e2e8f0; }
 
+        /* Media Gallery */
+        .media-upload-row {
+            display: flex; gap: 0.5rem; align-items: center; margin-bottom: 0.75rem;
+        }
+        .media-upload-row label {
+            flex: 1; display: flex; align-items: center; justify-content: center;
+            gap: 0.4rem; background: #3b82f6; color: #fff; font-weight: 600;
+            font-size: 0.85rem; padding: 0.35rem 0.75rem; border-radius: 0.375rem;
+            cursor: pointer; transition: opacity 0.15s;
+        }
+        .media-upload-row label:hover { opacity: 0.85; }
+        .media-upload-row input[type="file"] { display: none; }
+        .media-date-label { font-size: 0.8rem; color: #94a3b8; }
+        .media-grid {
+            display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+            gap: 0.6rem;
+        }
+        .media-card {
+            background: #334155; border: 1px solid #475569; border-radius: 0.4rem;
+            overflow: hidden; position: relative;
+        }
+        .media-card img {
+            width: 100%; aspect-ratio: 1; object-fit: cover; display: block; cursor: pointer;
+        }
+        .media-card audio { width: 100%; padding: 0.4rem; display: block; }
+        .media-card-footer {
+            padding: 0.3rem 0.4rem; display: flex; justify-content: space-between; align-items: center;
+        }
+        .media-card-desc {
+            font-size: 0.72rem; color: #94a3b8; flex: 1; overflow: hidden;
+            text-overflow: ellipsis; white-space: nowrap;
+        }
+        .media-card-del {
+            background: none; border: none; color: #475569; font-size: 0.85rem;
+            cursor: pointer; padding: 0; flex: none;
+        }
+        .media-card-del:hover { color: #ef4444; }
+        .media-progress {
+            font-size: 0.8rem; color: #94a3b8; text-align: center; padding: 0.5rem;
+        }
+        /* Lightbox */
+        #mediaLightbox {
+            display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.92); z-index: 2000;
+            align-items: center; justify-content: center;
+        }
+        #mediaLightbox.active { display: flex; }
+        #mediaLightbox img {
+            max-width: 95vw; max-height: 90vh; border-radius: 0.4rem;
+            object-fit: contain;
+        }
+        #mediaLightboxClose {
+            position: absolute; top: 1rem; right: 1rem;
+            background: rgba(255,255,255,0.15); border: none; color: #fff;
+            font-size: 1.5rem; width: 2.5rem; height: 2.5rem; border-radius: 50%;
+            cursor: pointer; display: flex; align-items: center; justify-content: center;
+        }
+
         .entry {
             background: #334155; border: 1px solid #475569;
             border-radius: 0.4rem; padding: 0.9rem; margin-bottom: 0.65rem;
@@ -389,6 +447,32 @@
         </div>
     </div>
 
+    <!-- MEDIEN -->
+    <div class="section" id="mediaSection">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.75rem;">
+            <span class="section-title" style="margin-bottom:0;">📷 Medien zum Tag</span>
+            <span id="mediaDateLabel" class="media-date-label"></span>
+        </div>
+        <div class="media-upload-row">
+            <label>
+                <input type="file" id="mediaFileInput" accept="image/*,audio/*" multiple onchange="uploadMediaFiles(this.files)">
+                📎 Bild / Audio hochladen
+            </label>
+            <label style="background:#10b981;">
+                <input type="file" id="mediaCameraInput" accept="image/*" capture="environment" onchange="uploadMediaFiles(this.files)">
+                📷 Kamera
+            </label>
+        </div>
+        <div id="mediaUploadProgress" class="media-progress hidden"></div>
+        <div id="mediaGrid" class="media-grid"></div>
+    </div>
+
+    <!-- LIGHTBOX -->
+    <div id="mediaLightbox" onclick="closeLightbox()">
+        <button id="mediaLightboxClose" onclick="closeLightbox()">✕</button>
+        <img id="mediaLightboxImg" src="" alt="">
+    </div>
+
     <!-- KI-ANALYSE -->
     <div class="section">
         <div class="ki-header">
@@ -465,6 +549,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     document.getElementById('exportTo').value   = `${y}-${m}-${pad(lastDay)}`;
     loadKiPat();
     await loadCategories();
+    loadMediaForDate(selectedDate);
     document.addEventListener('click', e => {
         const btn = document.getElementById('exportCatBtn');
         const dd  = document.getElementById('exportCatDropdown');
@@ -496,6 +581,7 @@ function setConnBadge(ok, msg) {
 function onDateChange() {
     selectedDate = document.getElementById('entryDate').value;
     if (selectedCategory) renderEntries();
+    loadMediaForDate(selectedDate);
 }
 
 // ── Categories ────────────────────────────────────────────────────────────────
@@ -1466,6 +1552,125 @@ function downloadExport(content, filename) {
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
+}
+
+// ── Media ─────────────────────────────────────────────────────────────────────
+const MEDIA_BUCKET = 'tagesnotizen-media';
+
+async function loadMediaForDate(datum) {
+    const label = document.getElementById('mediaDateLabel');
+    if (datum) {
+        const d = new Date(datum + 'T12:00:00');
+        label.textContent = d.toLocaleDateString('de-DE', { weekday: 'short', day: 'numeric', month: 'long', year: 'numeric' });
+    } else {
+        label.textContent = '';
+    }
+    const grid = document.getElementById('mediaGrid');
+    if (!datum) { grid.innerHTML = '<p class="empty-msg" style="font-size:0.85rem;">Kein Datum gewählt.</p>'; return; }
+
+    grid.innerHTML = '<p class="media-progress">Lade Medien…</p>';
+    try {
+        const { data, error } = await sb.from('tagesnotizen_media')
+            .select('*').eq('datum', datum).order('created_at');
+        if (error) throw error;
+        renderMediaGrid(data || []);
+    } catch (e) {
+        grid.innerHTML = `<p class="media-progress" style="color:#f87171;">Fehler: ${escHtml(e.message)}</p>`;
+    }
+}
+
+function renderMediaGrid(items) {
+    const grid = document.getElementById('mediaGrid');
+    if (items.length === 0) {
+        grid.innerHTML = '<p class="empty-msg" style="font-size:0.85rem;">Noch keine Medien für diesen Tag.</p>';
+        return;
+    }
+    grid.innerHTML = items.map(item => {
+        const url = `${SUPABASE_URL}/storage/v1/object/public/${MEDIA_BUCKET}/${item.storage_path}`;
+        const desc = item.description ? escHtml(item.description) : escHtml(item.filename);
+        if (item.type === 'image') {
+            return `
+            <div class="media-card" id="mc-${item.id}">
+                <img src="${url}" alt="${desc}" loading="lazy" onclick="openLightbox('${url}')">
+                <div class="media-card-footer">
+                    <span class="media-card-desc" title="${desc}">${desc}</span>
+                    <button class="media-card-del" onclick="deleteMedia('${item.id}','${item.storage_path}')" title="Löschen">✕</button>
+                </div>
+            </div>`;
+        } else {
+            return `
+            <div class="media-card" id="mc-${item.id}">
+                <div style="padding:0.5rem;font-size:1.5rem;text-align:center;">🎤</div>
+                <audio controls src="${url}"></audio>
+                <div class="media-card-footer">
+                    <span class="media-card-desc" title="${desc}">${desc}</span>
+                    <button class="media-card-del" onclick="deleteMedia('${item.id}','${item.storage_path}')" title="Löschen">✕</button>
+                </div>
+            </div>`;
+        }
+    }).join('');
+}
+
+async function uploadMediaFiles(files) {
+    if (!files || files.length === 0) return;
+    if (!selectedDate) { showToast('Bitte zuerst ein Datum wählen.', true); return; }
+
+    const progress = document.getElementById('mediaUploadProgress');
+    progress.classList.remove('hidden');
+    let ok = 0, fail = 0;
+
+    for (const file of Array.from(files)) {
+        progress.textContent = `Lade hoch: ${file.name}…`;
+        const ext = file.name.split('.').pop().toLowerCase();
+        const uid = crypto.randomUUID();
+        const path = `${selectedDate}/${uid}.${ext}`;
+        const type = file.type.startsWith('image/') ? 'image' : 'audio';
+
+        try {
+            const { error: upErr } = await sb.storage.from(MEDIA_BUCKET).upload(path, file, {
+                cacheControl: '3600', upsert: false, contentType: file.type
+            });
+            if (upErr) throw upErr;
+
+            const { error: dbErr } = await sb.from('tagesnotizen_media').insert({
+                datum: selectedDate, type, filename: file.name, storage_path: path
+            });
+            if (dbErr) throw dbErr;
+            ok++;
+        } catch (e) {
+            fail++;
+            showToast(`Fehler bei ${file.name}: ${e.message}`, true);
+        }
+    }
+
+    progress.classList.add('hidden');
+    document.getElementById('mediaFileInput').value = '';
+    document.getElementById('mediaCameraInput').value = '';
+
+    if (ok > 0) showToast(`✅ ${ok} Datei${ok > 1 ? 'en' : ''} hochgeladen.`);
+    await loadMediaForDate(selectedDate);
+}
+
+async function deleteMedia(id, storagePath) {
+    if (!confirm('Dieses Medium löschen?')) return;
+    try {
+        const { error: stErr } = await sb.storage.from(MEDIA_BUCKET).remove([storagePath]);
+        if (stErr) throw stErr;
+        const { error: dbErr } = await sb.from('tagesnotizen_media').delete().eq('id', id);
+        if (dbErr) throw dbErr;
+        document.getElementById('mc-' + id)?.remove();
+        showToast('✅ Gelöscht.');
+        await loadMediaForDate(selectedDate);
+    } catch (e) { showToast('Fehler: ' + e.message, true); }
+}
+
+function openLightbox(url) {
+    document.getElementById('mediaLightboxImg').src = url;
+    document.getElementById('mediaLightbox').classList.add('active');
+}
+function closeLightbox() {
+    document.getElementById('mediaLightbox').classList.remove('active');
+    document.getElementById('mediaLightboxImg').src = '';
 }
 </script>
 </body>
