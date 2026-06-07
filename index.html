@@ -349,12 +349,60 @@
         </div>
     </div>
 
+    <!-- MOVE ENTRY MODAL -->
+    <div id="moveEntryModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <span class="modal-title">📦 Eintrag umziehen</span>
+                <button class="modal-close" onclick="closeMoveEntryModal()">✕</button>
+            </div>
+            <p id="moveEntryInfo" class="form-label" style="margin-bottom:0.6rem;"></p>
+            <label class="form-label">In welche Kategorie?</label>
+            <div id="moveEntryTargets" style="display:flex;flex-direction:column;gap:0.45rem;max-height:50vh;overflow-y:auto;"></div>
+            <div class="btn-row" style="margin-top:0.7rem;">
+                <button class="btn-gray" onclick="closeMoveEntryModal()">Abbrechen</button>
+            </div>
+        </div>
+    </div>
+
     <!-- HEADER -->
     <div class="header">
         <h1 class="title">📔 Tagesnotizen</h1>
         <span id="connBadge" class="conn-badge">
             <span class="conn-dot"></span>&nbsp;Verbinde…
         </span>
+    </div>
+
+    <!-- KI-ANALYSE -->
+    <div class="section">
+        <div class="ki-header">
+            <span class="ki-title">🤖 KI-ANALYSE</span>
+            <div style="display:flex;align-items:center;gap:0.5rem;">
+                <span id="kiDot" class="ki-dot"></span>
+                <button class="btn-dark" style="font-size:0.75rem;padding:0.2rem 0.55rem;" onclick="toggleTokenPanel()">Token verwalten</button>
+            </div>
+        </div>
+        <p id="kiStatus" class="ki-status"></p>
+        <div id="tokenPanel" class="hidden">
+            <input type="password" id="githubPatInput" placeholder="github_pat_…" style="margin-bottom:0.5rem;">
+            <div class="btn-row">
+                <button class="btn-gray" onclick="clearGithubPat()">Löschen</button>
+                <button class="btn-blue" onclick="saveGithubPat()">Speichern</button>
+            </div>
+            <div style="margin-top:0.6rem;">
+                <label style="font-size:0.8rem;color:#aaa;display:block;margin-bottom:0.25rem;">KI-Modell</label>
+                <select id="modelSelect" onchange="saveModelChoice()" style="width:100%;padding:0.35rem 0.5rem;background:#2a2a2a;color:#eee;border:1px solid #444;border-radius:6px;font-size:0.85rem;">
+                    <option value="gpt-4o-mini">gpt-4o-mini (OpenAI)</option>
+                    <option value="gpt-4o">gpt-4o (OpenAI)</option>
+                    <option value="Phi-4">Phi-4 (Microsoft)</option>
+                    <option value="Llama-3.3-70B-Instruct">Llama-3.3-70B-Instruct (Meta)</option>
+                </select>
+            </div>
+            <div class="tip" style="margin-top:0.4rem;">
+                GitHub → Einstellungen → Developer settings → Personal access tokens (Classic) → Generate.<br>
+                Keine Berechtigungen nötig. Nur lokal gespeichert.
+            </div>
+        </div>
     </div>
 
     <!-- SEARCH -->
@@ -381,12 +429,8 @@
             <button class="btn-red  btn-icon" onclick="deleteRange()"  title="Zeitraum löschen">🗑️</button>
             <button class="btn-blue btn-icon" onclick="generateZeitraumGeschichte()" title="Zeitraum als Prosa">📖</button>
         </div>
-        <!-- Zeile 2: +/- Kategorie | Kategorie-Auswahl | Tag-Export -->
+        <!-- Zeile 2: Kategorie-Auswahl | Tag-Export -->
         <div style="display:flex;gap:0.35rem;align-items:center;margin-bottom:0.5rem;">
-            <button class="btn-icon btn-dark" onclick="openNewCatModal()" title="Neue Kategorie" style="font-size:0.85rem;">+🏷️</button>
-            <button class="btn-icon btn-dark" onclick="deleteSelectedCategory()" title="Kategorie löschen" style="font-size:0.85rem;">−🏷️</button>
-            <button class="btn-icon btn-dark" onclick="moveCategory(-1)" title="Gewählte Kategorie nach links" style="font-size:0.85rem;">◀</button>
-            <button class="btn-icon btn-dark" onclick="moveCategory(1)" title="Gewählte Kategorie nach rechts" style="font-size:0.85rem;">▶</button>
             <div style="position:relative;flex:1;">
                 <button id="exportCatBtn" onclick="toggleExportCatDropdown()"
                         style="width:100%;display:flex;justify-content:space-between;align-items:center;font-size:0.78rem;padding:0.3rem 0.5rem;background:#1e293b;color:#f1f5f9;border:1px solid #334155;border-radius:0.5rem;cursor:pointer;">
@@ -402,11 +446,15 @@
             <button class="btn-red  btn-icon" onclick="deleteDay()"  title="Tag löschen">🗑️</button>
             <button class="btn-blue btn-icon" onclick="generateTagesgeschichte()" title="Tagesgeschichte als Prosa">📖</button>
         </div>
-        <!-- Eintragsdatum -->
-        <div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.5rem;">
+        <!-- Eintragsdatum + Kategorie verwalten -->
+        <div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.5rem;flex-wrap:wrap;">
             <span>📅</span>
-            <input type="date" id="entryDate" onchange="onDateChange()" style="flex:1;margin-bottom:0;">
+            <input type="date" id="entryDate" onchange="onDateChange()" style="flex:1;min-width:8rem;margin-bottom:0;">
             <button class="btn-icon" onclick="openGoogleCalendar()" title="Diesen Tag im Google-Kalender öffnen" style="background:#1a73e8;color:#fff;flex:none;">📆 Kalender</button>
+            <button class="btn-icon btn-dark" onclick="openNewCatModal()" title="Neue Kategorie anlegen" style="font-size:0.85rem;">+🏷️</button>
+            <button class="btn-icon btn-dark" onclick="deleteSelectedCategory()" title="Gewählte Kategorie löschen" style="font-size:0.85rem;">−🏷️</button>
+            <button class="btn-icon btn-dark" onclick="moveCategory(-1)" title="Gewählte Kategorie nach links" style="font-size:0.85rem;">◀</button>
+            <button class="btn-icon btn-dark" onclick="moveCategory(1)" title="Gewählte Kategorie nach rechts" style="font-size:0.85rem;">▶</button>
         </div>
         <!-- Kategorie-Chips (Aufnahme + Export) -->
         <div id="categoryGrid" class="tag-grid"></div>
@@ -481,37 +529,6 @@
         <img id="mediaLightboxImg" src="" alt="">
     </div>
 
-    <!-- KI-ANALYSE -->
-    <div class="section">
-        <div class="ki-header">
-            <span class="ki-title">🤖 KI-ANALYSE</span>
-            <div style="display:flex;align-items:center;gap:0.5rem;">
-                <span id="kiDot" class="ki-dot"></span>
-                <button class="btn-dark" style="font-size:0.75rem;padding:0.2rem 0.55rem;" onclick="toggleTokenPanel()">Token verwalten</button>
-            </div>
-        </div>
-        <p id="kiStatus" class="ki-status"></p>
-        <div id="tokenPanel" class="hidden">
-            <input type="password" id="githubPatInput" placeholder="github_pat_…" style="margin-bottom:0.5rem;">
-            <div class="btn-row">
-                <button class="btn-gray" onclick="clearGithubPat()">Löschen</button>
-                <button class="btn-blue" onclick="saveGithubPat()">Speichern</button>
-            </div>
-            <div style="margin-top:0.6rem;">
-                <label style="font-size:0.8rem;color:#aaa;display:block;margin-bottom:0.25rem;">KI-Modell</label>
-                <select id="modelSelect" onchange="saveModelChoice()" style="width:100%;padding:0.35rem 0.5rem;background:#2a2a2a;color:#eee;border:1px solid #444;border-radius:6px;font-size:0.85rem;">
-                    <option value="gpt-4o-mini">gpt-4o-mini (OpenAI)</option>
-                    <option value="gpt-4o">gpt-4o (OpenAI)</option>
-                    <option value="Phi-4">Phi-4 (Microsoft)</option>
-                    <option value="Llama-3.3-70B-Instruct">Llama-3.3-70B-Instruct (Meta)</option>
-                </select>
-            </div>
-            <div class="tip" style="margin-top:0.4rem;">
-                GitHub → Einstellungen → Developer settings → Personal access tokens (Classic) → Generate.<br>
-                Keine Berechtigungen nötig. Nur lokal gespeichert.
-            </div>
-        </div>
-    </div>
 
 </div>
 
@@ -789,17 +806,36 @@ function editEntry(id) {
 }
 
 // Verschiebt einen Eintrag in eine andere Kategorie ("umziehen").
-async function moveEntry(id) {
+let moveEntryId = null;
+function moveEntry(id) {
     const e = entries.find(x => x.id === id);
     if (!e) return;
     const targets = categories.filter(c => c !== selectedCategory);
     if (targets.length === 0) { alert('Es gibt keine andere Kategorie zum Verschieben.'); return; }
-    const list = targets.map((c, i) => `${i + 1}. ${c}`).join('\n');
-    const answer = prompt(`Eintrag vom ${e.datum} in welche Kategorie verschieben?\n\nBitte die Nummer eingeben:\n\n${list}`);
-    if (answer === null) return;
-    const idx = parseInt(String(answer).trim(), 10) - 1;
-    if (isNaN(idx) || idx < 0 || idx >= targets.length) { alert('Ungültige Auswahl – bitte eine der angezeigten Nummern eingeben.'); return; }
-    const target = targets[idx];
+    moveEntryId = id;
+    document.getElementById('moveEntryInfo').textContent =
+        `Eintrag vom ${e.datum} aus „${selectedCategory}" verschieben.`;
+    const box = document.getElementById('moveEntryTargets');
+    box.innerHTML = '';
+    targets.forEach(c => {
+        const btn = document.createElement('button');
+        btn.className = 'btn-dark';
+        btn.style.cssText = 'width:100%;text-align:left;font-size:1rem;padding:0.6rem 0.8rem;';
+        btn.textContent = '#' + c + (isProtectedCategory(c) ? ' 🔒' : '');
+        btn.onclick = () => doMoveEntry(c);
+        box.appendChild(btn);
+    });
+    document.getElementById('moveEntryModal').classList.add('active');
+}
+function closeMoveEntryModal() {
+    document.getElementById('moveEntryModal').classList.remove('active');
+    moveEntryId = null;
+}
+async function doMoveEntry(target) {
+    const id = moveEntryId;
+    const e = entries.find(x => x.id === id);
+    if (!e) { closeMoveEntryModal(); return; }
+    closeMoveEntryModal();
     try {
         // Pro Tag und Kategorie ist nur ein Eintrag erlaubt – Ziel prüfen
         const { data: existing } = await sb.from('tagesnotizen_entries')
