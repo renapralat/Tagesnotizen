@@ -12,14 +12,14 @@
 ## Schon live
 - Foto- und Medien-Bereich (Kamera + Hochladen)
 - **Kalender-Absprung** und **Dokumente hoch-/herunterladen**
-
-## In Vorschau (noch nicht live – wartet auf mein „passt")
 - **Schutz:** Bilder, Tagesprotokoll, Prosa sind 🔒 und nicht löschbar; andere Kategorien fragen **zweimal** nach
 - **Sortieren:** Kategorien mit ◀ ▶ verschieben
-- **Umziehen:** Eintrag mit 📦 in eine andere Kategorie
+- **Umziehen:** Eintrag mit 📦 – Zielkategorie zum Antippen
+- **KI-Analyse oben** (Modell schnell wechseln, Token nachtragen)
+- Kategorie-Knöpfe **mittig** an der Datumszeile, Datum fett am Medien-Titel
+- **Web-Adressen** (https://…) in Einträgen sind anklickbar
 
 ## Offene Ideen
-- **D – Layout:** Tagesprotokoll und Prosa oben neben das Datum; Datum kleiner
 - **E – Alles auswählen/kopieren** mit einem Knopf
 - **F – Google-Drive-Backup:** Texte täglich sichern; einmal gesichert wird **nie wieder gelöscht** (Bilder/Dokumente bleiben in Supabase)
 
