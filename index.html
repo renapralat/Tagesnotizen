@@ -451,10 +451,12 @@
         <div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.5rem;flex-wrap:wrap;">
             <span>📅</span>
             <input type="date" id="entryDate" onchange="onDateChange()" style="flex:none;width:8.5rem;margin-bottom:0;">
+            <span style="flex:1;min-width:0.5rem;"></span>
             <button class="btn-icon btn-dark" onclick="openNewCatModal()" title="Neue Kategorie anlegen" style="font-size:0.85rem;">+🏷️</button>
             <button class="btn-icon btn-dark" onclick="deleteSelectedCategory()" title="Gewählte Kategorie löschen" style="font-size:0.85rem;">−🏷️</button>
             <button class="btn-icon btn-dark" onclick="moveCategory(-1)" title="Gewählte Kategorie nach links" style="font-size:0.85rem;">◀</button>
             <button class="btn-icon btn-dark" onclick="moveCategory(1)" title="Gewählte Kategorie nach rechts" style="font-size:0.85rem;">▶</button>
+            <span style="flex:1;min-width:0.5rem;"></span>
             <button class="btn-icon" onclick="openGoogleCalendar()" title="Diesen Tag im Google-Kalender öffnen" style="background:#1a73e8;color:#fff;flex:none;">📆 Kalender</button>
         </div>
         <!-- Kategorie-Chips (Aufnahme + Export) -->
