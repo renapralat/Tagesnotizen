@@ -421,10 +421,6 @@
                 <input type="file" id="mediaFileInput" accept="image/*,audio/*,video/*,application/pdf,.pdf,.doc,.docx,.txt,.rtf,.odt,.xls,.xlsx,.csv,.ppt,.pptx" multiple onchange="uploadMediaFiles(this.files)">
                 📎 Hochladen
             </label>
-            <label style="background:#8b5cf6;">
-                <input type="file" id="mediaSelfieInput" accept="image/*" capture="user" onchange="uploadMediaFiles(this.files)">
-                🤳 Selfie
-            </label>
             <label style="background:#10b981;">
                 <input type="file" id="mediaCameraInput" accept="image/*" capture="environment" onchange="uploadMediaFiles(this.files)">
                 📷 Kamera
@@ -1694,7 +1690,6 @@ async function uploadMediaFiles(files) {
     progress.classList.add('hidden');
     document.getElementById('mediaFileInput').value = '';
     document.getElementById('mediaCameraInput').value = '';
-    document.getElementById('mediaSelfieInput').value = '';
 
     if (ok > 0) showToast(`✅ ${ok} Datei${ok > 1 ? 'en' : ''} hochgeladen.`);
     await loadMediaForDate(selectedDate);
