@@ -268,6 +268,7 @@
         .entry-date { color: #94a3b8; font-size: 0.875rem; font-weight: 700; }
         .entry-actions { display: flex; gap: 0.4rem; }
         .entry-text { line-height: 1.65; white-space: pre-wrap; word-break: break-word; font-size: 0.95rem; }
+        .entry-link { color: #60a5fa; text-decoration: underline; font-weight: 600; word-break: break-all; }
 
         /* KI Section */
         .ki-header {
@@ -449,12 +450,12 @@
         <!-- Eintragsdatum + Kategorie verwalten -->
         <div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.5rem;flex-wrap:wrap;">
             <span>📅</span>
-            <input type="date" id="entryDate" onchange="onDateChange()" style="flex:1;min-width:8rem;margin-bottom:0;">
-            <button class="btn-icon" onclick="openGoogleCalendar()" title="Diesen Tag im Google-Kalender öffnen" style="background:#1a73e8;color:#fff;flex:none;">📆 Kalender</button>
+            <input type="date" id="entryDate" onchange="onDateChange()" style="flex:none;width:8.5rem;margin-bottom:0;">
             <button class="btn-icon btn-dark" onclick="openNewCatModal()" title="Neue Kategorie anlegen" style="font-size:0.85rem;">+🏷️</button>
             <button class="btn-icon btn-dark" onclick="deleteSelectedCategory()" title="Gewählte Kategorie löschen" style="font-size:0.85rem;">−🏷️</button>
             <button class="btn-icon btn-dark" onclick="moveCategory(-1)" title="Gewählte Kategorie nach links" style="font-size:0.85rem;">◀</button>
             <button class="btn-icon btn-dark" onclick="moveCategory(1)" title="Gewählte Kategorie nach rechts" style="font-size:0.85rem;">▶</button>
+            <button class="btn-icon" onclick="openGoogleCalendar()" title="Diesen Tag im Google-Kalender öffnen" style="background:#1a73e8;color:#fff;flex:none;">📆 Kalender</button>
         </div>
         <!-- Kategorie-Chips (Aufnahme + Export) -->
         <div id="categoryGrid" class="tag-grid"></div>
@@ -462,9 +463,8 @@
 
     <!-- MEDIEN -->
     <div class="section" id="mediaSection">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.75rem;">
-            <span class="section-title" style="margin-bottom:0;">📷 Medien & Dokumente zum Tag</span>
-            <span id="mediaDateLabel" class="media-date-label"></span>
+        <div style="margin-bottom:0.75rem;">
+            <span class="section-title" style="margin-bottom:0;">📷 Medien & Dokumente zum Tag<span id="mediaDateLabel" style="font-weight:inherit;"></span></span>
         </div>
         <div class="media-upload-row">
             <label>
@@ -599,6 +599,14 @@ function escHtml(s) {
     return String(s)
         .replace(/&/g,'&amp;').replace(/</g,'&lt;')
         .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// Text sicher anzeigen UND Web-Adressen (https://…) in anklickbare Links wandeln
+function linkify(s) {
+    return escHtml(s).replace(
+        /(https?:\/\/[^\s<]+[^\s<.,;:!?)\]}"'])/g,
+        '<a href="$1" target="_blank" rel="noopener" class="entry-link">$1</a>'
+    );
 }
 
 function setConnBadge(ok, msg) {
@@ -769,7 +777,7 @@ function displayEntries(list) {
                     <button class="btn-icon btn-red"   onclick="deleteEntry('${e.id}','${e.datum}')" title="Löschen">✕</button>
                 </div>
             </div>
-            <div class="entry-text">${escHtml(e.text)}</div>
+            <div class="entry-text">${linkify(e.text)}</div>
         </div>
     `).join('');
 }
@@ -1676,7 +1684,7 @@ async function loadMediaForDate(datum) {
     const label = document.getElementById('mediaDateLabel');
     if (datum) {
         const d = new Date(datum + 'T12:00:00');
-        label.textContent = d.toLocaleDateString('de-DE', { weekday: 'short', day: 'numeric', month: 'long', year: 'numeric' });
+        label.textContent = ' — ' + d.toLocaleDateString('de-DE', { weekday: 'short', day: 'numeric', month: 'long', year: 'numeric' });
     } else {
         label.textContent = '';
     }
