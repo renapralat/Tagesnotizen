@@ -404,6 +404,26 @@
         <div id="categoryGrid" class="tag-grid"></div>
     </div>
 
+    <!-- MEDIEN -->
+    <div class="section" id="mediaSection">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.75rem;">
+            <span class="section-title" style="margin-bottom:0;">📷 Medien zum Tag</span>
+            <span id="mediaDateLabel" class="media-date-label"></span>
+        </div>
+        <div class="media-upload-row">
+            <label>
+                <input type="file" id="mediaFileInput" accept="image/*,audio/*,video/*" multiple onchange="uploadMediaFiles(this.files)">
+                📎 Hochladen
+            </label>
+            <label style="background:#10b981;">
+                <input type="file" id="mediaCameraInput" accept="image/*" capture="environment" onchange="uploadMediaFiles(this.files)">
+                📷 Kamera
+            </label>
+        </div>
+        <div id="mediaUploadProgress" class="media-progress hidden"></div>
+        <div id="mediaGrid" class="media-grid"></div>
+    </div>
+
     <!-- INPUT -->
     <div id="inputSection" class="section hidden">
         <div class="input-area">
@@ -445,26 +465,6 @@
         <div id="entriesContainer">
             <p class="empty-msg">Bitte Datum und Kategorie wählen.</p>
         </div>
-    </div>
-
-    <!-- MEDIEN -->
-    <div class="section" id="mediaSection">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.75rem;">
-            <span class="section-title" style="margin-bottom:0;">📷 Medien zum Tag</span>
-            <span id="mediaDateLabel" class="media-date-label"></span>
-        </div>
-        <div class="media-upload-row">
-            <label>
-                <input type="file" id="mediaFileInput" accept="image/*,audio/*" multiple onchange="uploadMediaFiles(this.files)">
-                📎 Bild / Audio hochladen
-            </label>
-            <label style="background:#10b981;">
-                <input type="file" id="mediaCameraInput" accept="image/*" capture="environment" onchange="uploadMediaFiles(this.files)">
-                📷 Kamera
-            </label>
-        </div>
-        <div id="mediaUploadProgress" class="media-progress hidden"></div>
-        <div id="mediaGrid" class="media-grid"></div>
     </div>
 
     <!-- LIGHTBOX -->
