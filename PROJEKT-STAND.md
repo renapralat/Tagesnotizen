@@ -19,9 +19,16 @@
 - Kategorie-Knöpfe **mittig** an der Datumszeile, Datum fett am Medien-Titel
 - **Web-Adressen** (https://…) in Einträgen sind anklickbar
 
+## Google-Drive-Backup
+- Ordner in meinem Drive: **Claude Tagesnotizen**
+- Ich sage **„Claude, sichere meine Texte"** → Claude legt **eine Datei pro Tag** dort ab
+- **Wird nie gelöscht.** Lösche ich in der App, bleibt die Drive-Datei. Bilder/Dokumente bleiben in Supabase.
+- Läuft aktuell **auf Anfrage** (in einer Sitzung). Vollautomatisch täglich = späterer Ausbau (braucht einmalige Google-Einrichtung)
+
 ## Offene Ideen
 - **E – Alles auswählen/kopieren** mit einem Knopf
-- **F – Google-Drive-Backup:** Texte täglich sichern; einmal gesichert wird **nie wieder gelöscht** (Bilder/Dokumente bleiben in Supabase)
+- **Verknüpfungen** (Stichwörter wie „Anna" → Einträge + Bilder) – zurückgestellt, bis mehr Daten da sind
+- **Drive-Backup vollautomatisch** aus der App heraus
 
 ## So arbeiten wir
 - Claude baut etwas → ich bekomme eine **Vorschau** → ich sage **„passt"** → es wird **live**
