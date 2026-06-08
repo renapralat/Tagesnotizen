@@ -313,6 +313,10 @@
         .kap-del { background: none; border: none; color: #f87171; font-size: 1.1rem; cursor: pointer; flex: none; padding: 0.2rem 0.4rem; }
         .kap-body { width: 100%; min-height: 5rem; resize: vertical; background: #1e293b; border: 1px solid #475569; border-radius: 0.4rem; padding: 0.5rem 0.6rem; color: #e2e8f0; font-size: 0.95rem; line-height: 1.55; font-family: inherit; }
         .kap-intro .kap-title { font-weight: 400; color: #94a3b8; }
+        .kap-mic { flex: none; font-size: 1.2rem; padding: 0.5rem 0.65rem; border-radius: 0.4rem; align-self: stretch; }
+        .kap-mic.recording { background: #dc2626; animation: pulse 0.9s ease-in-out infinite; }
+        .kind-choice { display: flex; align-items: flex-start; gap: 0.5rem; font-size: 0.9rem; color: #cbd5e1; background: #0f172a; border: 1px solid #334155; border-radius: 0.4rem; padding: 0.55rem 0.7rem; cursor: pointer; line-height: 1.35; }
+        .kind-choice input { margin-top: 0.2rem; flex: none; }
         .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem; }
         .modal-title { font-size: 1.15rem; font-weight: 700; }
         .modal-close {
@@ -359,6 +363,11 @@
             <label class="form-label">Name:</label>
             <input type="text" id="newCatInput" placeholder="Kategorie-Name…"
                    onkeydown="if(event.key==='Enter')addCategory()">
+            <label class="form-label" style="margin-top:0.9rem;">Art:</label>
+            <div style="display:flex;flex-direction:column;gap:0.5rem;margin-bottom:0.3rem;">
+                <label class="kind-choice"><input type="radio" name="newCatKind" value="tag" checked> 📅 <b>Tag-Kategorie</b> – tägliche Notizen wie bisher</label>
+                <label class="kind-choice"><input type="radio" name="newCatKind" value="buch"> 📖 <b>Buch-Kategorie</b> – ein Buch mit Kapiteln (Lebenslauf, „Mein Sohn"…)</label>
+            </div>
             <div class="btn-row" style="margin-top:0;">
                 <button class="btn-gray" onclick="closeNewCatModal()">Abbrechen</button>
                 <button class="btn-green" onclick="addCategory()">+ Hinzufügen</button>
@@ -581,6 +590,9 @@ function getGhModel() { return localStorage.getItem('tagesnotizen-model') || GH_
 let selectedDate     = getTodayDate();
 let selectedCategory = null;
 let categories       = [];
+let categoryKind     = {};   // name -> 'tag' | 'buch'
+let currentBook      = null; // aktuell angezeigtes Buch (Eintrag der Buch-Kategorie)
+const BOOK_DATUM     = '2000-01-01'; // fester Platzhalter: pro Buch-Kategorie genau ein Eintrag
 
 // Geschützte Kategorien: können nicht gelöscht werden (siehe deleteSelectedCategory).
 const PROTECTED_CATEGORIES = ['Bilder', 'Tagesprotokoll', 'Prosa'];
@@ -598,6 +610,8 @@ let micBefore = '';  // text before cursor position when mic started
 let micAfter  = '';  // text after cursor position when mic started
 let micDone   = '';  // text dictated since last mic start (across session restarts)
 let micReset  = false; // when true, onresult skips commit, onend skips restart
+let micTargetEl = null; // textarea, in die gerade diktiert wird
+let micBtnEl    = null; // zugehöriger Mikrofon-Knopf (für die rote Anzeige)
 let speakingId       = null;  // null | 'summary' | entry-uuid
 let speakResumeTimer = null;  // workaround for Android auto-pause bug
 
@@ -711,9 +725,11 @@ function openGoogleCalendar() {
 async function loadCategories() {
     try {
         const { data, error } = await sb
-            .from('tagesnotizen_categories').select('name').order('position');
+            .from('tagesnotizen_categories').select('name, kind').order('position');
         if (error) throw error;
         categories = data.map(r => r.name);
+        categoryKind = {};
+        data.forEach(r => categoryKind[r.name] = r.kind || 'tag');
         renderCategories();
         updateExportSelect();
         setConnBadge(true, 'Cloud verbunden');
@@ -728,28 +744,38 @@ function renderCategories() {
     categories.forEach(cat => {
         const btn = document.createElement('button');
         btn.className = 'tag-btn' + (cat === selectedCategory ? ' active' : '');
-        btn.textContent = '#' + cat + (isProtectedCategory(cat) ? ' 🔒' : '');
+        const pre = categoryKind[cat] === 'buch' ? '📖 ' : '#';
+        btn.textContent = pre + cat + (isProtectedCategory(cat) ? ' 🔒' : '');
         btn.onclick = () => selectCategory(cat);
         grid.appendChild(btn);
     });
 }
 
 function selectCategory(cat) {
-    if (selectedCategory) bufferByCategory[selectedCategory] = [...buffer];
+    if (selectedCategory && categoryKind[selectedCategory] !== 'buch') {
+        bufferByCategory[selectedCategory] = [...buffer];
+    }
     selectedCategory = cat;
+    const isBook = categoryKind[cat] === 'buch';
     renderCategories();
-    document.getElementById('currentTagDisplay').textContent = '#' + cat;
-    document.getElementById('inputSection').classList.remove('hidden');
+    document.getElementById('currentTagDisplay').textContent = (isBook ? '📖 ' : '#') + cat;
+    // Bei Buch-Kategorien das gefährliche Tages-Eingabefeld ausblenden.
+    document.getElementById('inputSection').classList.toggle('hidden', isBook);
+    document.getElementById('mediaSection').classList.toggle('hidden', isBook);
     document.getElementById('summarySection').classList.add('hidden');
     currentSummary = '';
-    document.getElementById('inputText').value = '';
-    buffer = bufferByCategory[cat] ? [...bufferByCategory[cat]] : [];
-    renderBuffer();
+    if (!isBook) {
+        document.getElementById('inputText').value = '';
+        buffer = bufferByCategory[cat] ? [...bufferByCategory[cat]] : [];
+        renderBuffer();
+    }
     renderEntries();
 }
 
 function openNewCatModal() {
     document.getElementById('newCatInput').value = '';
+    const tagRadio = document.querySelector('input[name="newCatKind"][value="tag"]');
+    if (tagRadio) tagRadio.checked = true;
     document.getElementById('newCatModal').classList.add('active');
     setTimeout(() => document.getElementById('newCatInput').focus(), 120);
 }
@@ -759,11 +785,14 @@ async function addCategory() {
     const name = document.getElementById('newCatInput').value.trim();
     if (!name) return;
     if (categories.includes(name)) { alert('Diese Kategorie existiert bereits.'); return; }
+    const kindEl = document.querySelector('input[name="newCatKind"]:checked');
+    const kind = kindEl ? kindEl.value : 'tag';
     try {
         const { error } = await sb.from('tagesnotizen_categories')
-            .insert({ name, position: categories.length });
+            .insert({ name, position: categories.length, kind });
         if (error) throw error;
         categories.push(name);
+        categoryKind[name] = kind;
         closeNewCatModal();
         renderCategories();
         updateExportSelect();
@@ -833,8 +862,70 @@ async function loadEntries() {
 }
 
 async function renderEntries() {
+    if (selectedCategory && categoryKind[selectedCategory] === 'buch') {
+        await renderBook(selectedCategory);
+        return;
+    }
     await loadEntries();
     displayEntries(entries);
+}
+
+// ── Buch-Ansicht (Buch-Kategorie) ───────────────────────────────────────────────
+async function renderBook(cat) {
+    const c = document.getElementById('entriesContainer');
+    c.innerHTML = '<p class="empty-msg">Buch wird geladen…</p>';
+    let book = null;
+    try {
+        const { data, error } = await sb.from('tagesnotizen_entries')
+            .select('id, datum, category, text').eq('category', cat)
+            .order('updated_at', { ascending: false }).limit(1);
+        if (error) throw error;
+        book = (data && data[0]) ? data[0] : null;
+    } catch (e) { c.innerHTML = '<p class="empty-msg">Fehler: ' + escHtml(e.message) + '</p>'; return; }
+    currentBook = book;
+    if (!book || !book.text.trim()) {
+        c.innerHTML =
+            '<div class="entry"><p class="empty-msg">📖 Dieses Buch ist noch leer.</p>' +
+            '<button class="btn-purple" style="width:100%;font-size:1.05rem;padding:0.7rem;" onclick="openBookEditor()">📖 Buch beginnen</button></div>';
+        return;
+    }
+    const rt = renderRichText(book.text, 'book');
+    let toc = '';
+    if (rt.headings.length >= 1) {
+        toc = '<div class="entry-toc"><div class="entry-toc-title">📑 Inhalt</div>' +
+            rt.headings.map(h => `<a class="lvl${h.level}" onclick="scrollToHeading('${h.id}')">${escHtml(h.title)}</a>`).join('') +
+            '</div>';
+    }
+    c.innerHTML = `
+        <div class="entry">
+            <div class="entry-header">
+                <span class="entry-date">📖 ${escHtml(cat)}</span>
+                <div class="entry-actions">
+                    <button id="speak-book" class="btn-icon btn-amber speak-btn" onclick="speakBook()" title="Vorlesen">🔊</button>
+                    <button class="btn-icon btn-blue" onclick="openBookEditor()" title="Buch schreiben / bearbeiten">✏️</button>
+                    <button class="btn-icon btn-dark" onclick="printBook()" title="Als Buch drucken">🖨️</button>
+                </div>
+            </div>
+            <div class="entry-text">${toc}${rt.html}</div>
+        </div>`;
+}
+
+function speakBook() {
+    const prev = speakingId;
+    stopSpeaking();
+    if (prev !== null) return;
+    if (currentBook && currentBook.text) startSpeaking(currentBook.text, 'book');
+}
+
+function printBook() {
+    if (!currentBook) return;
+    printDoc(selectedCategory || 'Buch', '', currentBook.text);
+}
+
+// Öffnet den Kapitel-Editor für das Buch der aktuellen Kategorie (neu oder bestehend).
+function openBookEditor() {
+    const entry = currentBook || { id: null, datum: BOOK_DATUM, category: selectedCategory, text: '' };
+    openKapitelEditor(entry);
 }
 
 function displayEntries(list) {
@@ -867,23 +958,27 @@ function displayEntries(list) {
     }).join('');
 }
 
-// Eintrag im Buch-Layout drucken (eigenes sauberes Fenster)
+// Tageseintrag im Buch-Layout drucken
 function printEntry(id) {
     const e = entries.find(x => x.id === id);
     if (!e) return;
-    const rt = renderRichText(e.text, 'p');
+    printDoc(selectedCategory || 'Tagesnotizen', e.datum, e.text);
+}
+
+// Text im Buch-Layout drucken (eigenes sauberes Fenster) – für Tageseinträge UND Bücher
+function printDoc(titel, dateLabel, text) {
+    const rt = renderRichText(text, 'p');
     let toc = '';
     if (rt.headings.length >= 2) {
         toc = '<nav class="toc"><h2>Inhalt</h2>' +
             rt.headings.map(h => `<div class="toc-l${h.level}">${escHtml(h.title)}</div>`).join('') +
             '</nav>';
     }
-    const titel = (selectedCategory || 'Tagesnotizen');
     const w = window.open('', '_blank');
     if (!w) { showToast('Bitte Pop-ups für diese Seite erlauben.', true); return; }
     w.document.write(
         '<!doctype html><html lang="de"><head><meta charset="utf-8">' +
-        '<title>' + escHtml(titel) + ' – ' + e.datum + '</title><style>' +
+        '<title>' + escHtml(titel) + (dateLabel ? ' – ' + dateLabel : '') + '</title><style>' +
         'body{font-family:Georgia,"Times New Roman",serif;line-height:1.6;color:#111;max-width:42rem;margin:2rem auto;padding:0 1.5rem;}' +
         'h1.doc{font-size:1.8rem;border-bottom:2px solid #333;padding-bottom:0.3rem;}' +
         '.meta{color:#666;font-size:0.9rem;margin-bottom:2rem;}' +
@@ -897,7 +992,7 @@ function printEntry(id) {
         '@media print{h3{page-break-before:always;}h3:first-of-type{page-break-before:avoid;}.toc{page-break-after:always;}}' +
         '</style></head><body>' +
         '<h1 class="doc">' + escHtml(titel) + '</h1>' +
-        '<div class="meta">' + e.datum + '</div>' +
+        (dateLabel ? '<div class="meta">' + escHtml(dateLabel) + '</div>' : '') +
         toc + rt.html +
         '</body></html>'
     );
@@ -931,7 +1026,7 @@ function editEntry(id) {
     if (!e) return;
     // Hat der Eintrag Kapitel-Überschriften? Dann den bequemen Kapitel-Editor öffnen.
     if (/^(#{1,2}\s+|Kapitel\s+|Abschnitt\s+)/im.test(e.text)) {
-        openKapitelEditor(id);
+        openKapitelEditor(e);
         return;
     }
     document.getElementById('entryDate').value = e.datum;
@@ -968,13 +1063,17 @@ function parseBook(text) {
     };
 }
 
-let kapitelEditId = null;
-function openKapitelEditor(id) {
-    const e = entries.find(x => x.id === id);
-    if (!e) return;
-    kapitelEditId = id;
-    const book = parseBook(e.text);
-    document.querySelector('#kapitelModal .modal-title').textContent = '📖 Buch bearbeiten – #' + selectedCategory;
+// kapitelEdit: { id (oder null bei neuem Buch), datum, category }
+let kapitelEdit = null;
+function openKapitelEditor(entry) {
+    if (!entry) return;
+    kapitelEdit = {
+        id: entry.id || null,
+        datum: entry.datum || BOOK_DATUM,
+        category: entry.category || selectedCategory
+    };
+    const book = parseBook(entry.text || '');
+    document.querySelector('#kapitelModal .modal-title').textContent = '📖 Buch bearbeiten – ' + (kapitelEdit.category || '');
     const list = document.getElementById('kapitelList');
     list.innerHTML = '';
     if (book.intro) addKapitelCard('', book.intro, true);
@@ -1000,14 +1099,34 @@ function addKapitelCard(title, body, isIntro) {
             '<button class="kap-del" title="Dieses Kapitel löschen" onclick="if(confirm(\'Dieses Kapitel wirklich löschen?\')){this.closest(&quot;.kap-card&quot;).remove();renumberKapitel();}">🗑</button></div>';
         card.querySelector('.kap-title').value = title;
     }
+    const row = document.createElement('div');
+    row.style.cssText = 'display:flex;gap:0.5rem;align-items:flex-start;';
     const ta = document.createElement('textarea');
     ta.className = 'kap-body';
     ta.placeholder = isIntro ? 'Optionaler Text vor dem ersten Kapitel…' : 'Hier schreibst Du den Inhalt dieses Kapitels…';
     ta.value = body;
-    card.appendChild(ta);
+    const micBtn = document.createElement('button');
+    micBtn.className = 'btn-amber kap-mic';
+    micBtn.textContent = '🎤';
+    micBtn.title = 'In dieses Kapitel sprechen';
+    micBtn.onclick = () => toggleKapitelMic(ta, micBtn);
+    row.appendChild(ta);
+    row.appendChild(micBtn);
+    card.appendChild(row);
     list.appendChild(card);
     renumberKapitel();
     if (!isIntro && !title && !body) ta.focus();
+}
+
+// Diktieren in ein bestimmtes Kapitel-Feld (eigenes Mikrofon je Kapitel)
+function toggleKapitelMic(ta, btn) {
+    if (isRecording && micTargetEl === ta) { stopMic(); return; }
+    if (isRecording) stopMic();
+    const pos = ta.selectionStart != null ? ta.selectionStart : ta.value.length;
+    micBefore = ta.value.substring(0, pos);
+    micAfter  = ta.value.substring(pos);
+    micDone   = '';
+    startMic(ta, btn);
 }
 
 function renumberKapitel() {
@@ -1021,9 +1140,8 @@ function renumberKapitel() {
 }
 
 async function saveKapitelEditor() {
-    const id = kapitelEditId;
-    const e = entries.find(x => x.id === id);
-    if (!e) { closeKapitelEditor(); return; }
+    if (!kapitelEdit) { closeKapitelEditor(); return; }
+    if (isRecording) stopMic();
     const parts = [];
     document.querySelectorAll('#kapitelList .kap-card').forEach(card => {
         const ta = card.querySelector('.kap-body');
@@ -1042,8 +1160,15 @@ async function saveKapitelEditor() {
     const newText = parts.join('\n\n');
     if (!newText.trim()) { alert('Das Buch ist leer – nichts zu speichern.'); return; }
     try {
-        const { error } = await sb.from('tagesnotizen_entries').update({ text: newText }).eq('id', id);
-        if (error) throw error;
+        if (kapitelEdit.id) {
+            const { error } = await sb.from('tagesnotizen_entries')
+                .update({ text: newText, updated_at: new Date().toISOString() }).eq('id', kapitelEdit.id);
+            if (error) throw error;
+        } else {
+            const { error } = await sb.from('tagesnotizen_entries')
+                .insert({ datum: kapitelEdit.datum, category: kapitelEdit.category, text: newText });
+            if (error) throw error;
+        }
         closeKapitelEditor();
         showToast('✅ Buch gespeichert.');
         await renderEntries();
@@ -1051,8 +1176,9 @@ async function saveKapitelEditor() {
 }
 
 function closeKapitelEditor() {
+    if (isRecording) stopMic();
     document.getElementById('kapitelModal').classList.remove('active');
-    kapitelEditId = null;
+    kapitelEdit = null;
 }
 
 // Verschiebt einen Eintrag in eine andere Kategorie ("umziehen").
@@ -1112,11 +1238,16 @@ function toggleMic() {
         micBefore = ta.value.substring(0, pos); // Text vor dem Cursor
         micAfter  = ta.value.substring(pos);    // Text nach dem Cursor
         micDone   = '';
-        startMic();
+        startMic(ta, document.getElementById('micBtn'));
     }
 }
 
-function startMic() {
+// startMic(target, btn): diktiert in das Feld `target`. Ohne Argumente (Neustart
+// nach onend) werden die zuletzt gesetzten micTargetEl/micBtnEl weiterverwendet.
+function startMic(target, btn) {
+    if (target) micTargetEl = target;
+    if (btn)    micBtnEl    = btn;
+    const ta = micTargetEl || document.getElementById('inputText');
     const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!SR) {
         alert('Spracherkennung nicht verfügbar.\nBitte Chrome verwenden.');
@@ -1132,11 +1263,10 @@ function startMic() {
     recognition.continuous = false;
     recognition.interimResults = true;
 
-    const ta = document.getElementById('inputText');
     let curInterim = '';
 
     recognition.onstart = () => {
-        document.getElementById('micBtn').classList.add('recording');
+        if (micBtnEl) micBtnEl.classList.add('recording');
         ta.readOnly = true;   // kein händisches Editieren während Aufnahme
         setRecStatus(true);
     };
@@ -1169,7 +1299,7 @@ function startMic() {
             setTimeout(() => { if (isRecording) startMic(); }, 80);
         } else {
             ta.readOnly = false;
-            document.getElementById('micBtn').classList.remove('recording');
+            if (micBtnEl) micBtnEl.classList.remove('recording');
             setRecStatus(false);
         }
     };
@@ -1177,7 +1307,7 @@ function startMic() {
     recognition.onerror = (ev) => {
         if (ev.error === 'not-allowed') {
             isRecording = false;
-            document.getElementById('micBtn').classList.remove('recording');
+            if (micBtnEl) micBtnEl.classList.remove('recording');
             setRecStatus(false);
             alert('Mikrofon-Zugriff verweigert.\nBitte in den Browser-Einstellungen erlauben.');
         }
@@ -1191,8 +1321,8 @@ function startMic() {
 function stopMic() {
     isRecording = false;
     try { recognition && recognition.stop(); } catch(e){}
-    document.getElementById('inputText').readOnly = false;
-    document.getElementById('micBtn').classList.remove('recording');
+    if (micTargetEl) micTargetEl.readOnly = false;
+    if (micBtnEl) micBtnEl.classList.remove('recording');
     setRecStatus(false);
 }
 
