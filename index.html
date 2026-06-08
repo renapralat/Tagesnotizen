@@ -305,14 +305,18 @@
             background: #1e293b; padding: 1.5rem; border-radius: 0.5rem;
             width: 100%; max-width: 420px; border: 1px solid #475569;
         }
-        .modal-content.modal-wide { max-width: 640px; }
+        .modal-content.modal-wide { max-width: 680px; }
         .kap-card { background: #0f172a; border: 1px solid #334155; border-radius: 0.5rem; padding: 0.7rem 0.8rem; }
-        .kap-card-head { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem; }
-        .kap-num { background: #475569; color: #e2e8f0; font-weight: 700; font-size: 0.85rem; border-radius: 999px; padding: 0.1rem 0.6rem; flex: none; }
-        .kap-title { flex: 1; font-size: 1rem; font-weight: 700; color: #f1f5f9; background: #1e293b; border: 1px solid #475569; border-radius: 0.4rem; padding: 0.45rem 0.6rem; }
-        .kap-del { background: none; border: none; color: #f87171; font-size: 1.1rem; cursor: pointer; flex: none; padding: 0.2rem 0.4rem; }
-        .kap-body { width: 100%; min-height: 5rem; resize: vertical; background: #1e293b; border: 1px solid #475569; border-radius: 0.4rem; padding: 0.5rem 0.6rem; color: #e2e8f0; font-size: 0.95rem; line-height: 1.55; font-family: inherit; }
-        .kap-intro .kap-title { font-weight: 400; color: #94a3b8; }
+        .kap-card.is-abschnitt { margin-left: 1.1rem; border-left: 3px solid #6366f1; }
+        .kap-card-head { display: flex; align-items: center; gap: 0.4rem; margin-bottom: 0.5rem; flex-wrap: wrap; }
+        .kap-num { background: #475569; color: #e2e8f0; font-weight: 700; font-size: 0.8rem; border-radius: 999px; padding: 0.15rem 0.6rem; flex: none; }
+        .kap-lvl { border: none; cursor: pointer; }
+        .kap-sel { width: 1.3rem; height: 1.3rem; flex: none; }
+        .kap-title { flex: 1; min-width: 8rem; font-size: 1rem; font-weight: 700; color: #f1f5f9; background: #1e293b; border: 1px solid #475569; border-radius: 0.4rem; padding: 0.45rem 0.6rem; }
+        .kap-introlabel { font-weight: 400; color: #94a3b8; }
+        .kap-mini { background: #334155; border: 1px solid #475569; color: #e2e8f0; font-size: 1rem; cursor: pointer; flex: none; padding: 0.3rem 0.5rem; border-radius: 0.4rem; }
+        .kap-mini.kap-delmini { color: #f87171; }
+        .kap-body { width: 100%; min-height: 9rem; resize: vertical; background: #1e293b; border: 1px solid #475569; border-radius: 0.4rem; padding: 0.55rem 0.65rem; color: #e2e8f0; font-size: 1rem; line-height: 1.6; font-family: inherit; }
         .kap-mic { flex: none; font-size: 1.2rem; padding: 0.5rem 0.65rem; border-radius: 0.4rem; align-self: stretch; }
         .kap-mic.recording { background: #dc2626; animation: pulse 0.9s ease-in-out infinite; }
         .kap-tool { font-size: 0.82rem; padding: 0.42rem 0.6rem; border-radius: 0.4rem; }
@@ -399,9 +403,16 @@
                 <span class="modal-title">📖 Buch bearbeiten</span>
                 <button class="modal-close" onclick="closeKapitelEditor()">✕</button>
             </div>
-            <p id="kapitelInfo" class="tip" style="margin-top:0;margin-bottom:0.8rem;">Tippe ein Kapitel an und schreibe hinein. Gespeichert wird alles als ein Buch.</p>
-            <div id="kapitelList" style="display:flex;flex-direction:column;gap:0.8rem;max-height:62vh;overflow-y:auto;"></div>
-            <button class="btn-dark" style="width:100%;margin-top:0.8rem;" onclick="addKapitelCard('','',false)">➕ Neues Kapitel anhängen</button>
+            <p id="kapitelInfo" class="tip" style="margin-top:0;margin-bottom:0.8rem;">Schiebe Blöcke mit ⬆️⬇️, hake mehrere an zum Zusammenführen, schreibe mit 🪄 neu. Gespeichert wird alles als ein Buch.</p>
+            <div id="kapitelBatch" class="hidden" style="display:flex;gap:0.5rem;margin-bottom:0.7rem;">
+                <button id="kapMergeBtn" class="btn-purple" style="flex:1;" onclick="mergeSelectedBlocks()">🔗 Markierte zusammenführen</button>
+                <button id="kapDelBtn" class="btn-red" onclick="deleteSelectedBlocks()">🗑 Markierte löschen</button>
+            </div>
+            <div id="kapitelList" style="display:flex;flex-direction:column;gap:0.8rem;max-height:60vh;overflow-y:auto;"></div>
+            <div style="display:flex;gap:0.5rem;margin-top:0.8rem;">
+                <button class="btn-dark" style="flex:1;" onclick="addNewBlock(1)">➕ Kapitel</button>
+                <button class="btn-dark" style="flex:1;" onclick="addNewBlock(2)">➕ Abschnitt</button>
+            </div>
             <div class="btn-row" style="margin-top:0.9rem;">
                 <button class="btn-purple" style="flex:1;" onclick="saveKapitelEditor()">💾 Buch speichern</button>
                 <button class="btn-gray" onclick="closeKapitelEditor()">Abbrechen</button>
@@ -1038,30 +1049,33 @@ function editEntry(id) {
     window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
-// ── Kapitel-Editor: ein Buch bequem Kapitel für Kapitel bearbeiten ──────────────
-function parseBook(text) {
+// ── Block-Editor: Buch aus verschiebbaren Blöcken (Kapitel & Abschnitte) ────────
+// Ein Block: { level: 0=Einleitung | 1=Kapitel | 2=Abschnitt, title, body }
+function parseBlocks(text) {
     const lines = String(text).split('\n');
-    const isChapter = (l) => l.match(/^#\s+(.+)$/) || l.match(/^Kapitel\s+(.+)$/i);
     const intro = [];
-    const chapters = [];
+    const blocks = [];
     let cur = null;
-    for (const line of lines) {
-        const m = isChapter(line);
-        if (m) {
-            if (cur) chapters.push(cur);
-            cur = { title: m[1].trim(), body: [] };
+    for (const raw of lines) {
+        let m, level = 0, title = '';
+        if      ((m = raw.match(/^##\s+(.+)$/)) || (m = raw.match(/^Abschnitt\s+(.+)$/i))) { level = 2; title = m[1]; }
+        else if ((m = raw.match(/^#\s+(.+)$/))  || (m = raw.match(/^Kapitel\s+(.+)$/i)))   { level = 1; title = m[1]; }
+        if (level) {
+            if (cur) blocks.push(cur);
+            cur = { level, title: title.trim(), body: [] };
         } else if (cur) {
-            cur.body.push(line);
+            cur.body.push(raw);
         } else {
-            intro.push(line);
+            intro.push(raw);
         }
     }
-    if (cur) chapters.push(cur);
+    if (cur) blocks.push(cur);
     const trim = (a) => a.join('\n').replace(/^\n+|\n+$/g, '');
-    return {
-        intro: trim(intro),
-        chapters: chapters.map(c => ({ title: c.title, body: trim(c.body) }))
-    };
+    const result = [];
+    const introText = trim(intro);
+    if (introText) result.push({ level: 0, title: '', body: introText });
+    blocks.forEach(b => result.push({ level: b.level, title: b.title, body: trim(b.body) }));
+    return result;
 }
 
 // kapitelEdit: { id (oder null bei neuem Buch), datum, category }
@@ -1073,68 +1087,155 @@ function openKapitelEditor(entry) {
         datum: entry.datum || BOOK_DATUM,
         category: entry.category || selectedCategory
     };
-    const book = parseBook(entry.text || '');
+    const blocks = parseBlocks(entry.text || '');
     document.querySelector('#kapitelModal .modal-title').textContent = '📖 Buch bearbeiten – ' + (kapitelEdit.category || '');
     const list = document.getElementById('kapitelList');
     list.innerHTML = '';
-    if (book.intro) addKapitelCard('', book.intro, true);
-    book.chapters.forEach(c => addKapitelCard(c.title, c.body, false));
-    if (!book.chapters.length && !book.intro) addKapitelCard('', '', false);
-    renumberKapitel();
+    if (!blocks.length) addBlockCard(1, '', '');
+    else blocks.forEach(b => addBlockCard(b.level, b.title, b.body));
+    updateBlockUI();
     document.getElementById('kapitelModal').classList.add('active');
 }
 
-function addKapitelCard(title, body, isIntro) {
+function miniBtn(label, title, fn) {
+    const b = document.createElement('button');
+    b.className = 'kap-mini'; b.textContent = label; b.title = title;
+    b.onclick = fn; return b;
+}
+
+// Fügt einen Block (Kapitel/Abschnitt/Einleitung) hinzu. afterCard: optional einfügen danach.
+function addBlockCard(level, title, body, afterCard) {
     const list = document.getElementById('kapitelList');
     const card = document.createElement('div');
-    card.className = 'kap-card' + (isIntro ? ' kap-intro' : '');
-    card.dataset.intro = isIntro ? '1' : '';
-    if (isIntro) {
-        card.innerHTML =
-            '<div class="kap-card-head"><span class="kap-num">📝</span>' +
-            '<div class="kap-title">Einleitung (vor dem ersten Kapitel)</div></div>';
+    card.className = 'kap-card' + (level === 2 ? ' is-abschnitt' : '');
+    card.dataset.level = String(level);
+
+    const head = document.createElement('div');
+    head.className = 'kap-card-head';
+
+    if (level === 0) {
+        const lbl = document.createElement('span'); lbl.className = 'kap-num'; lbl.textContent = '📝';
+        const t = document.createElement('div'); t.className = 'kap-title kap-introlabel'; t.textContent = 'Einleitung (vor dem ersten Kapitel)';
+        head.appendChild(lbl); head.appendChild(t);
     } else {
-        card.innerHTML =
-            '<div class="kap-card-head"><span class="kap-num">Kapitel</span>' +
-            '<input class="kap-title" placeholder="Überschrift des Kapitels">' +
-            '<button class="kap-del" title="Dieses Kapitel löschen" onclick="if(confirm(\'Dieses Kapitel wirklich löschen?\')){this.closest(&quot;.kap-card&quot;).remove();renumberKapitel();}">🗑</button></div>';
-        card.querySelector('.kap-title').value = title;
+        const cb = document.createElement('input');
+        cb.type = 'checkbox'; cb.className = 'kap-sel'; cb.title = 'Auswählen (zum Zusammenführen/Löschen)';
+        cb.onchange = updateBlockUI;
+
+        const lvlBtn = document.createElement('button');
+        lvlBtn.className = 'kap-num kap-lvl';
+        lvlBtn.textContent = level === 1 ? '📖 Kapitel' : '📑 Abschnitt';
+        lvlBtn.title = 'Zwischen Kapitel und Abschnitt umschalten';
+        lvlBtn.onclick = () => {
+            const next = card.dataset.level === '1' ? 2 : 1;
+            card.dataset.level = String(next);
+            lvlBtn.textContent = next === 1 ? '📖 Kapitel' : '📑 Abschnitt';
+            card.classList.toggle('is-abschnitt', next === 2);
+        };
+
+        const titleInput = document.createElement('input');
+        titleInput.className = 'kap-title'; titleInput.placeholder = 'Überschrift'; titleInput.value = title || '';
+
+        const up   = miniBtn('⬆️', 'Nach oben schieben',  () => moveBlock(card, -1));
+        const down = miniBtn('⬇️', 'Nach unten schieben', () => moveBlock(card, 1));
+        const del  = miniBtn('🗑', 'Diesen Block löschen', () => {
+            if (confirm('Diesen Block wirklich löschen?')) { card.remove(); updateBlockUI(); }
+        });
+        del.classList.add('kap-delmini');
+
+        head.appendChild(cb); head.appendChild(lvlBtn); head.appendChild(titleInput);
+        head.appendChild(up); head.appendChild(down); head.appendChild(del);
     }
+    card.appendChild(head);
+
     const row = document.createElement('div');
     row.style.cssText = 'display:flex;gap:0.5rem;align-items:flex-start;';
     const ta = document.createElement('textarea');
     ta.className = 'kap-body';
-    ta.placeholder = isIntro ? 'Optionaler Text vor dem ersten Kapitel…' : 'Hier schreibst Du den Inhalt dieses Kapitels…';
-    ta.value = body;
+    ta.placeholder = level === 0 ? 'Optionaler Text vor dem ersten Kapitel…' : 'Hier hineinsprechen oder schreiben…';
+    ta.value = body || '';
     const micBtn = document.createElement('button');
-    micBtn.className = 'btn-amber kap-mic';
-    micBtn.textContent = '🎤';
-    micBtn.title = 'In dieses Kapitel sprechen';
+    micBtn.className = 'btn-amber kap-mic'; micBtn.textContent = '🎤'; micBtn.title = 'In diesen Block sprechen';
     micBtn.onclick = () => toggleKapitelMic(ta, micBtn);
-    row.appendChild(ta);
-    row.appendChild(micBtn);
+    row.appendChild(ta); row.appendChild(micBtn);
     card.appendChild(row);
 
-    // Werkzeugleiste je Kapitel: KI, Vorlesen, Rückgängig, Leeren
     const tools = document.createElement('div');
     tools.style.cssText = 'display:flex;flex-wrap:wrap;gap:0.4rem;margin-top:0.5rem;';
     const mk = (label, title, fn) => {
         const b = document.createElement('button');
-        b.className = 'btn-dark kap-tool';
-        b.textContent = label; b.title = title;
-        b.onclick = () => fn(b);
-        return b;
+        b.className = 'btn-dark kap-tool'; b.textContent = label; b.title = title;
+        b.onclick = () => fn(b); return b;
     };
-    const kiBtn = mk('🪄 KI schön schreiben', 'Notizen in schönen Text verwandeln', (b) => kapitelKI(ta, b));
-    tools.appendChild(kiBtn);
-    tools.appendChild(mk('🔊 Vorlesen', 'Dieses Kapitel vorlesen', () => speakKapitel(ta)));
+    tools.appendChild(mk('🪄 KI schön schreiben', 'Diesen Block neu schreiben', (b) => kapitelKI(ta, b)));
+    tools.appendChild(mk('🔊 Vorlesen', 'Diesen Block vorlesen', () => speakKapitel(ta)));
     tools.appendChild(mk('↩ Rückgängig', 'Letzte Änderung zurücknehmen', () => kapitelUndo(ta)));
-    tools.appendChild(mk('🧹 Feld leeren', 'Diesen Kapitel-Text leeren', () => kapitelClear(ta)));
+    tools.appendChild(mk('🧹 Feld leeren', 'Diesen Block-Text leeren', () => kapitelClear(ta)));
     card.appendChild(tools);
 
-    list.appendChild(card);
-    renumberKapitel();
-    if (!isIntro && !title && !body) ta.focus();
+    if (afterCard && afterCard.parentNode === list) list.insertBefore(card, afterCard.nextSibling);
+    else list.appendChild(card);
+    updateBlockUI();
+    if (level !== 0 && !title && !body) ta.focus();
+    return card;
+}
+
+// Block verschieben (−1 = hoch, +1 = runter)
+function moveBlock(card, dir) {
+    const list = card.parentNode;
+    if (dir < 0) { const prev = card.previousElementSibling; if (prev) list.insertBefore(card, prev); }
+    else         { const next = card.nextElementSibling;     if (next) list.insertBefore(next, card); }
+    card.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
+// Neuen Block am Ende anlegen (level 1 = Kapitel, 2 = Abschnitt)
+function addNewBlock(level) {
+    const card = addBlockCard(level, '', '');
+    card.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    const t = card.querySelector('.kap-title'); if (t) t.focus();
+}
+
+// Markierte Blöcke zusammenführen: in den ersten markierten Block hineinziehen
+function mergeSelectedBlocks() {
+    const sel = [...document.querySelectorAll('#kapitelList .kap-card')]
+        .filter(c => { const cb = c.querySelector('.kap-sel'); return cb && cb.checked; });
+    if (sel.length < 2) { showToast('Bitte mindestens zwei Blöcke auswählen.', true); return; }
+    const first = sel[0];
+    const firstTa = first.querySelector('.kap-body');
+    pushKapHistory(firstTa);
+    const parts = [];
+    sel.forEach((c, i) => {
+        const t = c.querySelector('.kap-title') ? (c.querySelector('.kap-title').value || '').trim() : '';
+        const b = (c.querySelector('.kap-body').value || '').trim();
+        if (i === 0) { if (b) parts.push(b); }
+        else { if (t) parts.push(t); if (b) parts.push(b); }
+    });
+    firstTa.value = parts.join('\n\n');
+    sel.slice(1).forEach(c => c.remove());
+    const cb0 = first.querySelector('.kap-sel'); if (cb0) cb0.checked = false;
+    updateBlockUI();
+    showToast('Zusammengeführt. Mit 🪄 kannst Du jetzt alles neu schreiben lassen.');
+    firstTa.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
+function deleteSelectedBlocks() {
+    const sel = [...document.querySelectorAll('#kapitelList .kap-card')]
+        .filter(c => { const cb = c.querySelector('.kap-sel'); return cb && cb.checked; });
+    if (!sel.length) return;
+    if (!confirm(sel.length + ' markierte(n) Block/Blöcke wirklich löschen?')) return;
+    sel.forEach(c => c.remove());
+    updateBlockUI();
+}
+
+// Aktualisiert die Auswahl-Leiste (Zusammenführen/Löschen) je nach markierten Blöcken
+function updateBlockUI() {
+    const sel = [...document.querySelectorAll('#kapitelList .kap-card .kap-sel')].filter(cb => cb.checked);
+    const bar = document.getElementById('kapitelBatch');
+    const mergeBtn = document.getElementById('kapMergeBtn');
+    const delBtn = document.getElementById('kapDelBtn');
+    if (bar) bar.classList.toggle('hidden', sel.length === 0);
+    if (mergeBtn) mergeBtn.disabled = sel.length < 2;
+    if (delBtn) delBtn.disabled = sel.length < 1;
 }
 
 // Verlauf je Kapitel-Feld für ↩ Rückgängig
@@ -1206,33 +1307,25 @@ function toggleKapitelMic(ta, btn) {
     startMic(ta, btn);
 }
 
-function renumberKapitel() {
-    let n = 0;
-    document.querySelectorAll('#kapitelList .kap-card').forEach(card => {
-        if (card.dataset.intro === '1') return;
-        n++;
-        const num = card.querySelector('.kap-num');
-        if (num) num.textContent = 'Kapitel ' + n;
-    });
-}
-
 async function saveKapitelEditor() {
     if (!kapitelEdit) { closeKapitelEditor(); return; }
     if (isRecording) stopMic();
     const parts = [];
     document.querySelectorAll('#kapitelList .kap-card').forEach(card => {
+        const level = card.dataset.level;
         const ta = card.querySelector('.kap-body');
         const body = (ta ? ta.value : '').trim();
-        if (card.dataset.intro === '1') {
+        if (level === '0') {
             if (body) parts.push(body);
-        } else {
-            const titleEl = card.querySelector('.kap-title');
-            const title = (titleEl ? titleEl.value : '').trim();
-            if (!title && !body) return;
-            let block = title ? 'Kapitel ' + title : '';
-            if (body) block += (block ? '\n' : '') + body;
-            parts.push(block);
+            return;
         }
+        const titleEl = card.querySelector('.kap-title');
+        const title = (titleEl ? titleEl.value : '').trim();
+        if (!title && !body) return;
+        const kw = level === '2' ? 'Abschnitt ' : 'Kapitel ';
+        let block = title ? kw + title : '';
+        if (body) block += (block ? '\n' : '') + body;
+        parts.push(block);
     });
     const newText = parts.join('\n\n');
     if (!newText.trim()) { alert('Das Buch ist leer – nichts zu speichern.'); return; }
