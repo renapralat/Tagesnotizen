@@ -316,11 +316,12 @@
         .kap-introlabel { font-weight: 400; color: #94a3b8; }
         .kap-mini { background: #334155; border: 1px solid #475569; color: #e2e8f0; font-size: 1rem; cursor: pointer; flex: none; padding: 0.3rem 0.5rem; border-radius: 0.4rem; }
         .kap-mini.kap-delmini { color: #f87171; }
+        .kap-mini.kap-ins { font-size: 0.8rem; font-weight: 600; }
         .kap-body { width: 100%; min-height: 9rem; resize: vertical; background: #1e293b; border: 1px solid #475569; border-radius: 0.4rem; padding: 0.55rem 0.65rem; color: #e2e8f0; font-size: 1rem; line-height: 1.6; font-family: inherit; }
         .kap-mic { flex: none; font-size: 1.2rem; padding: 0.5rem 0.65rem; border-radius: 0.4rem; align-self: stretch; }
         .kap-mic.recording { background: #dc2626; animation: pulse 0.9s ease-in-out infinite; }
         .kap-tool { font-size: 0.82rem; padding: 0.42rem 0.6rem; border-radius: 0.4rem; }
-        .kap-footer { position: sticky; bottom: -1.5rem; background: #1e293b; padding: 0.7rem 0 0.2rem; margin-top: 0.9rem; border-top: 1px solid #334155; z-index: 5; }
+        .kap-footer { position: sticky; bottom: -1.5rem; background: #1e293b; padding: 0.7rem 0 calc(0.3rem + env(safe-area-inset-bottom)); margin-top: 0.9rem; border-top: 1px solid #334155; z-index: 5; }
         .kind-choice { display: flex; align-items: flex-start; gap: 0.5rem; font-size: 0.9rem; color: #cbd5e1; background: #0f172a; border: 1px solid #334155; border-radius: 0.4rem; padding: 0.55rem 0.7rem; cursor: pointer; line-height: 1.35; }
         .kind-choice input { margin-top: 0.2rem; flex: none; }
         .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem; }
@@ -401,7 +402,8 @@
     <div id="kapitelModal" class="modal">
         <div class="modal-content modal-wide">
             <div class="modal-header">
-                <span class="modal-title">📖 Buch bearbeiten</span>
+                <span class="modal-title" style="flex:1;">📖 Buch bearbeiten</span>
+                <button class="btn-purple" style="padding:0.4rem 0.8rem;font-size:0.95rem;margin-right:0.4rem;" onclick="saveKapitelEditor()">💾 Speichern</button>
                 <button class="modal-close" onclick="closeKapitelEditor()">✕</button>
             </div>
             <p id="kapitelInfo" class="tip" style="margin-top:0;margin-bottom:0.8rem;">Schiebe Blöcke mit ⬆️⬇️, hake mehrere an zum Zusammenführen, schreibe mit 🪄 neu. Gespeichert wird alles als ein Buch.</p>
@@ -1139,7 +1141,8 @@ function addBlockCard(level, title, body, afterCard) {
 
         const up   = miniBtn('⬆️', 'Nach oben schieben',  () => moveBlock(card, -1));
         const down = miniBtn('⬇️', 'Nach unten schieben', () => moveBlock(card, 1));
-        const ins  = miniBtn('➕📑', 'Abschnitt direkt darunter einfügen', () => addBlockCard(2, '', '', card));
+        const ins  = miniBtn('➕ Abschnitt', 'Abschnitt direkt darunter einfügen', () => addBlockCard(2, '', '', card));
+        ins.classList.add('kap-ins');
         const del  = miniBtn('🗑', 'Diesen Block löschen', () => {
             if (confirm('Diesen Block wirklich löschen?')) { card.remove(); updateBlockUI(); }
         });
