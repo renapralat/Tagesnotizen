@@ -1245,7 +1245,10 @@ async function generateTagesgeschichte() {
             'Alle anderen genannten Personen sind reale Menschen im Text. ' +
             'Fasse alle Kategorien zu einer einzigen fließenden Geschichte zusammen. ' +
             'Behalte alle Details, Orte, Namen und Ereignisse — nichts darf erfunden werden. ' +
-            'Schreibe ohne Überschriften, ohne Kategorienamen, nur als fließenden literarischen Text in Prosa. ' +
+            'Wenn die Vorlage Überschriften enthält (Zeilen, die mit "Kapitel", "Abschnitt" oder "#" beginnen), ' +
+            'übernimm jede dieser Überschriften unverändert als eigene Zeile und schreibe darunter die zugehörige Prosa. ' +
+            'Erfinde keine zusätzlichen Überschriften und verwende keine Kategorienamen als Überschriften. ' +
+            'Enthält die Vorlage keine Überschriften, schreibe einen durchgehenden Fließtext. ' +
             'Antworte nur mit dem fertigen Text, ohne Einleitung oder Kommentar.';
         const prompt = `Schreibe aus diesen Tagebucheinträgen vom ${datum} eine Geschichte in Prosa:\n\n${inputText}`;
 
@@ -1299,7 +1302,10 @@ async function generateZeitraumGeschichte() {
             'Alle anderen genannten Personen sind reale Menschen im Text. ' +
             'Fasse alle Einträge zu einer einzigen fließenden Geschichte zusammen, die den gesamten Zeitraum als Ganzes erlebbar macht. ' +
             'Behalte alle Details, Namen und Ereignisse — erfinde nichts hinzu. ' +
-            'Schreibe ohne Überschriften als fließenden literarischen Text in Prosa. ' +
+            'Wenn die Vorlage Überschriften enthält (Zeilen, die mit "Kapitel", "Abschnitt" oder "#" beginnen), ' +
+            'übernimm jede dieser Überschriften unverändert als eigene Zeile und schreibe darunter die zugehörige Prosa. ' +
+            'Erfinde keine zusätzlichen Überschriften. ' +
+            'Enthält die Vorlage keine Überschriften, schreibe einen durchgehenden Fließtext. ' +
             'Antworte nur mit dem fertigen Text.';
         const prompt = `Schreibe aus diesen Einträgen vom ${from} bis ${to} eine zusammenhängende Geschichte in Prosa:\n\n${inputText}`;
 
