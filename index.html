@@ -315,6 +315,7 @@
         .kap-intro .kap-title { font-weight: 400; color: #94a3b8; }
         .kap-mic { flex: none; font-size: 1.2rem; padding: 0.5rem 0.65rem; border-radius: 0.4rem; align-self: stretch; }
         .kap-mic.recording { background: #dc2626; animation: pulse 0.9s ease-in-out infinite; }
+        .kap-tool { font-size: 0.82rem; padding: 0.42rem 0.6rem; border-radius: 0.4rem; }
         .kind-choice { display: flex; align-items: flex-start; gap: 0.5rem; font-size: 0.9rem; color: #cbd5e1; background: #0f172a; border: 1px solid #334155; border-radius: 0.4rem; padding: 0.55rem 0.7rem; cursor: pointer; line-height: 1.35; }
         .kind-choice input { margin-top: 0.2rem; flex: none; }
         .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem; }
@@ -1113,9 +1114,85 @@ function addKapitelCard(title, body, isIntro) {
     row.appendChild(ta);
     row.appendChild(micBtn);
     card.appendChild(row);
+
+    // Werkzeugleiste je Kapitel: KI, Vorlesen, Rückgängig, Leeren
+    const tools = document.createElement('div');
+    tools.style.cssText = 'display:flex;flex-wrap:wrap;gap:0.4rem;margin-top:0.5rem;';
+    const mk = (label, title, fn) => {
+        const b = document.createElement('button');
+        b.className = 'btn-dark kap-tool';
+        b.textContent = label; b.title = title;
+        b.onclick = () => fn(b);
+        return b;
+    };
+    const kiBtn = mk('🪄 KI schön schreiben', 'Notizen in schönen Text verwandeln', (b) => kapitelKI(ta, b));
+    tools.appendChild(kiBtn);
+    tools.appendChild(mk('🔊 Vorlesen', 'Dieses Kapitel vorlesen', () => speakKapitel(ta)));
+    tools.appendChild(mk('↩ Rückgängig', 'Letzte Änderung zurücknehmen', () => kapitelUndo(ta)));
+    tools.appendChild(mk('🧹 Feld leeren', 'Diesen Kapitel-Text leeren', () => kapitelClear(ta)));
+    card.appendChild(tools);
+
     list.appendChild(card);
     renumberKapitel();
     if (!isIntro && !title && !body) ta.focus();
+}
+
+// Verlauf je Kapitel-Feld für ↩ Rückgängig
+function pushKapHistory(ta) { if (!ta._hist) ta._hist = []; ta._hist.push(ta.value); }
+function kapitelUndo(ta) {
+    if (ta._hist && ta._hist.length) { ta.value = ta._hist.pop(); }
+    else { showToast('Nichts zum Rückgängigmachen.', true); }
+}
+function kapitelClear(ta) {
+    if (!(ta.value || '').trim()) return;
+    pushKapHistory(ta);
+    ta.value = '';
+    ta.focus();
+}
+
+// 🪄 KI: macht aus den Notizen dieses Kapitels einen schönen Fließtext (direkt ins Feld)
+async function kapitelKI(ta, btn) {
+    const text = (ta.value || '').trim();
+    if (!text) { showToast('Bitte zuerst etwas ins Kapitel schreiben oder sprechen.', true); return; }
+    if (!getGithubPat()) { showToast('Bitte zuerst den GitHub-Token im Abschnitt „KI" eingeben.', true); return; }
+    pushKapHistory(ta);
+    const old = btn.textContent;
+    btn.disabled = true; btn.textContent = '⏳ …';
+    try {
+        const sysPrompt =
+            'Du bist ein einfühlsamer Schriftsteller, der aus Stichworten und Notizen lebendige, gut lesbare Prosa macht. ' +
+            'Die schreibende Person ist immer "ich" und wird niemals durch einen Namen ersetzt. ' +
+            'Norbert ist der Ehemann der schreibenden Person. Alle anderen genannten Namen sind reale Personen. ' +
+            'Behalte alle Fakten, Namen, Orte und Ereignisse — erfinde nichts hinzu. ' +
+            'Schreibe einen zusammenhängenden Fließtext ohne Überschriften. ' +
+            'Antworte nur mit dem fertigen Text, ohne Einleitung oder Kommentar.';
+        const prompt = 'Mach aus diesen Notizen einen schönen, zusammenhängenden Text:\n\n' + text;
+        const res = await callGithubModels(prompt, sysPrompt, 0.6, 2000);
+        if (res) ta.value = res;
+        else showToast('Die KI hat keinen Text geliefert.', true);
+    } catch (e) {
+        showToast('Fehler: ' + e.message, true);
+    } finally {
+        btn.disabled = false; btn.textContent = old;
+    }
+}
+
+// Vorlesen eines einzelnen Kapitel-Feldes
+let kapSpeakTimer = null;
+function speakKapitel(ta) {
+    const synth = window.speechSynthesis;
+    if (synth.speaking || synth.pending) {
+        synth.cancel();
+        if (kapSpeakTimer) { clearInterval(kapSpeakTimer); kapSpeakTimer = null; }
+        return;
+    }
+    const t = stripMarkdown(ta.value || '');
+    if (!t.trim()) { showToast('Dieses Kapitel ist noch leer.', true); return; }
+    const u = new SpeechSynthesisUtterance(t);
+    u.lang = 'de-DE';
+    u.onend = u.onerror = () => { if (kapSpeakTimer) { clearInterval(kapSpeakTimer); kapSpeakTimer = null; } };
+    synth.speak(u);
+    kapSpeakTimer = setInterval(() => { if (synth.paused) synth.resume(); }, 5000);
 }
 
 // Diktieren in ein bestimmtes Kapitel-Feld (eigenes Mikrofon je Kapitel)
@@ -1177,6 +1254,8 @@ async function saveKapitelEditor() {
 
 function closeKapitelEditor() {
     if (isRecording) stopMic();
+    try { window.speechSynthesis.cancel(); } catch(e) {}
+    if (kapSpeakTimer) { clearInterval(kapSpeakTimer); kapSpeakTimer = null; }
     document.getElementById('kapitelModal').classList.remove('active');
     kapitelEdit = null;
 }
