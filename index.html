@@ -267,8 +267,16 @@
         .entry-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem; }
         .entry-date { color: #94a3b8; font-size: 0.875rem; font-weight: 700; }
         .entry-actions { display: flex; gap: 0.4rem; }
-        .entry-text { line-height: 1.65; white-space: pre-wrap; word-break: break-word; font-size: 0.95rem; }
+        .entry-text { line-height: 1.65; word-break: break-word; font-size: 0.95rem; }
+        .rt-text { white-space: pre-wrap; }
+        .rt-h1 { font-size: 1.25rem; font-weight: 700; color: #f1f5f9; margin: 1rem 0 0.4rem; padding-bottom: 0.2rem; border-bottom: 1px solid #475569; }
+        .rt-h2 { font-size: 1.05rem; font-weight: 700; color: #e2e8f0; margin: 0.8rem 0 0.3rem; }
         .entry-link { color: #60a5fa; text-decoration: underline; font-weight: 600; word-break: break-all; }
+        .entry-toc { background: #1e293b; border: 1px solid #475569; border-radius: 0.4rem; padding: 0.6rem 0.8rem; margin-bottom: 0.8rem; }
+        .entry-toc-title { font-weight: 700; color: #94a3b8; font-size: 0.85rem; margin-bottom: 0.35rem; }
+        .entry-toc a { display: block; color: #60a5fa; text-decoration: none; font-size: 0.92rem; padding: 0.12rem 0; cursor: pointer; }
+        .entry-toc a.lvl2 { padding-left: 1rem; font-size: 0.85rem; color: #93c5fd; }
+        .entry-toc a:hover { text-decoration: underline; }
 
         /* KI Section */
         .ki-header {
@@ -611,6 +619,48 @@ function linkify(s) {
     );
 }
 
+// Fettdruck **so** und Web-Adressen in bereits HTML-sicherem Text auszeichnen
+function inlineFmt(escaped) {
+    return escaped
+        .replace(/\*\*([^*\n]+)\*\*/g, '<strong>$1</strong>')
+        .replace(/(https?:\/\/[^\s<]+[^\s<.,;:!?)\]}"'])/g,
+            '<a href="$1" target="_blank" rel="noopener" class="entry-link">$1</a>');
+}
+
+// Text in Buch-Form rendern: Überschriften (# / Kapitel, ## / Abschnitt) + Inhaltsverzeichnis
+function renderRichText(text, idPrefix) {
+    const lines = String(text).split('\n');
+    const headings = [];
+    let html = '', buf = [], n = 0;
+    function flush() {
+        if (!buf.length) return;
+        html += '<div class="rt-text">' + inlineFmt(escHtml(buf.join('\n'))) + '</div>';
+        buf = [];
+    }
+    for (const raw of lines) {
+        let m, lvl = 0, title = '';
+        if      ((m = raw.match(/^##\s+(.+)$/))            || (m = raw.match(/^Abschnitt\s+(.+)$/i))) { lvl = 2; title = m[1]; }
+        else if ((m = raw.match(/^#\s+(.+)$/))             || (m = raw.match(/^Kapitel\s+(.+)$/i)))    { lvl = 1; title = m[1]; }
+        if (lvl) {
+            flush();
+            const id = idPrefix + '-h' + (n++);
+            title = title.trim();
+            headings.push({ level: lvl, title, id });
+            const tag = lvl === 1 ? 'h3' : 'h4';
+            html += `<${tag} id="${id}" class="rt-h${lvl}">${inlineFmt(escHtml(title))}</${tag}>`;
+        } else {
+            buf.push(raw);
+        }
+    }
+    flush();
+    return { html, headings };
+}
+
+function scrollToHeading(id) {
+    const el = document.getElementById(id);
+    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
 function setConnBadge(ok, msg) {
     const b = document.getElementById('connBadge');
     b.className = 'conn-badge' + (ok ? ' ok' : ' err');
@@ -768,7 +818,15 @@ function displayEntries(list) {
     if (!list || list.length === 0) {
         c.innerHTML = '<p class="empty-msg">Noch keine Einträge.</p>'; return;
     }
-    c.innerHTML = list.map(e => `
+    c.innerHTML = list.map(e => {
+        const rt = renderRichText(e.text, 'e' + e.id);
+        let toc = '';
+        if (rt.headings.length >= 2) {
+            toc = '<div class="entry-toc"><div class="entry-toc-title">📑 Inhalt</div>' +
+                rt.headings.map(h => `<a class="lvl${h.level}" onclick="scrollToHeading('${h.id}')">${escHtml(h.title)}</a>`).join('') +
+                '</div>';
+        }
+        return `
         <div class="entry">
             <div class="entry-header">
                 <span class="entry-date">📅 ${e.datum}</span>
@@ -776,12 +834,52 @@ function displayEntries(list) {
                     <button id="speak-${e.id}" class="btn-icon btn-amber speak-btn" onclick="speakEntry('${e.id}')" title="Vorlesen">🔊</button>
                     <button class="btn-icon btn-blue"  onclick="editEntry('${e.id}')" title="Bearbeiten">✏️</button>
                     <button class="btn-icon btn-dark"  onclick="moveEntry('${e.id}')" title="In andere Kategorie verschieben">📦</button>
+                    <button class="btn-icon btn-dark"  onclick="printEntry('${e.id}')" title="Als Buch drucken">🖨️</button>
                     <button class="btn-icon btn-red"   onclick="deleteEntry('${e.id}','${e.datum}')" title="Löschen">✕</button>
                 </div>
             </div>
-            <div class="entry-text">${linkify(e.text)}</div>
-        </div>
-    `).join('');
+            <div class="entry-text">${toc}${rt.html}</div>
+        </div>`;
+    }).join('');
+}
+
+// Eintrag im Buch-Layout drucken (eigenes sauberes Fenster)
+function printEntry(id) {
+    const e = entries.find(x => x.id === id);
+    if (!e) return;
+    const rt = renderRichText(e.text, 'p');
+    let toc = '';
+    if (rt.headings.length >= 2) {
+        toc = '<nav class="toc"><h2>Inhalt</h2>' +
+            rt.headings.map(h => `<div class="toc-l${h.level}">${escHtml(h.title)}</div>`).join('') +
+            '</nav>';
+    }
+    const titel = (selectedCategory || 'Tagesnotizen');
+    const w = window.open('', '_blank');
+    if (!w) { showToast('Bitte Pop-ups für diese Seite erlauben.', true); return; }
+    w.document.write(
+        '<!doctype html><html lang="de"><head><meta charset="utf-8">' +
+        '<title>' + escHtml(titel) + ' – ' + e.datum + '</title><style>' +
+        'body{font-family:Georgia,"Times New Roman",serif;line-height:1.6;color:#111;max-width:42rem;margin:2rem auto;padding:0 1.5rem;}' +
+        'h1.doc{font-size:1.8rem;border-bottom:2px solid #333;padding-bottom:0.3rem;}' +
+        '.meta{color:#666;font-size:0.9rem;margin-bottom:2rem;}' +
+        'h3{font-size:1.4rem;margin-top:1.6rem;border-bottom:1px solid #ccc;padding-bottom:0.2rem;}' +
+        'h4{font-size:1.15rem;margin-top:1.1rem;}' +
+        '.rt-text{white-space:pre-wrap;margin:0.4rem 0;}' +
+        'a{color:#1a4f8b;}' +
+        '.toc{background:#f5f5f5;border:1px solid #ddd;border-radius:6px;padding:0.8rem 1rem;margin-bottom:2rem;}' +
+        '.toc h2{font-size:1.1rem;margin:0 0 0.4rem;}' +
+        '.toc-l1{font-weight:600;padding:0.1rem 0;}.toc-l2{padding:0.1rem 0 0.1rem 1.2rem;color:#444;}' +
+        '@media print{h3{page-break-before:always;}h3:first-of-type{page-break-before:avoid;}.toc{page-break-after:always;}}' +
+        '</style></head><body>' +
+        '<h1 class="doc">' + escHtml(titel) + '</h1>' +
+        '<div class="meta">' + e.datum + '</div>' +
+        toc + rt.html +
+        '</body></html>'
+    );
+    w.document.close();
+    w.focus();
+    setTimeout(() => w.print(), 400);
 }
 
 async function saveEntry(datum, category, text) {
