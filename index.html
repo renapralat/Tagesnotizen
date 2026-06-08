@@ -305,6 +305,14 @@
             background: #1e293b; padding: 1.5rem; border-radius: 0.5rem;
             width: 100%; max-width: 420px; border: 1px solid #475569;
         }
+        .modal-content.modal-wide { max-width: 640px; }
+        .kap-card { background: #0f172a; border: 1px solid #334155; border-radius: 0.5rem; padding: 0.7rem 0.8rem; }
+        .kap-card-head { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem; }
+        .kap-num { background: #475569; color: #e2e8f0; font-weight: 700; font-size: 0.85rem; border-radius: 999px; padding: 0.1rem 0.6rem; flex: none; }
+        .kap-title { flex: 1; font-size: 1rem; font-weight: 700; color: #f1f5f9; background: #1e293b; border: 1px solid #475569; border-radius: 0.4rem; padding: 0.45rem 0.6rem; }
+        .kap-del { background: none; border: none; color: #f87171; font-size: 1.1rem; cursor: pointer; flex: none; padding: 0.2rem 0.4rem; }
+        .kap-body { width: 100%; min-height: 5rem; resize: vertical; background: #1e293b; border: 1px solid #475569; border-radius: 0.4rem; padding: 0.5rem 0.6rem; color: #e2e8f0; font-size: 0.95rem; line-height: 1.55; font-family: inherit; }
+        .kap-intro .kap-title { font-weight: 400; color: #94a3b8; }
         .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem; }
         .modal-title { font-size: 1.15rem; font-weight: 700; }
         .modal-close {
@@ -374,7 +382,23 @@
         </div>
     </div>
 
-    <!-- HEADER -->
+    <!-- KAPITEL-EDITOR -->
+    <div id="kapitelModal" class="modal">
+        <div class="modal-content modal-wide">
+            <div class="modal-header">
+                <span class="modal-title">📖 Buch bearbeiten</span>
+                <button class="modal-close" onclick="closeKapitelEditor()">✕</button>
+            </div>
+            <p id="kapitelInfo" class="tip" style="margin-top:0;margin-bottom:0.8rem;">Tippe ein Kapitel an und schreibe hinein. Gespeichert wird alles als ein Buch.</p>
+            <div id="kapitelList" style="display:flex;flex-direction:column;gap:0.8rem;max-height:62vh;overflow-y:auto;"></div>
+            <button class="btn-dark" style="width:100%;margin-top:0.8rem;" onclick="addKapitelCard('','',false)">➕ Neues Kapitel anhängen</button>
+            <div class="btn-row" style="margin-top:0.9rem;">
+                <button class="btn-purple" style="flex:1;" onclick="saveKapitelEditor()">💾 Buch speichern</button>
+                <button class="btn-gray" onclick="closeKapitelEditor()">Abbrechen</button>
+            </div>
+        </div>
+    </div>
+
     <div class="header">
         <h1 class="title">📔 Tagesnotizen</h1>
         <span id="connBadge" class="conn-badge">
@@ -905,12 +929,130 @@ async function deleteEntry(id, datum) {
 function editEntry(id) {
     const e = entries.find(x => x.id === id);
     if (!e) return;
+    // Hat der Eintrag Kapitel-Überschriften? Dann den bequemen Kapitel-Editor öffnen.
+    if (/^(#{1,2}\s+|Kapitel\s+|Abschnitt\s+)/im.test(e.text)) {
+        openKapitelEditor(id);
+        return;
+    }
     document.getElementById('entryDate').value = e.datum;
     selectedDate = e.datum;
     document.getElementById('inputText').value = e.text;
     document.getElementById('summarySection').classList.add('hidden');
     currentSummary = '';
     window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+// ── Kapitel-Editor: ein Buch bequem Kapitel für Kapitel bearbeiten ──────────────
+function parseBook(text) {
+    const lines = String(text).split('\n');
+    const isChapter = (l) => l.match(/^#\s+(.+)$/) || l.match(/^Kapitel\s+(.+)$/i);
+    const intro = [];
+    const chapters = [];
+    let cur = null;
+    for (const line of lines) {
+        const m = isChapter(line);
+        if (m) {
+            if (cur) chapters.push(cur);
+            cur = { title: m[1].trim(), body: [] };
+        } else if (cur) {
+            cur.body.push(line);
+        } else {
+            intro.push(line);
+        }
+    }
+    if (cur) chapters.push(cur);
+    const trim = (a) => a.join('\n').replace(/^\n+|\n+$/g, '');
+    return {
+        intro: trim(intro),
+        chapters: chapters.map(c => ({ title: c.title, body: trim(c.body) }))
+    };
+}
+
+let kapitelEditId = null;
+function openKapitelEditor(id) {
+    const e = entries.find(x => x.id === id);
+    if (!e) return;
+    kapitelEditId = id;
+    const book = parseBook(e.text);
+    document.querySelector('#kapitelModal .modal-title').textContent = '📖 Buch bearbeiten – #' + selectedCategory;
+    const list = document.getElementById('kapitelList');
+    list.innerHTML = '';
+    if (book.intro) addKapitelCard('', book.intro, true);
+    book.chapters.forEach(c => addKapitelCard(c.title, c.body, false));
+    if (!book.chapters.length && !book.intro) addKapitelCard('', '', false);
+    renumberKapitel();
+    document.getElementById('kapitelModal').classList.add('active');
+}
+
+function addKapitelCard(title, body, isIntro) {
+    const list = document.getElementById('kapitelList');
+    const card = document.createElement('div');
+    card.className = 'kap-card' + (isIntro ? ' kap-intro' : '');
+    card.dataset.intro = isIntro ? '1' : '';
+    if (isIntro) {
+        card.innerHTML =
+            '<div class="kap-card-head"><span class="kap-num">📝</span>' +
+            '<div class="kap-title">Einleitung (vor dem ersten Kapitel)</div></div>';
+    } else {
+        card.innerHTML =
+            '<div class="kap-card-head"><span class="kap-num">Kapitel</span>' +
+            '<input class="kap-title" placeholder="Überschrift des Kapitels">' +
+            '<button class="kap-del" title="Dieses Kapitel löschen" onclick="if(confirm(\'Dieses Kapitel wirklich löschen?\')){this.closest(&quot;.kap-card&quot;).remove();renumberKapitel();}">🗑</button></div>';
+        card.querySelector('.kap-title').value = title;
+    }
+    const ta = document.createElement('textarea');
+    ta.className = 'kap-body';
+    ta.placeholder = isIntro ? 'Optionaler Text vor dem ersten Kapitel…' : 'Hier schreibst Du den Inhalt dieses Kapitels…';
+    ta.value = body;
+    card.appendChild(ta);
+    list.appendChild(card);
+    renumberKapitel();
+    if (!isIntro && !title && !body) ta.focus();
+}
+
+function renumberKapitel() {
+    let n = 0;
+    document.querySelectorAll('#kapitelList .kap-card').forEach(card => {
+        if (card.dataset.intro === '1') return;
+        n++;
+        const num = card.querySelector('.kap-num');
+        if (num) num.textContent = 'Kapitel ' + n;
+    });
+}
+
+async function saveKapitelEditor() {
+    const id = kapitelEditId;
+    const e = entries.find(x => x.id === id);
+    if (!e) { closeKapitelEditor(); return; }
+    const parts = [];
+    document.querySelectorAll('#kapitelList .kap-card').forEach(card => {
+        const ta = card.querySelector('.kap-body');
+        const body = (ta ? ta.value : '').trim();
+        if (card.dataset.intro === '1') {
+            if (body) parts.push(body);
+        } else {
+            const titleEl = card.querySelector('.kap-title');
+            const title = (titleEl ? titleEl.value : '').trim();
+            if (!title && !body) return;
+            let block = title ? 'Kapitel ' + title : '';
+            if (body) block += (block ? '\n' : '') + body;
+            parts.push(block);
+        }
+    });
+    const newText = parts.join('\n\n');
+    if (!newText.trim()) { alert('Das Buch ist leer – nichts zu speichern.'); return; }
+    try {
+        const { error } = await sb.from('tagesnotizen_entries').update({ text: newText }).eq('id', id);
+        if (error) throw error;
+        closeKapitelEditor();
+        showToast('✅ Buch gespeichert.');
+        await renderEntries();
+    } catch (err) { alert('Fehler beim Speichern: ' + err.message); }
+}
+
+function closeKapitelEditor() {
+    document.getElementById('kapitelModal').classList.remove('active');
+    kapitelEditId = null;
 }
 
 // Verschiebt einen Eintrag in eine andere Kategorie ("umziehen").
