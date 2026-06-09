@@ -321,6 +321,10 @@
         .kap-mic { flex: none; font-size: 1.2rem; padding: 0.5rem 0.65rem; border-radius: 0.4rem; align-self: stretch; }
         .kap-mic.recording { background: #dc2626; animation: pulse 0.9s ease-in-out infinite; }
         .kap-tool { font-size: 0.82rem; padding: 0.42rem 0.6rem; border-radius: 0.4rem; }
+        .kap-status { font-size: 0.85rem; color: #94a3b8; }
+        .kap-status.ok { color: #4ade80; font-weight: 600; }
+        .kap-status.pending { color: #fbbf24; }
+        .kap-status.warn { color: #f87171; font-weight: 600; }
         .kap-footer { position: sticky; bottom: -1.5rem; background: #1e293b; padding: 0.7rem 0 calc(0.3rem + env(safe-area-inset-bottom)); margin-top: 0.9rem; border-top: 1px solid #334155; z-index: 5; }
         .kind-choice { display: flex; align-items: flex-start; gap: 0.5rem; font-size: 0.9rem; color: #cbd5e1; background: #0f172a; border: 1px solid #334155; border-radius: 0.4rem; padding: 0.55rem 0.7rem; cursor: pointer; line-height: 1.35; }
         .kind-choice input { margin-top: 0.2rem; flex: none; }
@@ -402,7 +406,8 @@
     <div id="kapitelModal" class="modal">
         <div class="modal-content modal-wide">
             <div class="modal-header">
-                <span class="modal-title" style="flex:1;">📖 Buch bearbeiten</span>
+                <span class="modal-title">📖 Buch</span>
+                <span id="kapSaveStatus" class="kap-status" style="flex:1;text-align:center;"></span>
                 <button class="btn-purple" style="padding:0.4rem 0.8rem;font-size:0.95rem;margin-right:0.4rem;" onclick="saveKapitelEditor()">💾 Speichern</button>
                 <button class="modal-close" onclick="closeKapitelEditor()">✕</button>
             </div>
@@ -1090,13 +1095,23 @@ function openKapitelEditor(entry) {
         datum: entry.datum || BOOK_DATUM,
         category: entry.category || selectedCategory
     };
-    const blocks = parseBlocks(entry.text || '');
-    document.querySelector('#kapitelModal .modal-title').textContent = '📖 Buch bearbeiten – ' + (kapitelEdit.category || '');
+    // Falls beim letzten Mal etwas nicht in die Datenbank gespeichert wurde: anbieten
+    let sourceText = entry.text || '';
+    let draft = null;
+    try { const k = localDraftKey(); draft = k ? localStorage.getItem(k) : null; } catch (e) {}
+    if (draft && draft.trim() && draft.trim() !== sourceText.trim()) {
+        if (confirm('Es gibt noch nicht gespeicherte Änderungen von zuletzt. Möchtest Du sie weiterbearbeiten?')) sourceText = draft;
+        else clearLocalDraft();
+    }
+    const blocks = parseBlocks(sourceText);
+    document.querySelector('#kapitelModal .modal-title').textContent = '📖 ' + (kapitelEdit.category || 'Buch');
+    setKapStatus('', '');
     const list = document.getElementById('kapitelList');
     list.innerHTML = '';
     if (!blocks.length) addBlockCard(1, '', '');
     else blocks.forEach(b => addBlockCard(b.level, b.title, b.body));
     updateBlockUI();
+    clearTimeout(kapAutoTimer);
     document.getElementById('kapitelModal').classList.add('active');
 }
 
@@ -1134,17 +1149,19 @@ function addBlockCard(level, title, body, afterCard) {
             card.dataset.level = String(next);
             lvlBtn.textContent = next === 1 ? '📖 Kapitel' : '📑 Abschnitt';
             card.classList.toggle('is-abschnitt', next === 2);
+            scheduleAutosave();
         };
 
         const titleInput = document.createElement('input');
         titleInput.className = 'kap-title'; titleInput.placeholder = 'Überschrift'; titleInput.value = title || '';
+        titleInput.addEventListener('input', scheduleAutosave);
 
         const up   = miniBtn('⬆️', 'Nach oben schieben',  () => moveBlock(card, -1));
         const down = miniBtn('⬇️', 'Nach unten schieben', () => moveBlock(card, 1));
         const ins  = miniBtn('➕ Abschnitt', 'Abschnitt direkt darunter einfügen', () => addBlockCard(2, '', '', card));
         ins.classList.add('kap-ins');
         const del  = miniBtn('🗑', 'Diesen Block löschen', () => {
-            if (confirm('Diesen Block wirklich löschen?')) { card.remove(); updateBlockUI(); }
+            if (confirm('Diesen Block wirklich löschen?')) { card.remove(); updateBlockUI(); scheduleAutosave(); }
         });
         del.classList.add('kap-delmini');
 
@@ -1159,6 +1176,7 @@ function addBlockCard(level, title, body, afterCard) {
     ta.className = 'kap-body';
     ta.placeholder = level === 0 ? 'Optionaler Text vor dem ersten Kapitel…' : 'Hier hineinsprechen oder schreiben…';
     ta.value = body || '';
+    ta.addEventListener('input', scheduleAutosave);
     const micBtn = document.createElement('button');
     micBtn.className = 'btn-amber kap-mic'; micBtn.textContent = '🎤'; micBtn.title = 'In diesen Block sprechen';
     micBtn.onclick = () => toggleKapitelMic(ta, micBtn);
@@ -1191,6 +1209,7 @@ function moveBlock(card, dir) {
     if (dir < 0) { const prev = card.previousElementSibling; if (prev) list.insertBefore(card, prev); }
     else         { const next = card.nextElementSibling;     if (next) list.insertBefore(next, card); }
     card.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    scheduleAutosave();
 }
 
 // Neuen Block am Ende anlegen (level 1 = Kapitel, 2 = Abschnitt)
@@ -1219,6 +1238,7 @@ function mergeSelectedBlocks() {
     sel.slice(1).forEach(c => c.remove());
     const cb0 = first.querySelector('.kap-sel'); if (cb0) cb0.checked = false;
     updateBlockUI();
+    scheduleAutosave();
     showToast('Zusammengeführt. Mit 🪄 kannst Du jetzt alles neu schreiben lassen.');
     firstTa.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 }
@@ -1230,6 +1250,7 @@ function deleteSelectedBlocks() {
     if (!confirm(sel.length + ' markierte(n) Block/Blöcke wirklich löschen?')) return;
     sel.forEach(c => c.remove());
     updateBlockUI();
+    scheduleAutosave();
 }
 
 // Aktualisiert die Auswahl-Leiste (Zusammenführen/Löschen) je nach markierten Blöcken
@@ -1246,7 +1267,7 @@ function updateBlockUI() {
 // Verlauf je Kapitel-Feld für ↩ Rückgängig
 function pushKapHistory(ta) { if (!ta._hist) ta._hist = []; ta._hist.push(ta.value); }
 function kapitelUndo(ta) {
-    if (ta._hist && ta._hist.length) { ta.value = ta._hist.pop(); }
+    if (ta._hist && ta._hist.length) { ta.value = ta._hist.pop(); scheduleAutosave(); }
     else { showToast('Nichts zum Rückgängigmachen.', true); }
 }
 function kapitelClear(ta) {
@@ -1254,6 +1275,7 @@ function kapitelClear(ta) {
     pushKapHistory(ta);
     ta.value = '';
     ta.focus();
+    scheduleAutosave();
 }
 
 // 🪄 KI: macht aus den Notizen dieses Kapitels einen schönen Fließtext (direkt ins Feld)
@@ -1279,7 +1301,7 @@ async function kapitelKI(ta, btn) {
         const prompt = 'Mach aus diesen Notizen einen schönen, zusammenhängenden Text. ' +
             'Verwende nur den Inhalt dieser Notizen, ohne etwas hinzuzufügen:\n\n' + text;
         const res = await callGithubModels(prompt, sysPrompt, 0.4, 2000);
-        if (res) ta.value = res;
+        if (res) { ta.value = res; scheduleAutosave(); }
         else showToast('Die KI hat keinen Text geliefert.', true);
     } catch (e) {
         showToast('Fehler: ' + e.message, true);
@@ -1317,9 +1339,9 @@ function toggleKapitelMic(ta, btn) {
     startMic(ta, btn);
 }
 
-async function saveKapitelEditor() {
-    if (!kapitelEdit) { closeKapitelEditor(); return; }
-    if (isRecording) stopMic();
+// ── Automatisches Speichern ─────────────────────────────────────────────────
+// Setzt den gesamten Buch-Text aus allen Blöcken zusammen.
+function assembleBookText() {
     const parts = [];
     document.querySelectorAll('#kapitelList .kap-card').forEach(card => {
         const level = card.dataset.level;
@@ -1337,30 +1359,91 @@ async function saveKapitelEditor() {
         if (body) block += (block ? '\n' : '') + body;
         parts.push(block);
     });
-    const newText = parts.join('\n\n');
-    if (!newText.trim()) { alert('Das Buch ist leer – nichts zu speichern.'); return; }
+    return parts.join('\n\n');
+}
+
+let kapAutoTimer = null;
+let kapSaving = false;
+
+function setKapStatus(txt, cls) {
+    const el = document.getElementById('kapSaveStatus');
+    if (!el) return;
+    el.textContent = txt;
+    el.className = 'kap-status' + (cls ? ' ' + cls : '');
+}
+
+// Sicherungskopie im Gerät (falls Speichern in der Datenbank scheitert)
+function localDraftKey() {
+    if (!kapitelEdit) return null;
+    return 'buchEntwurf_' + (kapitelEdit.id || (kapitelEdit.category + '_' + kapitelEdit.datum));
+}
+function saveLocalDraft(text) {
+    try { const k = localDraftKey(); if (k) localStorage.setItem(k, text); } catch (e) {}
+}
+function clearLocalDraft() {
+    try { const k = localDraftKey(); if (k) localStorage.removeItem(k); } catch (e) {}
+}
+
+// Plant ein automatisches Speichern kurz nach der letzten Änderung
+function scheduleAutosave() {
+    if (!kapitelEdit) return;
+    clearTimeout(kapAutoTimer);
+    setKapStatus('• nicht gespeichert', 'pending');
+    kapAutoTimer = setTimeout(() => { autoSaveKapitel(); }, 1800);
+}
+
+// Speichert das Buch automatisch in die Datenbank
+async function autoSaveKapitel() {
+    if (!kapitelEdit || kapSaving) return false;
+    clearTimeout(kapAutoTimer);
+    const newText = assembleBookText();
+    if (!newText.trim()) { setKapStatus('', ''); return false; }
+    kapSaving = true;
+    setKapStatus('💾 speichert …', 'pending');
+    const preKey = localDraftKey();           // Schlüssel VOR dem Einfügen merken
+    try { if (preKey) localStorage.setItem(preKey, newText); } catch (e) {} // erst lokal sichern
     try {
         if (kapitelEdit.id) {
             const { error } = await sb.from('tagesnotizen_entries')
                 .update({ text: newText, updated_at: new Date().toISOString() }).eq('id', kapitelEdit.id);
             if (error) throw error;
         } else {
-            const { error } = await sb.from('tagesnotizen_entries')
-                .insert({ datum: kapitelEdit.datum, category: kapitelEdit.category, text: newText });
+            const { data, error } = await sb.from('tagesnotizen_entries')
+                .insert({ datum: kapitelEdit.datum, category: kapitelEdit.category, text: newText })
+                .select('id').single();
             if (error) throw error;
+            if (data && data.id) kapitelEdit.id = data.id;
         }
-        closeKapitelEditor();
-        showToast('✅ Buch gespeichert.');
-        await renderEntries();
-    } catch (err) { alert('Fehler beim Speichern: ' + err.message); }
+        try { if (preKey) localStorage.removeItem(preKey); } catch (e) {}
+        clearLocalDraft();
+        kapitelEdit._dirty = false;
+        setKapStatus('✓ Gespeichert', 'ok');
+        return true;
+    } catch (err) {
+        setKapStatus('⚠ Sicherung im Gerät', 'warn'); // bleibt lokal erhalten, neuer Versuch bei nächster Änderung
+        return false;
+    } finally {
+        kapSaving = false;
+    }
 }
 
-function closeKapitelEditor() {
+// Manuelles Speichern (Knopf): speichert und bleibt im Editor
+async function saveKapitelEditor() {
+    if (!kapitelEdit) { closeKapitelEditor(); return; }
+    if (isRecording) stopMic();
+    const ok = await autoSaveKapitel();
+    if (ok) showToast('✅ Gespeichert.');
+    else if (!assembleBookText().trim()) showToast('Das Buch ist noch leer.', true);
+}
+
+async function closeKapitelEditor() {
     if (isRecording) stopMic();
     try { window.speechSynthesis.cancel(); } catch(e) {}
     if (kapSpeakTimer) { clearInterval(kapSpeakTimer); kapSpeakTimer = null; }
+    if (kapitelEdit) await autoSaveKapitel(); // beim Schließen sicher speichern
     document.getElementById('kapitelModal').classList.remove('active');
     kapitelEdit = null;
+    try { await renderEntries(); } catch (e) {}
 }
 
 // Verschiebt einen Eintrag in eine andere Kategorie ("umziehen").
@@ -1506,6 +1589,8 @@ function stopMic() {
     if (micTargetEl) micTargetEl.readOnly = false;
     if (micBtnEl) micBtnEl.classList.remove('recording');
     setRecStatus(false);
+    // Diktat in einen Buch-Block beendet → automatisch speichern
+    if (micTargetEl && micTargetEl.classList && micTargetEl.classList.contains('kap-body')) scheduleAutosave();
 }
 
 function setRecStatus(active) {
