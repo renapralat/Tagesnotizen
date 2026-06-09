@@ -1695,7 +1695,18 @@ function saveModelChoice() {
 
 function saveGithubPat() {
     const val = document.getElementById('githubPatInput').value.trim();
-    if (!val || val.startsWith('•')) { showToast('Bitte gültigen Token eingeben.', true); return; }
+    const existing = localStorage.getItem('tagesnotizen-github-pat');
+    // Im Feld stehen nur die Punkte (Maskierung) → der echte Token ist schon gespeichert
+    if (val.startsWith('•')) {
+        if (existing) {
+            showToast('✓ Token ist bereits gespeichert.');
+            document.getElementById('tokenPanel').classList.add('hidden');
+        } else {
+            showToast('Bitte gültigen Token eingeben.', true);
+        }
+        return;
+    }
+    if (!val) { showToast('Bitte gültigen Token eingeben.', true); return; }
     localStorage.setItem('tagesnotizen-github-pat', val);
     document.getElementById('githubPatInput').value = '••••••••••••••••';
     updateKiStatus();
