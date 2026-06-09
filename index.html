@@ -445,24 +445,26 @@
             </div>
         </div>
         <p id="kiStatus" class="ki-status"></p>
+        <div style="margin-top:0.5rem;">
+            <label style="font-size:0.8rem;color:#aaa;display:block;margin-bottom:0.25rem;">KI-Modell — zum Vergleichen einfach umschalten:</label>
+            <select id="modelSelect" onchange="saveModelChoice()" style="width:100%;padding:0.45rem 0.5rem;background:#2a2a2a;color:#eee;border:1px solid #444;border-radius:6px;font-size:0.9rem;">
+                <option value="gpt-4o-mini">gpt-4o-mini (OpenAI)</option>
+                <option value="gpt-4o">gpt-4o (OpenAI)</option>
+                <option value="Phi-4">Phi-4 (Microsoft)</option>
+                <option value="Llama-3.3-70B-Instruct">Llama-3.3-70B-Instruct (Meta)</option>
+            </select>
+        </div>
         <div id="tokenPanel" class="hidden">
-            <input type="password" id="githubPatInput" placeholder="github_pat_…" style="margin-bottom:0.5rem;">
+            <label style="font-size:0.8rem;color:#aaa;display:block;margin:0.6rem 0 0.25rem;">GitHub-Token</label>
+            <input type="password" id="githubPatInput" placeholder="github_pat_…" style="margin-bottom:0.35rem;">
+            <p id="tokenSavedNote" class="ki-status" style="margin:0 0 0.5rem;"></p>
             <div class="btn-row">
                 <button class="btn-gray" onclick="clearGithubPat()">Löschen</button>
                 <button class="btn-blue" onclick="saveGithubPat()">Speichern</button>
             </div>
-            <div style="margin-top:0.6rem;">
-                <label style="font-size:0.8rem;color:#aaa;display:block;margin-bottom:0.25rem;">KI-Modell</label>
-                <select id="modelSelect" onchange="saveModelChoice()" style="width:100%;padding:0.35rem 0.5rem;background:#2a2a2a;color:#eee;border:1px solid #444;border-radius:6px;font-size:0.85rem;">
-                    <option value="gpt-4o-mini">gpt-4o-mini (OpenAI)</option>
-                    <option value="gpt-4o">gpt-4o (OpenAI)</option>
-                    <option value="Phi-4">Phi-4 (Microsoft)</option>
-                    <option value="Llama-3.3-70B-Instruct">Llama-3.3-70B-Instruct (Meta)</option>
-                </select>
-            </div>
             <div class="tip" style="margin-top:0.4rem;">
                 GitHub → Einstellungen → Developer settings → Personal access tokens (Classic) → Generate.<br>
-                Keine Berechtigungen nötig. Nur lokal gespeichert.
+                Keine Berechtigungen nötig. Nur lokal gespeichert. Du musst ihn nur einmal eingeben.
             </div>
         </div>
     </div>
@@ -1663,6 +1665,8 @@ function clearInput() {
 // ── KI (GitHub Models API) ────────────────────────────────────────────────────
 function loadKiPat() {
     updateKiStatus();
+    const sel = document.getElementById('modelSelect');
+    if (sel) sel.value = localStorage.getItem('tagesnotizen-model') || GH_MODEL_DEFAULT;
 }
 
 function toggleTokenPanel() {
@@ -1670,17 +1674,23 @@ function toggleTokenPanel() {
     const isHidden = panel.classList.toggle('hidden');
     if (!isHidden) {
         const pat = localStorage.getItem('tagesnotizen-github-pat');
-        document.getElementById('githubPatInput').value = pat ? '••••••••••••••••' : '';
-        document.getElementById('githubPatInput').focus();
-        const saved = localStorage.getItem('tagesnotizen-model') || GH_MODEL_DEFAULT;
-        document.getElementById('modelSelect').value = saved;
+        const input = document.getElementById('githubPatInput');
+        const note = document.getElementById('tokenSavedNote');
+        if (pat) {
+            input.value = '••••••••••••••••';
+            if (note) { note.textContent = '✓ Token ist gespeichert – Du musst ihn nicht neu eingeben.'; note.className = 'ki-status ok'; }
+        } else {
+            input.value = '';
+            input.focus();
+            if (note) { note.textContent = 'Noch kein Token gespeichert.'; note.className = 'ki-status'; }
+        }
     }
 }
 
 function saveModelChoice() {
     const val = document.getElementById('modelSelect').value;
     localStorage.setItem('tagesnotizen-model', val);
-    showToast('Modell: ' + val);
+    showToast('Modell gewechselt: ' + val);
 }
 
 function saveGithubPat() {
