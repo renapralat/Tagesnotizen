@@ -458,9 +458,6 @@
                 <option value="gpt-4o">gpt-4o (OpenAI)</option>
                 <option value="Phi-4">Phi-4 (Microsoft)</option>
                 <option value="Llama-3.3-70B-Instruct">Llama-3.3-70B-Instruct (Meta)</option>
-                <option value="Mistral-Nemo">Mistral-Nemo (Mistral)</option>
-                <option value="Mistral-small">Mistral-small (Mistral)</option>
-                <option value="Mistral-large-2411">Mistral-large-2411 (Mistral)</option>
                 <option value="Ministral-3B">Ministral-3B (Mistral)</option>
             </select>
         </div>
@@ -1453,16 +1450,14 @@ async function kapitelKI(ta, btn) {
             'Du bist ein einfühlsamer Schriftsteller, der aus Stichworten und Notizen lebendige, gut lesbare Prosa macht. ' +
             'Die schreibende Person ist immer "ich" und wird niemals durch einen Namen ersetzt. ' +
             'Norbert ist der Ehemann der schreibenden Person. Alle anderen genannten Namen sind reale Personen. ' +
-            'GANZ WICHTIG: Verwende AUSSCHLIESSLICH das, was in den Notizen steht. ' +
-            'Füge KEINE Personen, KEINE Politiker oder Personen des öffentlichen Lebens, KEINE historischen, ' +
-            'politischen oder gesellschaftlichen Ereignisse und KEINE Hintergründe hinzu, die nicht ausdrücklich in den Notizen genannt sind. ' +
-            'Erfinde nichts, deute nichts hinein und ergänze keinen Kontext. Bleibe streng bei den genannten Fakten, Namen, Orten und Erlebnissen. ' +
-            'Du darfst die Sprache schön und flüssig machen, aber inhaltlich nichts Neues einführen. ' +
+            'Behalte alle Details, Namen, Orte und Ereignisse — nichts darf erfunden werden. ' +
+            'Füge insbesondere KEINE Politiker oder Personen des öffentlichen Lebens und KEINE historischen oder ' +
+            'politischen Ereignisse hinzu, die nicht ausdrücklich in den Notizen genannt sind. ' +
+            'Du darfst die Sprache schön, warm und abwechslungsreich machen. ' +
             'Schreibe einen zusammenhängenden Fließtext ohne Überschriften. ' +
             'Antworte nur mit dem fertigen Text, ohne Einleitung oder Kommentar.';
-        const prompt = 'Mach aus diesen Notizen einen schönen, zusammenhängenden Text. ' +
-            'Verwende nur den Inhalt dieser Notizen, ohne etwas hinzuzufügen:\n\n' + text;
-        const res = await callGithubModels(prompt, sysPrompt, 0.4, 2000);
+        const prompt = 'Mach aus diesen Notizen einen schönen, zusammenhängenden Text in Prosa:\n\n' + text;
+        const res = await callGithubModels(prompt, sysPrompt, 0.3, 2000);
         if (res) { ta.value = res; autoGrow(ta); scheduleAutosave(); }
         else showToast('Die KI hat keinen Text geliefert.', true);
     } catch (e) {
