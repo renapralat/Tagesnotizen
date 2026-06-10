@@ -458,7 +458,20 @@
                 <option value="gpt-4o">gpt-4o (OpenAI)</option>
                 <option value="Phi-4">Phi-4 (Microsoft)</option>
                 <option value="Llama-3.3-70B-Instruct">Llama-3.3-70B-Instruct (Meta)</option>
+                <option value="Mistral-Nemo">Mistral-Nemo (Mistral)</option>
+                <option value="Mistral-small">Mistral-small (Mistral)</option>
+                <option value="Mistral-large-2411">Mistral-large-2411 (Mistral)</option>
+                <option value="Ministral-3B">Ministral-3B (Mistral)</option>
             </select>
+        </div>
+        <div style="margin-top:0.5rem;">
+            <label style="font-size:0.8rem;color:#aaa;display:block;margin-bottom:0.25rem;">🔊 Vorlese-Stimme (auf diesem Gerät):</label>
+            <div style="display:flex;gap:0.4rem;">
+                <select id="voiceSelect" onchange="saveVoiceChoice()" style="flex:1;min-width:0;padding:0.45rem 0.5rem;background:#2a2a2a;color:#eee;border:1px solid #444;border-radius:6px;font-size:0.9rem;">
+                    <option value="">Standard-Stimme des Geräts</option>
+                </select>
+                <button class="btn-amber" style="flex:none;padding:0.45rem 0.7rem;border-radius:6px;" onclick="testVoice()" title="Stimme anhören">▶︎ Probe</button>
+            </div>
         </div>
         <div id="tokenPanel" class="hidden">
             <label style="font-size:0.8rem;color:#aaa;display:block;margin:0.6rem 0 0.25rem;">GitHub-Token</label>
@@ -1472,6 +1485,7 @@ function speakKapitel(ta) {
     if (!t.trim()) { showToast('Dieses Kapitel ist noch leer.', true); return; }
     const u = new SpeechSynthesisUtterance(t);
     u.lang = 'de-DE';
+    applyVoice(u);
     u.onend = u.onerror = () => { if (kapSpeakTimer) { clearInterval(kapSpeakTimer); kapSpeakTimer = null; } };
     synth.speak(u);
     kapSpeakTimer = setInterval(() => { if (synth.paused) synth.resume(); }, 5000);
@@ -1817,6 +1831,9 @@ function loadKiPat() {
     updateKiStatus();
     const sel = document.getElementById('modelSelect');
     if (sel) sel.value = localStorage.getItem('tagesnotizen-model') || GH_MODEL_DEFAULT;
+    populateVoiceSelect();
+    // Manche Browser laden die Stimmen erst verzögert
+    setTimeout(populateVoiceSelect, 400);
 }
 
 function toggleTokenPanel() {
@@ -2148,6 +2165,62 @@ function backToInput() {
 }
 
 // ── TTS (Vorlesen) ────────────────────────────────────────────────────────────
+// Stimmen-Auswahl: pro Gerät die verfügbaren (deutschen) Stimmen anbieten und merken.
+function germanVoices() {
+    const all = window.speechSynthesis ? window.speechSynthesis.getVoices() : [];
+    const de = all.filter(v => (v.lang || '').toLowerCase().startsWith('de'));
+    return de.length ? de : all;
+}
+function populateVoiceSelect() {
+    const sel = document.getElementById('voiceSelect');
+    if (!sel) return;
+    const voices = germanVoices();
+    const saved = localStorage.getItem('tagesnotizen-voice') || '';
+    // schön sortieren: Google-Stimmen zuerst, dann alphabetisch
+    voices.sort((a, b) => {
+        const ga = /google/i.test(a.name) ? 0 : 1;
+        const gb = /google/i.test(b.name) ? 0 : 1;
+        if (ga !== gb) return ga - gb;
+        return a.name.localeCompare(b.name);
+    });
+    sel.innerHTML = '<option value="">Standard-Stimme des Geräts</option>' +
+        voices.map(v => {
+            const label = v.name + (/(de-DE)/i.test(v.lang) ? '' : ' [' + v.lang + ']');
+            return `<option value="${escHtml(v.name)}">${escHtml(label)}</option>`;
+        }).join('');
+    if (saved && voices.some(v => v.name === saved)) sel.value = saved;
+}
+function saveVoiceChoice() {
+    const sel = document.getElementById('voiceSelect');
+    if (!sel) return;
+    localStorage.setItem('tagesnotizen-voice', sel.value);
+    showToast(sel.value ? 'Stimme: ' + sel.value : 'Standard-Stimme des Geräts');
+}
+function getSelectedVoice() {
+    const voices = window.speechSynthesis ? window.speechSynthesis.getVoices() : [];
+    const saved = localStorage.getItem('tagesnotizen-voice') || '';
+    if (saved) { const v = voices.find(x => x.name === saved); if (v) return v; }
+    // sonst: bevorzugt eine deutsche Google-Stimme
+    return voices.find(v => /google/i.test(v.name) && /^de/i.test(v.lang))
+        || voices.find(v => /^de/i.test(v.lang)) || null;
+}
+function applyVoice(utt) {
+    const v = getSelectedVoice();
+    if (v) { utt.voice = v; utt.lang = v.lang || 'de-DE'; }
+}
+function testVoice() {
+    const synth = window.speechSynthesis;
+    if (!synth) return;
+    synth.cancel();
+    const u = new SpeechSynthesisUtterance('Guten Tag! So klingt diese Stimme beim Vorlesen Ihres Buches.');
+    u.lang = 'de-DE';
+    applyVoice(u);
+    synth.speak(u);
+}
+if (window.speechSynthesis) {
+    window.speechSynthesis.onvoiceschanged = populateVoiceSelect;
+}
+
 function stopSpeaking() {
     if (speakResumeTimer) { clearInterval(speakResumeTimer); speakResumeTimer = null; }
     window.speechSynthesis.cancel();
@@ -2182,6 +2255,7 @@ function startSpeaking(text, id) {
     const synth = window.speechSynthesis;
     const utt   = new SpeechSynthesisUtterance(stripMarkdown(text));
     utt.lang    = 'de-DE';
+    applyVoice(utt);
     utt.onend = utt.onerror = () => {
         if (speakResumeTimer) { clearInterval(speakResumeTimer); speakResumeTimer = null; }
         speakingId = null;
