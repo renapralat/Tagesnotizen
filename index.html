@@ -1149,7 +1149,10 @@ function openKapitelEditor(entry, scrollHeadingIndex) {
     else blocks.forEach(b => addBlockCard(b.level, b.title, b.body));
     updateBlockUI();
     clearTimeout(kapAutoTimer);
-    document.getElementById('kapitelModal').classList.add('active');
+    spellDirtyCard = null;
+    const modal = document.getElementById('kapitelModal');
+    if (!modal._spellWired) { modal.addEventListener('click', handleEditorClick, true); modal._spellWired = true; }
+    modal.classList.add('active');
     // Textfelder auf die volle Texthöhe aufziehen, sobald das Fenster sichtbar ist
     requestAnimationFrame(() => {
         growAllBlocks();
@@ -1238,7 +1241,7 @@ function addBlockCard(level, title, body, afterCard) {
     ta.placeholder = level === 0 ? 'Optionaler Text vor dem ersten Kapitel…' : 'Hier hineinsprechen oder schreiben…';
     ta.value = body || '';
     ta.addEventListener('input', scheduleAutosave);
-    ta.addEventListener('input', () => autoGrow(ta));
+    ta.addEventListener('input', () => { autoGrow(ta); markSpellDirty(card); });
     const micBtn = document.createElement('button');
     micBtn.className = 'btn-amber kap-mic'; micBtn.textContent = '🎤'; micBtn.title = 'In diesen Block sprechen';
     micBtn.onclick = () => toggleKapitelMic(ta, micBtn);
@@ -1344,31 +1347,84 @@ function kapitelClear(ta) {
 }
 
 // 📝 Rechtschreibung: korrigiert NUR Rechtschreibung/Zeichensetzung – Inhalt & Wortwahl bleiben
-async function kapitelSpell(ta, btn) {
+// Kern: prüft das Textfeld und schreibt das Ergebnis zurück. Gibt true bei Änderung.
+async function spellCheckTextarea(ta) {
     const text = (ta.value || '').trim();
-    if (!text) { showToast('Bitte zuerst etwas schreiben oder sprechen.', true); return; }
-    if (!getGithubPat()) { showToast('Bitte zuerst den GitHub-Token im Abschnitt „KI" eingeben.', true); return; }
+    if (!text) return false;
+    if (!getGithubPat()) { showToast('Bitte zuerst den GitHub-Token im Abschnitt „KI" eingeben.', true); return false; }
     pushKapHistory(ta);
+    setKapStatus('📝 Rechtschreibung wird geprüft …', 'pending');
+    const sysPrompt =
+        'Du bist ein Korrektor für deutsche Rechtschreibung (geltende deutsche Rechtschreibung in Deutschland). ' +
+        'Korrigiere AUSSCHLIESSLICH Rechtschreibung, Groß- und Kleinschreibung, Zeichensetzung und offensichtliche, ' +
+        'durch Spracherkennung entstandene Verhörer (z. B. falsch erkannte oder zusammengeschriebene Wörter). ' +
+        'Ändere NICHT den Inhalt, NICHT die Wortwahl, NICHT den Satzbau und NICHT den Stil. ' +
+        'Füge NICHTS hinzu und lasse NICHTS weg. Behalte alle Namen und Zahlen exakt bei. ' +
+        'Gib nur den korrigierten Text zurück, ohne Einleitung oder Kommentar.';
+    const prompt = 'Korrigiere nur die deutsche Rechtschreibung und Zeichensetzung dieses Textes, ' +
+        'ohne Inhalt oder Formulierung zu verändern:\n\n' + text;
+    const res = await callGithubModels(prompt, sysPrompt, 0.1, 2000);
+    if (res) { ta.value = res; autoGrow(ta); return true; }
+    return false;
+}
+
+// Knopf 📝: Rechtschreibung dieses Blocks prüfen
+async function kapitelSpell(ta, btn) {
+    if (!(ta.value || '').trim()) { showToast('Bitte zuerst etwas schreiben oder sprechen.', true); return; }
+    const card = ta.closest('.kap-card');
+    if (card && spellDirtyCard === card) spellDirtyCard = null;
     const old = btn.textContent;
     btn.disabled = true; btn.textContent = '⏳ …';
     try {
-        const sysPrompt =
-            'Du bist ein Korrektor für deutsche Rechtschreibung (geltende deutsche Rechtschreibung in Deutschland). ' +
-            'Korrigiere AUSSCHLIESSLICH Rechtschreibung, Groß- und Kleinschreibung, Zeichensetzung und offensichtliche, ' +
-            'durch Spracherkennung entstandene Verhörer (z. B. falsch erkannte oder zusammengeschriebene Wörter). ' +
-            'Ändere NICHT den Inhalt, NICHT die Wortwahl, NICHT den Satzbau und NICHT den Stil. ' +
-            'Füge NICHTS hinzu und lasse NICHTS weg. Behalte alle Namen und Zahlen exakt bei. ' +
-            'Gib nur den korrigierten Text zurück, ohne Einleitung oder Kommentar.';
-        const prompt = 'Korrigiere nur die deutsche Rechtschreibung und Zeichensetzung dieses Textes, ' +
-            'ohne Inhalt oder Formulierung zu verändern:\n\n' + text;
-        const res = await callGithubModels(prompt, sysPrompt, 0.1, 2000);
-        if (res) { ta.value = res; autoGrow(ta); scheduleAutosave(); showToast('✓ Rechtschreibung geprüft.'); }
-        else showToast('Die KI hat keinen Text geliefert.', true);
+        const ok = await spellCheckTextarea(ta);
+        if (ok) { await autoSaveKapitel(); showToast('✓ Rechtschreibung geprüft & gesichert.'); }
+        else if (getGithubPat()) showToast('Die KI hat keinen Text geliefert.', true);
     } catch (e) {
         showToast('Fehler: ' + e.message, true);
     } finally {
         btn.disabled = false; btn.textContent = old;
     }
+}
+
+// „Abschluss" eines Blocks: Rechtschreibung prüfen, anzeigen und sichern.
+// Wird ausgelöst, sobald nach dem Diktieren ein ANDERER Knopf gedrückt wird (nicht die Mikrofontaste).
+let spellDirtyCard = null;            // Block mit noch nicht abgeschlossenem Diktat
+function markSpellDirty(card) { if (card) spellDirtyCard = card; }
+
+async function finalizeSpell(card) {
+    if (!card || card._spellBusy) return;
+    const ta = card.querySelector('.kap-body');
+    if (!ta) return;
+    if (spellDirtyCard === card) spellDirtyCard = null;
+    if (!(ta.value || '').trim()) { scheduleAutosave(); return; }
+    card._spellBusy = true;
+    try {
+        const ok = await spellCheckTextarea(ta);
+        if (ok) { await autoSaveKapitel(); showToast('✓ Abschnitt gesichert – Rechtschreibung geprüft.'); }
+        else { scheduleAutosave(); }
+    } catch (e) {
+        scheduleAutosave(); // bei Fehler wenigstens den Text sichern
+    } finally {
+        card._spellBusy = false;
+    }
+}
+
+// Reagiert auf Knopfdrücke im Editor: schließt den zuletzt diktierten Block ab
+// (Rechtschreibung + sichern) – außer es ist die Mikrofontaste DESSELBEN Blocks.
+function handleEditorClick(ev) {
+    const card = spellDirtyCard;
+    if (!card) return;
+    const btn = ev.target.closest('button');
+    if (!btn) return;
+    // Knöpfe INNERHALB des aktiven Blocks lösen keinen Abschluss aus
+    // (Mikrofon + Werkzeuge 📝/🪄/🔊/↩/🧹 macht sie selbst bzw. soll nichts auslösen)
+    if (card.contains(btn) && (btn.classList.contains('kap-mic') || btn.classList.contains('kap-tool'))) {
+        const t = btn.textContent || '';
+        if (t.startsWith('📝') || t.startsWith('🪄')) spellDirtyCard = null; // verarbeitet den Block selbst
+        return;
+    }
+    // Jeder andere Knopf (anderer Block, Verschieben, Speichern …) → Abschluss: Rechtschreibung + sichern
+    finalizeSpell(card);
 }
 
 // 🪄 KI: macht aus den Notizen dieses Kapitels einen schönen Fließtext (direkt ins Feld)
@@ -1645,6 +1701,7 @@ function startMic(target, btn) {
         const sep = (micDone || micBefore) && curInterim ? ' ' : '';
         ta.value = micBefore + micDone + sep + curInterim + micAfter;
         if (curInterim) setRecStatus(true);
+        if (ta.classList && ta.classList.contains('kap-body')) markSpellDirty(ta.closest('.kap-card'));
     };
 
     recognition.onend = () => {
