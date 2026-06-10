@@ -1475,20 +1475,14 @@ async function kapitelKI(ta, btn) {
 // Vorlesen eines einzelnen Kapitel-Feldes
 let kapSpeakTimer = null;
 function speakKapitel(ta) {
-    const synth = window.speechSynthesis;
-    if (synth.speaking || synth.pending) {
-        synth.cancel();
+    // Läuft gerade etwas? → stoppen (zweiter Druck = aus)
+    if (speakingId !== null || window.speechSynthesis.speaking || window.speechSynthesis.pending) {
+        stopSpeaking();
         if (kapSpeakTimer) { clearInterval(kapSpeakTimer); kapSpeakTimer = null; }
         return;
     }
-    const t = stripMarkdown(ta.value || '');
-    if (!t.trim()) { showToast('Dieses Kapitel ist noch leer.', true); return; }
-    const u = new SpeechSynthesisUtterance(t);
-    u.lang = 'de-DE';
-    applyVoice(u);
-    u.onend = u.onerror = () => { if (kapSpeakTimer) { clearInterval(kapSpeakTimer); kapSpeakTimer = null; } };
-    synth.speak(u);
-    kapSpeakTimer = setInterval(() => { if (synth.paused) synth.resume(); }, 5000);
+    if (!(ta.value || '').trim()) { showToast('Dieses Kapitel ist noch leer.', true); return; }
+    startSpeaking(ta.value, 'kapitel'); // nutzt die Häppchen-Logik (auch für lange Texte)
 }
 
 // Diktieren in ein bestimmtes Kapitel-Feld (eigenes Mikrofon je Kapitel)
@@ -1601,7 +1595,7 @@ async function saveKapitelEditor() {
 
 async function closeKapitelEditor() {
     if (isRecording) stopMic();
-    try { window.speechSynthesis.cancel(); } catch(e) {}
+    try { stopSpeaking(); } catch(e) {}
     if (kapSpeakTimer) { clearInterval(kapSpeakTimer); kapSpeakTimer = null; }
     if (kapitelEdit) await autoSaveKapitel(); // beim Schließen sicher speichern
     document.getElementById('kapitelModal').classList.remove('active');
@@ -2251,23 +2245,53 @@ function stripMarkdown(text) {
         .replace(/^#{1,6}\s+/gm, '');
 }
 
+// Zerlegt einen Text in kleine, satzweise Häppchen (gegen den Browser-Fehler bei langen Texten)
+function chunkText(text) {
+    const t = stripMarkdown(String(text || '')).replace(/\s+\n/g, '\n').trim();
+    if (!t) return [];
+    // an Satzenden und Zeilenumbrüchen trennen
+    const pieces = t.match(/[^.!?\n]+[.!?]*|\n+/g) || [t];
+    const chunks = [];
+    let cur = '';
+    for (const p of pieces) {
+        const piece = p.replace(/\n+/g, ' ').trim();
+        if (!piece) continue;
+        if ((cur + ' ' + piece).trim().length > 200 && cur) { chunks.push(cur.trim()); cur = piece; }
+        else cur = (cur ? cur + ' ' : '') + piece;
+    }
+    if (cur.trim()) chunks.push(cur.trim());
+    return chunks;
+}
+
 function startSpeaking(text, id) {
     const synth = window.speechSynthesis;
-    const utt   = new SpeechSynthesisUtterance(stripMarkdown(text));
-    utt.lang    = 'de-DE';
-    applyVoice(utt);
-    utt.onend = utt.onerror = () => {
-        if (speakResumeTimer) { clearInterval(speakResumeTimer); speakResumeTimer = null; }
-        speakingId = null;
-        updateSpeakUI();
-    };
+    synth.cancel();
+    const chunks = chunkText(text);
+    if (!chunks.length) return;
     speakingId = id;
     updateSpeakUI();
-    synth.speak(utt);
-    // Workaround: Android/Chrome pausiert TTS automatisch – alle 5 s fortsetzen
+    let i = 0;
+    const speakNext = () => {
+        if (speakingId !== id) return;            // wurde gestoppt/gewechselt
+        if (i >= chunks.length) {                 // alle Häppchen gelesen
+            if (speakResumeTimer) { clearInterval(speakResumeTimer); speakResumeTimer = null; }
+            speakingId = null;
+            updateSpeakUI();
+            return;
+        }
+        const utt = new SpeechSynthesisUtterance(chunks[i++]);
+        utt.lang = 'de-DE';
+        applyVoice(utt);
+        utt.onend = speakNext;
+        utt.onerror = speakNext;
+        synth.speak(utt);
+    };
+    speakNext();
+    // Workaround: Android/Chrome pausiert TTS automatisch – regelmäßig fortsetzen
+    if (speakResumeTimer) clearInterval(speakResumeTimer);
     speakResumeTimer = setInterval(() => {
         if (synth.paused && speakingId) synth.resume();
-    }, 5000);
+    }, 4000);
 }
 
 function speakEntry(id) {
