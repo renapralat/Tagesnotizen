@@ -265,8 +265,12 @@
             border-radius: 0.4rem; padding: 0.9rem; margin-bottom: 0.65rem;
         }
         .entry-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem; }
+        .entry-header.book-head { position: sticky; top: 0; z-index: 20; background: #334155; padding: 0.5rem 0; margin: -0.2rem 0 0.5rem; border-bottom: 1px solid #475569; }
         .entry-date { color: #94a3b8; font-size: 0.875rem; font-weight: 700; }
         .entry-actions { display: flex; gap: 0.4rem; }
+        .rt-hrow { display: flex; align-items: center; gap: 0.4rem; flex-wrap: wrap; }
+        .rt-hrow > h3, .rt-hrow > h4 { flex: 1; margin-top: 0.6rem; }
+        .rt-htool { background: #475569; border: 1px solid #64748b; color: #e2e8f0; font-size: 1rem; cursor: pointer; padding: 0.25rem 0.5rem; border-radius: 0.4rem; flex: none; }
         .entry-text { line-height: 1.65; word-break: break-word; font-size: 0.95rem; }
         .rt-text { white-space: pre-wrap; }
         .rt-h1 { font-size: 1.25rem; font-weight: 700; color: #f1f5f9; margin: 1rem 0 0.4rem; padding-bottom: 0.2rem; border-bottom: 1px solid #475569; }
@@ -305,7 +309,9 @@
             background: #1e293b; padding: 1.5rem; border-radius: 0.5rem;
             width: 100%; max-width: 420px; border: 1px solid #475569;
         }
-        .modal-content.modal-wide { max-width: 680px; }
+        .modal-content.modal-wide { max-width: min(980px, 94vw); }
+        .kap-list { display: flex; flex-direction: column; gap: 0.8rem; max-height: 62vh; overflow-y: auto; }
+        @media (min-width: 700px) { .kap-list { max-height: 72vh; } }
         .kap-card { background: #0f172a; border: 1px solid #334155; border-radius: 0.5rem; padding: 0.7rem 0.8rem; }
         .kap-card.is-abschnitt { margin-left: 1.1rem; border-left: 3px solid #6366f1; }
         .kap-card-head { display: flex; align-items: center; gap: 0.4rem; margin-bottom: 0.5rem; flex-wrap: wrap; }
@@ -317,7 +323,7 @@
         .kap-mini { background: #334155; border: 1px solid #475569; color: #e2e8f0; font-size: 1rem; cursor: pointer; flex: none; padding: 0.3rem 0.5rem; border-radius: 0.4rem; }
         .kap-mini.kap-delmini { color: #f87171; }
         .kap-mini.kap-ins { font-size: 0.8rem; font-weight: 600; }
-        .kap-body { width: 100%; min-height: 9rem; resize: vertical; background: #1e293b; border: 1px solid #475569; border-radius: 0.4rem; padding: 0.55rem 0.65rem; color: #e2e8f0; font-size: 1rem; line-height: 1.6; font-family: inherit; }
+        .kap-body { width: 100%; min-height: 9rem; resize: vertical; overflow: hidden; background: #1e293b; border: 1px solid #475569; border-radius: 0.4rem; padding: 0.55rem 0.65rem; color: #e2e8f0; font-size: 1rem; line-height: 1.6; font-family: inherit; }
         .kap-mic { flex: none; font-size: 1.2rem; padding: 0.5rem 0.65rem; border-radius: 0.4rem; align-self: stretch; }
         .kap-mic.recording { background: #dc2626; animation: pulse 0.9s ease-in-out infinite; }
         .kap-tool { font-size: 0.82rem; padding: 0.42rem 0.6rem; border-radius: 0.4rem; }
@@ -416,7 +422,7 @@
                 <button id="kapMergeBtn" class="btn-purple" style="flex:1;" onclick="mergeSelectedBlocks()">🔗 Markierte zusammenführen</button>
                 <button id="kapDelBtn" class="btn-red" onclick="deleteSelectedBlocks()">🗑 Markierte löschen</button>
             </div>
-            <div id="kapitelList" style="display:flex;flex-direction:column;gap:0.8rem;max-height:60vh;overflow-y:auto;"></div>
+            <div id="kapitelList" class="kap-list"></div>
             <div style="display:flex;gap:0.5rem;margin-top:0.8rem;">
                 <button class="btn-dark" style="flex:1;" onclick="addNewBlock(1)">➕ Kapitel</button>
                 <button class="btn-dark" style="flex:1;" onclick="addNewBlock(2)">➕ Abschnitt</button>
@@ -688,7 +694,7 @@ function inlineFmt(escaped) {
 }
 
 // Text in Buch-Form rendern: Überschriften (# / Kapitel, ## / Abschnitt) + Inhaltsverzeichnis
-function renderRichText(text, idPrefix) {
+function renderRichText(text, idPrefix, withControls) {
     const lines = String(text).split('\n');
     const headings = [];
     let html = '', buf = [], n = 0;
@@ -703,17 +709,45 @@ function renderRichText(text, idPrefix) {
         else if ((m = raw.match(/^#\s+(.+)$/))             || (m = raw.match(/^Kapitel\s+(.+)$/i)))    { lvl = 1; title = m[1]; }
         if (lvl) {
             flush();
+            const hi = n;
             const id = idPrefix + '-h' + (n++);
             title = title.trim();
             headings.push({ level: lvl, title, id });
             const tag = lvl === 1 ? 'h3' : 'h4';
-            html += `<${tag} id="${id}" class="rt-h${lvl}">${inlineFmt(escHtml(title))}</${tag}>`;
+            const head = `<${tag} id="${id}" class="rt-h${lvl}">${inlineFmt(escHtml(title))}</${tag}>`;
+            if (withControls) {
+                html += `<div class="rt-hrow">${head}` +
+                    `<button class="rt-htool" onclick="speakFromHeading(${hi})" title="Ab hier vorlesen">🔊</button>` +
+                    `<button class="rt-htool" onclick="editSection(${hi})" title="Diesen Abschnitt bearbeiten">✏️</button>` +
+                    `</div>`;
+            } else {
+                html += head;
+            }
         } else {
             buf.push(raw);
         }
     }
     flush();
     return { html, headings };
+}
+
+// Liest das Buch ab der gewählten Überschrift vor
+function speakFromHeading(hIndex) {
+    if (!currentBook || !currentBook.text) return;
+    const lines = currentBook.text.split('\n');
+    const isHead = (l) => /^##\s+.+/.test(l) || /^Abschnitt\s+.+/i.test(l) || /^#\s+.+/.test(l) || /^Kapitel\s+.+/i.test(l);
+    let count = -1, start = 0;
+    for (let i = 0; i < lines.length; i++) {
+        if (isHead(lines[i])) { count++; if (count === hIndex) { start = i; break; } }
+    }
+    stopSpeaking();
+    startSpeaking(lines.slice(start).join('\n'), 'book');
+}
+
+// Öffnet den Editor und springt zum gewählten Abschnitt
+function editSection(hIndex) {
+    if (!currentBook) { openBookEditor(); return; }
+    openKapitelEditor(currentBook, hIndex);
 }
 
 function scrollToHeading(id) {
@@ -911,7 +945,7 @@ async function renderBook(cat) {
             '<button class="btn-purple" style="width:100%;font-size:1.05rem;padding:0.7rem;" onclick="openBookEditor()">📖 Buch beginnen</button></div>';
         return;
     }
-    const rt = renderRichText(book.text, 'book');
+    const rt = renderRichText(book.text, 'book', true);
     let toc = '';
     if (rt.headings.length >= 1) {
         toc = '<div class="entry-toc"><div class="entry-toc-title">📑 Inhalt</div>' +
@@ -920,10 +954,10 @@ async function renderBook(cat) {
     }
     c.innerHTML = `
         <div class="entry">
-            <div class="entry-header">
+            <div class="entry-header book-head">
                 <span class="entry-date">📖 ${escHtml(cat)}</span>
                 <div class="entry-actions">
-                    <button id="speak-book" class="btn-icon btn-amber speak-btn" onclick="speakBook()" title="Vorlesen">🔊</button>
+                    <button id="speak-book" class="btn-icon btn-amber speak-btn" onclick="speakBook()" title="Alles vorlesen">🔊</button>
                     <button class="btn-icon btn-blue" onclick="openBookEditor()" title="Buch schreiben / bearbeiten">✏️</button>
                     <button class="btn-icon btn-dark" onclick="printBook()" title="Als Buch drucken">🖨️</button>
                 </div>
@@ -1090,7 +1124,7 @@ function parseBlocks(text) {
 
 // kapitelEdit: { id (oder null bei neuem Buch), datum, category }
 let kapitelEdit = null;
-function openKapitelEditor(entry) {
+function openKapitelEditor(entry, scrollHeadingIndex) {
     if (!entry) return;
     kapitelEdit = {
         id: entry.id || null,
@@ -1115,6 +1149,30 @@ function openKapitelEditor(entry) {
     updateBlockUI();
     clearTimeout(kapAutoTimer);
     document.getElementById('kapitelModal').classList.add('active');
+    // Textfelder auf die volle Texthöhe aufziehen, sobald das Fenster sichtbar ist
+    requestAnimationFrame(() => {
+        growAllBlocks();
+        if (scrollHeadingIndex != null) {
+            const cards = [...document.querySelectorAll('#kapitelList .kap-card')]
+                .filter(c => c.dataset.level !== '0');
+            const target = cards[scrollHeadingIndex];
+            if (target) {
+                target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                const ta = target.querySelector('.kap-body');
+                if (ta) ta.focus();
+            }
+        }
+    });
+}
+
+// Lässt ein Textfeld so hoch werden, dass der ganze Text sichtbar ist (kein inneres Scrollen)
+function autoGrow(ta) {
+    if (!ta) return;
+    ta.style.height = 'auto';
+    ta.style.height = Math.max(ta.scrollHeight + 4, 0) + 'px';
+}
+function growAllBlocks() {
+    document.querySelectorAll('#kapitelList .kap-body').forEach(autoGrow);
 }
 
 function miniBtn(label, title, fn) {
@@ -1179,6 +1237,7 @@ function addBlockCard(level, title, body, afterCard) {
     ta.placeholder = level === 0 ? 'Optionaler Text vor dem ersten Kapitel…' : 'Hier hineinsprechen oder schreiben…';
     ta.value = body || '';
     ta.addEventListener('input', scheduleAutosave);
+    ta.addEventListener('input', () => autoGrow(ta));
     const micBtn = document.createElement('button');
     micBtn.className = 'btn-amber kap-mic'; micBtn.textContent = '🎤'; micBtn.title = 'In diesen Block sprechen';
     micBtn.onclick = () => toggleKapitelMic(ta, micBtn);
@@ -1192,6 +1251,7 @@ function addBlockCard(level, title, body, afterCard) {
         b.className = 'btn-dark kap-tool'; b.textContent = label; b.title = title;
         b.onclick = () => fn(b); return b;
     };
+    tools.appendChild(mk('📝 Rechtschreibung', 'Nur Rechtschreibung & Zeichensetzung prüfen – Inhalt bleibt gleich', (b) => kapitelSpell(ta, b)));
     tools.appendChild(mk('🪄 KI schön schreiben', 'Diesen Block neu schreiben', (b) => kapitelKI(ta, b)));
     tools.appendChild(mk('🔊 Vorlesen', 'Diesen Block vorlesen', () => speakKapitel(ta)));
     tools.appendChild(mk('↩ Rückgängig', 'Letzte Änderung zurücknehmen', () => kapitelUndo(ta)));
@@ -1237,6 +1297,7 @@ function mergeSelectedBlocks() {
         else { if (t) parts.push(t); if (b) parts.push(b); }
     });
     firstTa.value = parts.join('\n\n');
+    autoGrow(firstTa);
     sel.slice(1).forEach(c => c.remove());
     const cb0 = first.querySelector('.kap-sel'); if (cb0) cb0.checked = false;
     updateBlockUI();
@@ -1269,7 +1330,7 @@ function updateBlockUI() {
 // Verlauf je Kapitel-Feld für ↩ Rückgängig
 function pushKapHistory(ta) { if (!ta._hist) ta._hist = []; ta._hist.push(ta.value); }
 function kapitelUndo(ta) {
-    if (ta._hist && ta._hist.length) { ta.value = ta._hist.pop(); scheduleAutosave(); }
+    if (ta._hist && ta._hist.length) { ta.value = ta._hist.pop(); autoGrow(ta); scheduleAutosave(); }
     else { showToast('Nichts zum Rückgängigmachen.', true); }
 }
 function kapitelClear(ta) {
@@ -1277,7 +1338,36 @@ function kapitelClear(ta) {
     pushKapHistory(ta);
     ta.value = '';
     ta.focus();
+    autoGrow(ta);
     scheduleAutosave();
+}
+
+// 📝 Rechtschreibung: korrigiert NUR Rechtschreibung/Zeichensetzung – Inhalt & Wortwahl bleiben
+async function kapitelSpell(ta, btn) {
+    const text = (ta.value || '').trim();
+    if (!text) { showToast('Bitte zuerst etwas schreiben oder sprechen.', true); return; }
+    if (!getGithubPat()) { showToast('Bitte zuerst den GitHub-Token im Abschnitt „KI" eingeben.', true); return; }
+    pushKapHistory(ta);
+    const old = btn.textContent;
+    btn.disabled = true; btn.textContent = '⏳ …';
+    try {
+        const sysPrompt =
+            'Du bist ein Korrektor für deutsche Rechtschreibung (geltende deutsche Rechtschreibung in Deutschland). ' +
+            'Korrigiere AUSSCHLIESSLICH Rechtschreibung, Groß- und Kleinschreibung, Zeichensetzung und offensichtliche, ' +
+            'durch Spracherkennung entstandene Verhörer (z. B. falsch erkannte oder zusammengeschriebene Wörter). ' +
+            'Ändere NICHT den Inhalt, NICHT die Wortwahl, NICHT den Satzbau und NICHT den Stil. ' +
+            'Füge NICHTS hinzu und lasse NICHTS weg. Behalte alle Namen und Zahlen exakt bei. ' +
+            'Gib nur den korrigierten Text zurück, ohne Einleitung oder Kommentar.';
+        const prompt = 'Korrigiere nur die deutsche Rechtschreibung und Zeichensetzung dieses Textes, ' +
+            'ohne Inhalt oder Formulierung zu verändern:\n\n' + text;
+        const res = await callGithubModels(prompt, sysPrompt, 0.1, 2000);
+        if (res) { ta.value = res; autoGrow(ta); scheduleAutosave(); showToast('✓ Rechtschreibung geprüft.'); }
+        else showToast('Die KI hat keinen Text geliefert.', true);
+    } catch (e) {
+        showToast('Fehler: ' + e.message, true);
+    } finally {
+        btn.disabled = false; btn.textContent = old;
+    }
 }
 
 // 🪄 KI: macht aus den Notizen dieses Kapitels einen schönen Fließtext (direkt ins Feld)
@@ -1303,7 +1393,7 @@ async function kapitelKI(ta, btn) {
         const prompt = 'Mach aus diesen Notizen einen schönen, zusammenhängenden Text. ' +
             'Verwende nur den Inhalt dieser Notizen, ohne etwas hinzuzufügen:\n\n' + text;
         const res = await callGithubModels(prompt, sysPrompt, 0.4, 2000);
-        if (res) { ta.value = res; scheduleAutosave(); }
+        if (res) { ta.value = res; autoGrow(ta); scheduleAutosave(); }
         else showToast('Die KI hat keinen Text geliefert.', true);
     } catch (e) {
         showToast('Fehler: ' + e.message, true);
