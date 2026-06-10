@@ -733,6 +733,7 @@ function renderRichText(text, idPrefix, withControls) {
 
 // Liest das Buch ab der gewählten Überschrift vor
 function speakFromHeading(hIndex) {
+    if (speakingId !== null) { stopSpeaking(); return; } // läuft gerade → ausschalten
     if (!currentBook || !currentBook.text) return;
     const lines = currentBook.text.split('\n');
     const isHead = (l) => /^##\s+.+/.test(l) || /^Abschnitt\s+.+/i.test(l) || /^#\s+.+/.test(l) || /^Kapitel\s+.+/i.test(l);
@@ -1629,7 +1630,7 @@ function startMic(target, btn) {
     };
 
     recognition.onresult = (ev) => {
-        if (micReset) return;
+        if (micReset || micTargetEl !== ta) return; // nur ins eigene, noch aktive Feld schreiben
         let final = '', interim = '';
         for (let i = ev.resultIndex; i < ev.results.length; i++) {
             if (ev.results[i].isFinal) final += ev.results[i][0].transcript;
@@ -1648,6 +1649,8 @@ function startMic(target, btn) {
 
     recognition.onend = () => {
         curInterim = '';
+        // Wurde inzwischen auf ein anderes Feld gewechselt? Dann altes Feld NICHT anfassen.
+        if (micTargetEl !== ta) return;
         if (!micReset) {
             ta.value = micBefore + micDone + micAfter;
         }
@@ -2097,6 +2100,13 @@ function stopSpeaking() {
 
 function updateSpeakUI() {
     document.querySelectorAll('.speak-btn').forEach(b => b.classList.remove('speaking'));
+    // Buch-Knopf zeigt deutlich ⏹ während des Vorlesens, sonst 🔊
+    const bookBtn = document.getElementById('speak-book');
+    if (bookBtn) {
+        const reading = speakingId !== null;
+        bookBtn.textContent = reading ? '⏹' : '🔊';
+        bookBtn.title = reading ? 'Vorlesen stoppen' : 'Alles vorlesen';
+    }
     if (!speakingId) return;
     const btn = speakingId === 'summary'
         ? document.getElementById('speakSummaryBtn')
