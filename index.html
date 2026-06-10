@@ -310,6 +310,18 @@
             width: 100%; max-width: 420px; border: 1px solid #475569;
         }
         .modal-content.modal-wide { max-width: min(980px, 94vw); }
+        /* Editor-Fenster: passt immer auf den Bildschirm – Kopf & „Fertig" bleiben sichtbar, nur die Mitte scrollt */
+        #kapitelModal .modal-content {
+            display: flex; flex-direction: column;
+            max-height: 96vh; max-height: 96dvh; overflow: hidden;
+        }
+        #kapitelModal .modal-header,
+        #kapitelModal #kapitelInfo,
+        #kapitelModal #kapitelBatch,
+        #kapitelModal .kap-addrow,
+        #kapitelModal .kap-footer { flex: 0 0 auto; }
+        #kapitelModal .kap-list { flex: 1 1 auto; min-height: 0; max-height: none; }
+        #kapitelModal .kap-footer { position: static; bottom: auto; }
         .kap-list { display: flex; flex-direction: column; gap: 0.8rem; max-height: 62vh; overflow-y: auto; }
         @media (min-width: 700px) { .kap-list { max-height: 72vh; } }
         .kap-card { background: #0f172a; border: 1px solid #334155; border-radius: 0.5rem; padding: 0.7rem 0.8rem; }
@@ -424,7 +436,7 @@
                 <button id="kapDelBtn" class="btn-red" onclick="deleteSelectedBlocks()">🗑 Markierte löschen</button>
             </div>
             <div id="kapitelList" class="kap-list"></div>
-            <div style="display:flex;gap:0.5rem;margin-top:0.8rem;">
+            <div class="kap-addrow" style="display:flex;gap:0.5rem;margin-top:0.8rem;">
                 <button class="btn-dark" style="flex:1;" onclick="addNewBlock(1)">➕ Kapitel</button>
                 <button class="btn-dark" style="flex:1;" onclick="addNewBlock(2)">➕ Abschnitt</button>
             </div>
