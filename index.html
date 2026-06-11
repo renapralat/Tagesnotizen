@@ -337,7 +337,9 @@
         .kap-mini.kap-delmini { color: #f87171; }
         .kap-mini.kap-ins { font-size: 0.8rem; font-weight: 600; }
         .kap-body { width: 100%; min-height: 9rem; resize: vertical; overflow: hidden; background: #1e293b; border: 1px solid #475569; border-radius: 0.4rem; padding: 0.55rem 0.65rem; color: #e2e8f0; font-size: 1rem; line-height: 1.6; font-family: inherit; }
-        .kap-readbar { background: #78350f; color: #fde68a; border: 1px solid #b45309; border-radius: 0.4rem; padding: 0.55rem 0.75rem; margin-bottom: 0.6rem; font-size: 1rem; line-height: 1.45; font-weight: 600; }
+        .kap-readbar { display: flex; align-items: center; gap: 0.6rem; background: #78350f; color: #fde68a; border: 1px solid #b45309; border-radius: 0.4rem; padding: 0.55rem 0.75rem; margin-bottom: 0.6rem; font-size: 1rem; line-height: 1.45; font-weight: 600; }
+        .kap-readtext { flex: 1; min-width: 0; }
+        .kap-readstop { flex: none; background: #dc2626; color: #fff; border: none; border-radius: 0.4rem; padding: 0.5rem 0.9rem; font-size: 1rem; font-weight: 700; cursor: pointer; }
         .kap-body::selection { background: #fbbf24; color: #1e293b; }
         .kap-body::-moz-selection { background: #fbbf24; color: #1e293b; }
         .kap-mic { flex: none; font-size: 1.2rem; padding: 0.5rem 0.65rem; border-radius: 0.4rem; align-self: stretch; }
@@ -1269,6 +1271,9 @@ function addBlockCard(level, title, body, afterCard) {
     ta.value = body || '';
     ta.addEventListener('input', scheduleAutosave);
     ta.addEventListener('input', () => { autoGrow(ta); markSpellDirty(card); });
+    // Cursor-Stelle merken (auch wenn der Fokus später zum Knopf wandert) – für „ab Cursor vorlesen"
+    ['keyup', 'mouseup', 'click', 'select', 'focus'].forEach(ev =>
+        ta.addEventListener(ev, () => { ta._caret = ta.selectionStart; }));
     const micBtn = document.createElement('button');
     micBtn.className = 'btn-amber kap-mic'; micBtn.textContent = '🎤'; micBtn.title = 'In diesen Block sprechen';
     micBtn.onclick = () => toggleKapitelMic(ta, micBtn);
@@ -1443,6 +1448,7 @@ function handleEditorClick(ev) {
     if (!card) return;
     const btn = ev.target.closest('button');
     if (!btn) return;
+    if (btn.classList.contains('kap-readstop')) return; // Stopp-Knopf der Vorlese-Leiste: nie Abschluss
     // Knöpfe INNERHALB des aktiven Blocks lösen keinen Abschluss aus
     // (Mikrofon + Werkzeuge 📝/🪄/🔊/↩/🧹 macht sie selbst bzw. soll nichts auslösen)
     if (card.contains(btn) && (btn.classList.contains('kap-mic') || btn.classList.contains('kap-tool'))) {
@@ -1487,13 +1493,30 @@ async function kapitelKI(ta, btn) {
 // Vorlesen eines einzelnen Kapitel-Feldes
 let kapSpeakTimer = null;
 let kapLastChunkText = '';   // zuletzt vorgelesener Satz (für die Anzeige-Leiste)
-// Zeigt oben deutlich, welcher Satz gerade gelesen wird (auf jedem Gerät sichtbar)
+let kapReadTa = null;        // Textfeld, das gerade vorgelesen wird
+let kapReadCurStart = 0;     // Anfang des aktuellen Satzes (für „hier weitermachen")
+// Zeigt oben deutlich, welcher Satz gerade gelesen wird – mit großem ⏹-Stopp-Knopf
 function setReadBar(text, stopped) {
     const el = document.getElementById('kapReadBar');
     if (!el) return;
-    if (!text) { el.classList.add('hidden'); el.textContent = ''; return; }
+    if (!text) { el.classList.add('hidden'); el.innerHTML = ''; return; }
     el.classList.remove('hidden');
-    el.textContent = (stopped ? '⏹ Hier gestoppt: ' : '🔊 liest: ') + text;
+    if (stopped) {
+        el.innerHTML = '<span class="kap-readtext">⏹ Hier gestoppt – Du kannst jetzt ändern.</span>';
+    } else {
+        el.innerHTML = '<span class="kap-readtext">🔊 ' + escHtml(text) + '</span>' +
+            '<button class="kap-readstop" onclick="stopKapReading()">⏹ Stopp</button>';
+    }
+}
+// Stoppt das Vorlesen im Editor und setzt den Cursor an die gestoppte Stelle
+function stopKapReading() {
+    stopSpeaking();
+    if (kapSpeakTimer) { clearInterval(kapSpeakTimer); kapSpeakTimer = null; }
+    setReadBar('x', true); // „Hier gestoppt" anzeigen
+    if (kapReadTa) {
+        try { kapReadTa.setSelectionRange(kapReadCurStart, kapReadCurStart); } catch (e) {}
+        kapReadTa._caret = kapReadCurStart; // nächstes 🔊 liest ab hier weiter
+    }
 }
 // Zerlegt Text ab startPos in Satz-Häppchen und merkt sich die genaue Stelle (a..b) im Text
 function chunkWithRanges(text, startPos) {
@@ -1519,17 +1542,16 @@ function chunkWithRanges(text, startPos) {
 function speakKapitel(ta) {
     const synth = window.speechSynthesis;
     if (speakingId !== null || synth.speaking || synth.pending) {   // läuft → stoppen (Stelle bleibt sichtbar)
-        stopSpeaking();
-        if (kapSpeakTimer) { clearInterval(kapSpeakTimer); kapSpeakTimer = null; }
-        if (kapLastChunkText) setReadBar(kapLastChunkText, true);
+        stopKapReading();
         return;
     }
     const full = ta.value || '';
     if (!full.trim()) { showToast('Dieser Abschnitt ist noch leer.', true); return; }
-    let startPos = (ta.selectionStart != null) ? ta.selectionStart : 0;
-    if (startPos >= full.length) startPos = 0;          // Cursor am Ende → von vorne
+    let startPos = (ta._caret != null) ? ta._caret : (ta.selectionStart || 0);
+    if (startPos >= full.length || startPos < 0) startPos = 0;     // Cursor am Ende → von vorne
     const chunks = chunkWithRanges(full, startPos);
     if (!chunks.length) return;
+    kapReadTa = ta;
     speakingId = 'kapitel';
     updateSpeakUI();
     let i = 0;
@@ -1540,6 +1562,7 @@ function speakKapitel(ta) {
             speakingId = null; updateSpeakUI(); setReadBar(''); return;
         }
         const ch = chunks[i++];
+        kapReadCurStart = ch.a;
         try { ta.setSelectionRange(ch.a, ch.b); } catch (e) {}   // aktuellen Satz markieren
         kapLastChunkText = full.slice(ch.a, ch.b).trim();
         setReadBar(kapLastChunkText);                            // oben deutlich anzeigen
