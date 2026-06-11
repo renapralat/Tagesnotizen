@@ -643,7 +643,7 @@ const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZ
 const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 // GitHub Models API
-const APP_VERSION = 'v10';   // sichtbare Versions-Nummer (zur Kontrolle, ob die neue Fassung geladen ist)
+const APP_VERSION = 'v11';   // sichtbare Versions-Nummer (zur Kontrolle, ob die neue Fassung geladen ist)
 const GH_MODELS_URL = 'https://models.inference.ai.azure.com/chat/completions';
 const GH_MODEL_DEFAULT = 'Llama-3.3-70B-Instruct';
 function getGhModel() { return localStorage.getItem('tagesnotizen-model') || GH_MODEL_DEFAULT; }
@@ -1198,6 +1198,7 @@ function parseBlocks(text) {
 let kapitelEdit = null;
 function openKapitelEditor(entry, scrollHeadingIndex) {
     if (!entry) return;
+    stopSpeaking(); // Vorlesen sofort beenden – friert die zuletzt gelesene Stelle ein
     kapitelEdit = {
         id: entry.id || null,
         datum: entry.datum || BOOK_DATUM,
