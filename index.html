@@ -645,7 +645,7 @@ const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZ
 const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 // GitHub Models API
-const APP_VERSION = 'v12';   // sichtbare Versions-Nummer (zur Kontrolle, ob die neue Fassung geladen ist)
+const APP_VERSION = 'v13';   // sichtbare Versions-Nummer (zur Kontrolle, ob die neue Fassung geladen ist)
 const GH_MODELS_URL = 'https://models.inference.ai.azure.com/chat/completions';
 const GH_MODEL_DEFAULT = 'Llama-3.3-70B-Instruct';
 function getGhModel() { return localStorage.getItem('tagesnotizen-model') || GH_MODEL_DEFAULT; }
@@ -1224,6 +1224,7 @@ function openKapitelEditor(entry, scrollHeadingIndex) {
     updateBlockUI();
     clearTimeout(kapAutoTimer);
     spellDirtyCard = null;
+    kapPinTa = null; kapPinOffset = null; kapPinText = '';
     kapLastChunkText = ''; setReadBar('');
     const modal = document.getElementById('kapitelModal');
     if (!modal._spellWired) { modal.addEventListener('click', handleEditorClick, true); modal._spellWired = true; }
@@ -1243,15 +1244,9 @@ function openKapitelEditor(entry, scrollHeadingIndex) {
                     const snip = lastSpokenText.trim().slice(0, 40);
                     const idx = snip ? ta.value.indexOf(snip) : -1;
                     if (idx >= 0) {
-                        kapPinTa = ta; kapPinText = lastSpokenText.trim();
-                        setReadBar(kapPinText, true);              // oben anzeigen (antippbar)
-                        try {
-                            ta.focus();                            // blinkender Cursor an der Stelle
-                            ta.setSelectionRange(idx, idx);        // NICHT markieren – nur Cursor setzen
-                            ta._caret = idx;
-                        } catch (e) {}
-                        scrollOffsetIntoView(ta, idx);             // genau dorthin scrollen
-                        placePin(ta, idx);                         // 📍 Stecknadel an die Zeile
+                        setPin(ta, idx, lastSpokenText.trim());    // 📍 setzen + antippbare Leiste
+                        target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                        try { ta.setSelectionRange(idx, idx); ta._caret = idx; } catch (e) {}
                         pinned = true;
                     }
                 }
@@ -1314,15 +1309,29 @@ function placePin(ta, offset) {
     } catch (e) {}
 }
 
-// Springt erneut zur gemerkten Stelle (wenn man oben auf den Satz tippt)
+// Entfernt alle Stecknadeln (es soll immer nur die LETZTE geben)
+function removeAllPins() {
+    document.querySelectorAll('#kapitelList .kap-pin').forEach(p => p.remove());
+}
+
+// Setzt DIE EINE Stecknadel an die Stelle und zeigt die antippbare Leiste
+function setPin(ta, offset, text) {
+    if (!ta) return;
+    removeAllPins();
+    kapPinTa = ta;
+    kapPinOffset = offset;
+    kapPinText = (text || '').trim();
+    placePin(ta, offset);
+    setReadBar(kapPinText || 'die letzte Stelle', true);
+}
+
+// Springt erneut zur gemerkten Stelle (wenn man oben auf den Satz tippt) und blendet die Leiste aus
 function jumpToPin() {
-    if (!kapPinTa || !kapPinText) return;
-    const snip = kapPinText.slice(0, 40);
-    const idx = kapPinTa.value.indexOf(snip);
-    if (idx < 0) { showToast('Die Stelle wurde inzwischen verändert.', true); return; }
+    if (!kapPinTa || kapPinOffset == null) return;
+    const idx = Math.min(kapPinOffset, kapPinTa.value.length);
     try { kapPinTa.focus(); kapPinTa.setSelectionRange(idx, idx); kapPinTa._caret = idx; } catch (e) {}
     scrollOffsetIntoView(kapPinTa, idx);
-    placePin(kapPinTa, idx);
+    setReadBar(''); // braune Leiste weg – nur die Nadel bleibt
 }
 
 // Lässt ein Textfeld so hoch werden, dass der ganze Text sichtbar ist (kein inneres Scrollen)
@@ -1623,7 +1632,8 @@ let kapLastChunkText = '';   // zuletzt vorgelesener Satz (für die Anzeige-Leis
 let kapReadTa = null;        // Textfeld, das gerade vorgelesen wird
 let kapReadCurStart = 0;     // Anfang des aktuellen Satzes (für „hier weitermachen")
 let kapPinTa = null;         // Textfeld mit der gemerkten Stelle (📍)
-let kapPinText = '';         // Satz an der gemerkten Stelle (zum Wiederfinden)
+let kapPinText = '';         // Satz an der gemerkten Stelle (zum Anzeigen)
+let kapPinOffset = null;     // Zeichen-Stelle der Stecknadel
 // Zeigt oben deutlich, welcher Satz gerade gelesen wird – mit großem ⏹-Stopp-Knopf
 function setReadBar(text, stopped) {
     const el = document.getElementById('kapReadBar');
@@ -1641,14 +1651,14 @@ function setReadBar(text, stopped) {
             '<button class="kap-readstop" onclick="stopKapReading()">⏹ Stopp</button>';
     }
 }
-// Stoppt das Vorlesen im Editor und setzt den Cursor an die gestoppte Stelle
+// Stoppt das Vorlesen im Editor: setzt die NEUE Stecknadel an die gestoppte Stelle (ersetzt die alte)
 function stopKapReading() {
     stopSpeaking();
     if (kapSpeakTimer) { clearInterval(kapSpeakTimer); kapSpeakTimer = null; }
-    setReadBar(kapLastChunkText || 'die letzte Stelle', true); // genauen Satz anzeigen
     if (kapReadTa) {
         try { kapReadTa.setSelectionRange(kapReadCurStart, kapReadCurStart); } catch (e) {}
         kapReadTa._caret = kapReadCurStart; // nächstes 🔊 liest ab hier weiter
+        setPin(kapReadTa, kapReadCurStart, kapLastChunkText); // 📍 an die neue Stelle
     }
 }
 // Zerlegt Text ab startPos in Satz-Häppchen und merkt sich die genaue Stelle (a..b) im Text
