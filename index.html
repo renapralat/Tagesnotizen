@@ -336,6 +336,8 @@
         .kap-mini.kap-delmini { color: #f87171; }
         .kap-mini.kap-ins { font-size: 0.8rem; font-weight: 600; }
         .kap-body { width: 100%; min-height: 9rem; resize: vertical; overflow: hidden; background: #1e293b; border: 1px solid #475569; border-radius: 0.4rem; padding: 0.55rem 0.65rem; color: #e2e8f0; font-size: 1rem; line-height: 1.6; font-family: inherit; }
+        .kap-body::selection { background: #fbbf24; color: #1e293b; }
+        .kap-body::-moz-selection { background: #fbbf24; color: #1e293b; }
         .kap-mic { flex: none; font-size: 1.2rem; padding: 0.5rem 0.65rem; border-radius: 0.4rem; align-self: stretch; }
         .kap-mic.recording { background: #dc2626; animation: pulse 0.9s ease-in-out infinite; }
         .kap-tool { font-size: 0.82rem; padding: 0.42rem 0.6rem; border-radius: 0.4rem; }
@@ -1480,15 +1482,61 @@ async function kapitelKI(ta, btn) {
 
 // Vorlesen eines einzelnen Kapitel-Feldes
 let kapSpeakTimer = null;
+// Zerlegt Text ab startPos in Satz-Häppchen und merkt sich die genaue Stelle (a..b) im Text
+function chunkWithRanges(text, startPos) {
+    const chunks = [];
+    const re = /[^.!?\n]*[.!?]+|[^.!?\n]+|\n+/g;
+    re.lastIndex = Math.max(0, startPos || 0);
+    let curStart = -1, curEnd = -1, curLen = 0, m;
+    while ((m = re.exec(text)) !== null) {
+        const piece = m[0];
+        if (piece === '') { re.lastIndex++; continue; }
+        if (/^\n+$/.test(piece) || !piece.trim()) continue;
+        const pStart = m.index, pEnd = m.index + piece.length;
+        if (curStart !== -1 && (curLen + piece.trim().length) > 200) {
+            chunks.push({ a: curStart, b: curEnd }); curStart = -1; curLen = 0;
+        }
+        if (curStart === -1) curStart = pStart;
+        curEnd = pEnd; curLen += piece.trim().length;
+    }
+    if (curStart !== -1) chunks.push({ a: curStart, b: curEnd });
+    return chunks;
+}
+// Liest einen Abschnitt vor – ab der Cursor-Stelle (falls gesetzt) und markiert den aktuellen Satz.
 function speakKapitel(ta) {
-    // Läuft gerade etwas? → stoppen (zweiter Druck = aus)
-    if (speakingId !== null || window.speechSynthesis.speaking || window.speechSynthesis.pending) {
+    const synth = window.speechSynthesis;
+    if (speakingId !== null || synth.speaking || synth.pending) {   // läuft → stoppen (Markierung bleibt)
         stopSpeaking();
         if (kapSpeakTimer) { clearInterval(kapSpeakTimer); kapSpeakTimer = null; }
         return;
     }
-    if (!(ta.value || '').trim()) { showToast('Dieses Kapitel ist noch leer.', true); return; }
-    startSpeaking(ta.value, 'kapitel'); // nutzt die Häppchen-Logik (auch für lange Texte)
+    const full = ta.value || '';
+    if (!full.trim()) { showToast('Dieser Abschnitt ist noch leer.', true); return; }
+    let startPos = (ta.selectionStart != null) ? ta.selectionStart : 0;
+    if (startPos >= full.length) startPos = 0;          // Cursor am Ende → von vorne
+    const chunks = chunkWithRanges(full, startPos);
+    if (!chunks.length) return;
+    speakingId = 'kapitel';
+    updateSpeakUI();
+    let i = 0;
+    const speakNext = () => {
+        if (speakingId !== 'kapitel') return;
+        if (i >= chunks.length) {
+            if (speakResumeTimer) { clearInterval(speakResumeTimer); speakResumeTimer = null; }
+            speakingId = null; updateSpeakUI(); return;
+        }
+        const ch = chunks[i++];
+        try { ta.setSelectionRange(ch.a, ch.b); } catch (e) {}   // aktuellen Satz markieren
+        const u = new SpeechSynthesisUtterance(full.slice(ch.a, ch.b));
+        u.lang = 'de-DE';
+        applyVoice(u);
+        u.onend = speakNext;
+        u.onerror = speakNext;
+        synth.speak(u);
+    };
+    speakNext();
+    if (speakResumeTimer) clearInterval(speakResumeTimer);
+    speakResumeTimer = setInterval(() => { if (synth.paused && speakingId) synth.resume(); }, 4000);
 }
 
 // Diktieren in ein bestimmtes Kapitel-Feld (eigenes Mikrofon je Kapitel)
