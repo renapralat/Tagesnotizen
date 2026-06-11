@@ -273,6 +273,8 @@
         .rt-htool { background: #475569; border: 1px solid #64748b; color: #e2e8f0; font-size: 1rem; cursor: pointer; padding: 0.25rem 0.5rem; border-radius: 0.4rem; flex: none; }
         .entry-text { line-height: 1.65; word-break: break-word; font-size: 0.95rem; }
         .rt-text { white-space: pre-wrap; }
+        .rt-clickable { cursor: pointer; border-radius: 0.3rem; transition: background 0.15s; }
+        .rt-clickable:hover { background: #3f4c63; }
         .rt-h1 { font-size: 1.25rem; font-weight: 700; color: #f1f5f9; margin: 1rem 0 0.4rem; padding-bottom: 0.2rem; border-bottom: 1px solid #475569; }
         .rt-h2 { font-size: 1.05rem; font-weight: 700; color: #e2e8f0; margin: 0.8rem 0 0.3rem; }
         .entry-link { color: #60a5fa; text-decoration: underline; font-weight: 600; word-break: break-all; }
@@ -641,6 +643,7 @@ const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZ
 const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 // GitHub Models API
+const APP_VERSION = 'v8';   // sichtbare Versions-Nummer (zur Kontrolle, ob die neue Fassung geladen ist)
 const GH_MODELS_URL = 'https://models.inference.ai.azure.com/chat/completions';
 const GH_MODEL_DEFAULT = 'Llama-3.3-70B-Instruct';
 function getGhModel() { return localStorage.getItem('tagesnotizen-model') || GH_MODEL_DEFAULT; }
@@ -729,10 +732,12 @@ function inlineFmt(escaped) {
 function renderRichText(text, idPrefix, withControls) {
     const lines = String(text).split('\n');
     const headings = [];
-    let html = '', buf = [], n = 0;
+    let html = '', buf = [], n = 0, pos = 0, bufStart = 0;
     function flush() {
         if (!buf.length) return;
-        html += '<div class="rt-text">' + inlineFmt(escHtml(buf.join('\n'))) + '</div>';
+        const click = withControls ? ` onclick="speakFromOffset(${bufStart})" title="Ab hier vorlesen (antippen)"` : '';
+        const cls = withControls ? 'rt-text rt-clickable' : 'rt-text';
+        html += `<div class="${cls}"${click}>` + inlineFmt(escHtml(buf.join('\n'))) + '</div>';
         buf = [];
     }
     for (const raw of lines) {
@@ -756,8 +761,10 @@ function renderRichText(text, idPrefix, withControls) {
                 html += head;
             }
         } else {
+            if (!buf.length) bufStart = pos;
             buf.push(raw);
         }
+        pos += raw.length + 1; // Zeichen-Position mitzählen (für „ab hier vorlesen")
     }
     flush();
     return { html, headings };
@@ -768,6 +775,13 @@ function speakFromHeading(hIndex) {
     if (speakingId !== null) { stopSpeaking(); return; } // läuft gerade → ausschalten
     if (!currentBook || !currentBook.text) return;
     startSpeaking(currentBook.text, 'book', hIndex); // ab dieser Überschrift vorlesen
+}
+
+// In der Anzeige eine Stelle (Absatz) antippen → ab dort vorlesen
+function speakFromOffset(charOffset) {
+    if (speakingId !== null) { stopSpeaking(); return; } // läuft → ausschalten
+    if (!currentBook || !currentBook.text) return;
+    startSpeaking(currentBook.text, 'book', null, charOffset);
 }
 
 // Öffnet den Editor und springt zum gewählten Abschnitt
@@ -981,7 +995,7 @@ async function renderBook(cat) {
     c.innerHTML = `
         <div class="entry">
             <div class="entry-header book-head">
-                <span class="entry-date">📖 ${escHtml(cat)}</span>
+                <span class="entry-date">📖 ${escHtml(cat)} · ${APP_VERSION}</span>
                 <div class="entry-actions">
                     <button id="speak-book" class="btn-icon btn-amber speak-btn" onclick="speakBook()" title="Alles vorlesen">🔊</button>
                     <button class="btn-icon btn-blue" onclick="openBookEditor()" title="Buch schreiben / bearbeiten">✏️</button>
@@ -1167,7 +1181,7 @@ function openKapitelEditor(entry, scrollHeadingIndex) {
         else clearLocalDraft();
     }
     const blocks = parseBlocks(sourceText);
-    document.querySelector('#kapitelModal .modal-title').textContent = '📖 ' + (kapitelEdit.category || 'Buch');
+    document.querySelector('#kapitelModal .modal-title').textContent = '📖 ' + (kapitelEdit.category || 'Buch') + ' · ' + APP_VERSION;
     setKapStatus('', '');
     const list = document.getElementById('kapitelList');
     list.innerHTML = '';
@@ -1191,8 +1205,9 @@ function openKapitelEditor(entry, scrollHeadingIndex) {
                 target.scrollIntoView({ behavior: 'smooth', block: 'start' });
                 target.classList.add('kap-flash');
                 setTimeout(() => target.classList.remove('kap-flash'), 2200);
+                // Cursor an den Anfang des Abschnitts setzen (NICHT fokussieren → springt sonst ans Ende & öffnet Tastatur)
                 const ta = target.querySelector('.kap-body');
-                if (ta) ta.focus();
+                if (ta) { try { ta.setSelectionRange(0, 0); ta._caret = 0; } catch (e) {} }
             }
         }
     });
@@ -1502,7 +1517,7 @@ function setReadBar(text, stopped) {
     if (!text) { el.classList.add('hidden'); el.innerHTML = ''; return; }
     el.classList.remove('hidden');
     if (stopped) {
-        el.innerHTML = '<span class="kap-readtext">⏹ Hier gestoppt – Du kannst jetzt ändern.</span>';
+        el.innerHTML = '<span class="kap-readtext">⏹ Gestoppt bei: ' + escHtml(text) + '</span>';
     } else {
         el.innerHTML = '<span class="kap-readtext">🔊 ' + escHtml(text) + '</span>' +
             '<button class="kap-readstop" onclick="stopKapReading()">⏹ Stopp</button>';
@@ -1512,7 +1527,7 @@ function setReadBar(text, stopped) {
 function stopKapReading() {
     stopSpeaking();
     if (kapSpeakTimer) { clearInterval(kapSpeakTimer); kapSpeakTimer = null; }
-    setReadBar('x', true); // „Hier gestoppt" anzeigen
+    setReadBar(kapLastChunkText || 'die letzte Stelle', true); // genauen Satz anzeigen
     if (kapReadTa) {
         try { kapReadTa.setSelectionRange(kapReadCurStart, kapReadCurStart); } catch (e) {}
         kapReadTa._caret = kapReadCurStart; // nächstes 🔊 liest ab hier weiter
@@ -2356,36 +2371,52 @@ function chunkText(text) {
     return chunks;
 }
 
-// Baut Vorlese-Häppchen, die jeweils ihre Überschrift (0-basiert) kennen.
-// So wissen wir beim Stoppen, an welcher Überschrift gerade vorgelesen wurde.
+// Baut Vorlese-Häppchen, die jeweils ihre Überschrift (h) UND ihre Zeichen-Position (pos) kennen.
+// So wissen wir beim Stoppen, wo gerade gelesen wurde – und können „ab dieser Stelle" starten.
 function buildSpeechChunks(text) {
     const lines = String(text).split('\n');
     const isHead = (l) => /^##\s+.+/.test(l) || /^Abschnitt\s+.+/i.test(l) || /^#\s+.+/.test(l) || /^Kapitel\s+.+/i.test(l);
     const segments = [];
-    let h = -1, buf = [];
-    const flush = () => { const t = buf.join('\n').trim(); if (t) segments.push({ h, text: t }); buf = []; };
+    let h = -1, buf = [], bufStart = 0, pos = 0;
+    const flush = () => { const t = buf.join('\n'); if (t.trim()) segments.push({ h, text: t, start: bufStart }); buf = []; };
     for (const raw of lines) {
         if (isHead(raw)) {
             flush(); h++;
-            const title = raw.replace(/^#{1,2}\s+/, '').replace(/^(Kapitel|Abschnitt)\s+/i, '');
-            buf.push(title);
-        } else buf.push(raw);
+            const mlen = raw.length - raw.replace(/^#{1,2}\s+/, '').replace(/^(Kapitel|Abschnitt)\s+/i, '').length;
+            segments.push({ h, text: raw.slice(mlen), start: pos + mlen });
+            buf = []; bufStart = pos + raw.length + 1;
+        } else {
+            if (!buf.length) bufStart = pos;
+            buf.push(raw);
+        }
+        pos += raw.length + 1;
     }
     flush();
     const chunks = [];
     for (const seg of segments) {
-        for (const piece of chunkText(seg.text)) chunks.push({ text: piece, h: seg.h });
+        let cur = 0;
+        for (const piece of chunkText(seg.text)) {
+            const probe = piece.slice(0, Math.min(piece.length, 12));
+            let at = seg.text.indexOf(probe, cur);
+            if (at < 0) at = cur;
+            chunks.push({ text: piece, h: seg.h, pos: seg.start + at });
+            cur = at + piece.length;
+        }
     }
     return chunks;
 }
 
-function startSpeaking(text, id, startHeading) {
+function startSpeaking(text, id, startHeading, startCharOffset) {
     const synth = window.speechSynthesis;
     synth.cancel();
     const chunks = buildSpeechChunks(text);
     if (!chunks.length) return;
     let i = 0;
-    if (startHeading != null) {
+    if (startCharOffset != null) {
+        let idx = chunks.findIndex(c => c.pos >= startCharOffset - 6);
+        if (idx < 0) idx = chunks.length - 1;
+        i = Math.max(0, idx);
+    } else if (startHeading != null) {
         const idx = chunks.findIndex(c => c.h === startHeading);
         if (idx >= 0) i = idx;
     }
