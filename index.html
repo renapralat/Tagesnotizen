@@ -645,7 +645,7 @@ const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZ
 const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 // GitHub Models API
-const APP_VERSION = 'v13';   // sichtbare Versions-Nummer (zur Kontrolle, ob die neue Fassung geladen ist)
+const APP_VERSION = 'v14';   // sichtbare Versions-Nummer (zur Kontrolle, ob die neue Fassung geladen ist)
 const GH_MODELS_URL = 'https://models.inference.ai.azure.com/chat/completions';
 const GH_MODEL_DEFAULT = 'Llama-3.3-70B-Instruct';
 function getGhModel() { return localStorage.getItem('tagesnotizen-model') || GH_MODEL_DEFAULT; }
@@ -1328,10 +1328,40 @@ function setPin(ta, offset, text) {
 // Springt erneut zur gemerkten Stelle (wenn man oben auf den Satz tippt) und blendet die Leiste aus
 function jumpToPin() {
     if (!kapPinTa || kapPinOffset == null) return;
+    if (kapPinText && kapPinTa.value.indexOf(kapPinText.slice(0, 25)) < 0) {
+        showToast('Stelle nicht mehr auffindbar – bitte neu vorlesen.', true); return;
+    }
     const idx = Math.min(kapPinOffset, kapPinTa.value.length);
     try { kapPinTa.focus(); kapPinTa.setSelectionRange(idx, idx); kapPinTa._caret = idx; } catch (e) {}
     scrollOffsetIntoView(kapPinTa, idx);
     setReadBar(''); // braune Leiste weg – nur die Nadel bleibt
+}
+
+// Prüft, ob die markierte Stelle noch auffindbar ist: rot 📍 = ja, schwarz ⚫ = verloren
+let pinValidateTimer = null;
+function scheduleValidatePin() { clearTimeout(pinValidateTimer); pinValidateTimer = setTimeout(validatePin, 600); }
+function validatePin() {
+    if (kapPinOffset == null || !kapPinTa) return;
+    // Block (Textfeld) ganz verschwunden? → Stelle verloren
+    if (!document.body.contains(kapPinTa)) {
+        removeAllPins();
+        kapPinTa = null; kapPinOffset = null; kapPinText = '';
+        showToast('Die markierte Stelle gibt es nicht mehr – bitte neu vorlesen.', true);
+        setReadBar('');
+        return;
+    }
+    const pin = kapPinTa.closest('.kap-card') ? kapPinTa.closest('.kap-card').querySelector('.kap-pin') : null;
+    const snip = (kapPinText || '').slice(0, 25);
+    const idx = snip ? kapPinTa.value.indexOf(snip) : -1;
+    if (idx >= 0) {                       // noch auffindbar → rot, an die (evtl. verschobene) Zeile
+        kapPinOffset = idx;
+        if (pin) { pin.textContent = '📍'; pin.title = 'Zuletzt vorgelesene Stelle'; pin.classList.remove('kap-pin-lost'); }
+        placePin(kapPinTa, idx);
+    } else if (pin) {                     // nicht mehr auffindbar → schwarz
+        pin.textContent = '⚫';
+        pin.title = 'Stelle verloren – bitte neu vorlesen';
+        pin.classList.add('kap-pin-lost');
+    }
 }
 
 // Lässt ein Textfeld so hoch werden, dass der ganze Text sichtbar ist (kein inneres Scrollen)
@@ -1390,7 +1420,7 @@ function addBlockCard(level, title, body, afterCard) {
         const ins  = miniBtn('➕ Abschnitt', 'Abschnitt direkt darunter einfügen', () => addBlockCard(2, '', '', card));
         ins.classList.add('kap-ins');
         const del  = miniBtn('🗑', 'Diesen Block löschen', () => {
-            if (confirm('Diesen Block wirklich löschen?')) { card.remove(); updateBlockUI(); scheduleAutosave(); }
+            if (confirm('Diesen Block wirklich löschen?')) { card.remove(); updateBlockUI(); validatePin(); scheduleAutosave(); }
         });
         del.classList.add('kap-delmini');
 
@@ -1406,7 +1436,7 @@ function addBlockCard(level, title, body, afterCard) {
     ta.placeholder = level === 0 ? 'Optionaler Text vor dem ersten Kapitel…' : 'Hier hineinsprechen oder schreiben…';
     ta.value = body || '';
     ta.addEventListener('input', scheduleAutosave);
-    ta.addEventListener('input', () => { autoGrow(ta); markSpellDirty(card); });
+    ta.addEventListener('input', () => { autoGrow(ta); markSpellDirty(card); if (ta === kapPinTa) scheduleValidatePin(); });
     // Cursor-Stelle merken (auch wenn der Fokus später zum Knopf wandert) – für „ab Cursor vorlesen"
     ['keyup', 'mouseup', 'click', 'select', 'focus'].forEach(ev =>
         ta.addEventListener(ev, () => { ta._caret = ta.selectionStart; }));
@@ -1473,6 +1503,7 @@ function mergeSelectedBlocks() {
     sel.slice(1).forEach(c => c.remove());
     const cb0 = first.querySelector('.kap-sel'); if (cb0) cb0.checked = false;
     updateBlockUI();
+    validatePin();
     scheduleAutosave();
     showToast('Zusammengeführt. Mit 🪄 kannst Du jetzt alles neu schreiben lassen.');
     firstTa.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
@@ -1485,6 +1516,7 @@ function deleteSelectedBlocks() {
     if (!confirm(sel.length + ' markierte(n) Block/Blöcke wirklich löschen?')) return;
     sel.forEach(c => c.remove());
     updateBlockUI();
+    validatePin();
     scheduleAutosave();
 }
 
@@ -1532,7 +1564,7 @@ async function spellCheckTextarea(ta) {
     const prompt = 'Korrigiere nur die deutsche Rechtschreibung und Zeichensetzung dieses Textes, ' +
         'ohne Inhalt oder Formulierung zu verändern:\n\n' + text;
     const res = await callGithubModels(prompt, sysPrompt, 0.1, 2000);
-    if (res) { ta.value = res; autoGrow(ta); return true; }
+    if (res) { ta.value = res; autoGrow(ta); validatePin(); return true; }
     return false;
 }
 
@@ -1617,7 +1649,7 @@ async function kapitelKI(ta, btn) {
             'Antworte nur mit dem fertigen Text, ohne Einleitung oder Kommentar.';
         const prompt = 'Mach aus diesen Notizen einen schönen, zusammenhängenden Text in Prosa:\n\n' + text;
         const res = await callGithubModels(prompt, sysPrompt, 0.3, 2000);
-        if (res) { ta.value = res; autoGrow(ta); scheduleAutosave(); }
+        if (res) { ta.value = res; autoGrow(ta); validatePin(); scheduleAutosave(); }
         else showToast('Die KI hat keinen Text geliefert.', true);
     } catch (e) {
         showToast('Fehler: ' + e.message, true);
