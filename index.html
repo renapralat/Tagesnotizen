@@ -346,9 +346,11 @@
         .kap-readstop { flex: none; background: #dc2626; color: #fff; border: none; border-radius: 0.4rem; padding: 0.5rem 0.9rem; font-size: 1rem; font-weight: 700; cursor: pointer; }
         .kap-body::selection { background: #fbbf24; color: #1e293b; }
         .kap-body::-moz-selection { background: #fbbf24; color: #1e293b; }
-        .kap-mic { flex: none; font-size: 1.2rem; padding: 0.5rem 0.65rem; border-radius: 0.4rem; align-self: stretch; }
+        .kap-side { display: flex; flex-direction: column; gap: 0.4rem; flex: none; }
+        .kap-side > button { width: 3rem; border-radius: 0.4rem; }
+        .kap-mic { flex: none; font-size: 1.5rem; padding: 0.6rem 0; }
         .kap-mic.recording { background: #dc2626; animation: pulse 0.9s ease-in-out infinite; }
-        .kap-tool { font-size: 0.82rem; padding: 0.42rem 0.6rem; border-radius: 0.4rem; }
+        .kap-side .kap-tool { font-size: 1.3rem; padding: 0.45rem 0; text-align: center; }
         .kap-status { font-size: 0.85rem; color: #94a3b8; }
         .kap-status.ok { color: #4ade80; font-weight: 600; }
         .kap-status.pending { color: #fbbf24; }
@@ -645,7 +647,7 @@ const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZ
 const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 // GitHub Models API
-const APP_VERSION = 'v14';   // sichtbare Versions-Nummer (zur Kontrolle, ob die neue Fassung geladen ist)
+const APP_VERSION = 'v15';   // sichtbare Versions-Nummer (zur Kontrolle, ob die neue Fassung geladen ist)
 const GH_MODELS_URL = 'https://models.inference.ai.azure.com/chat/completions';
 const GH_MODEL_DEFAULT = 'Llama-3.3-70B-Instruct';
 function getGhModel() { return localStorage.getItem('tagesnotizen-model') || GH_MODEL_DEFAULT; }
@@ -1440,25 +1442,26 @@ function addBlockCard(level, title, body, afterCard) {
     // Cursor-Stelle merken (auch wenn der Fokus später zum Knopf wandert) – für „ab Cursor vorlesen"
     ['keyup', 'mouseup', 'click', 'select', 'focus'].forEach(ev =>
         ta.addEventListener(ev, () => { ta._caret = ta.selectionStart; }));
+
+    // Rechte Spalte: oben großes Mikrofon, darunter die einzelnen Knöpfe
+    const side = document.createElement('div');
+    side.className = 'kap-side';
     const micBtn = document.createElement('button');
     micBtn.className = 'btn-amber kap-mic'; micBtn.textContent = '🎤'; micBtn.title = 'In diesen Block sprechen';
     micBtn.onclick = () => toggleKapitelMic(ta, micBtn);
-    row.appendChild(ta); row.appendChild(micBtn);
-    card.appendChild(row);
-
-    const tools = document.createElement('div');
-    tools.style.cssText = 'display:flex;flex-wrap:wrap;gap:0.4rem;margin-top:0.5rem;';
     const mk = (label, title, fn) => {
         const b = document.createElement('button');
         b.className = 'btn-dark kap-tool'; b.textContent = label; b.title = title;
         b.onclick = () => fn(b); return b;
     };
-    tools.appendChild(mk('📝 Rechtschreibung', 'Nur Rechtschreibung & Zeichensetzung prüfen – Inhalt bleibt gleich', (b) => kapitelSpell(ta, b)));
-    tools.appendChild(mk('🪄 KI schön schreiben', 'Diesen Block neu schreiben', (b) => kapitelKI(ta, b)));
-    tools.appendChild(mk('🔊 Vorlesen', 'Diesen Block vorlesen', () => speakKapitel(ta)));
-    tools.appendChild(mk('↩ Rückgängig', 'Letzte Änderung zurücknehmen', () => kapitelUndo(ta)));
-    tools.appendChild(mk('🧹 Feld leeren', 'Diesen Block-Text leeren', () => kapitelClear(ta)));
-    card.appendChild(tools);
+    side.appendChild(micBtn);
+    side.appendChild(mk('📝', 'Rechtschreibung prüfen – Inhalt bleibt gleich', (b) => kapitelSpell(ta, b)));
+    side.appendChild(mk('🪄', 'KI schön schreiben (diesen Block)', (b) => kapitelKI(ta, b)));
+    side.appendChild(mk('🔊', 'Vorlesen ab Cursor', () => speakKapitel(ta)));
+    side.appendChild(mk('↩', 'Letzte Änderung zurücknehmen', () => kapitelUndo(ta)));
+    side.appendChild(mk('✖', 'Feld leeren', () => kapitelClear(ta)));
+    row.appendChild(ta); row.appendChild(side);
+    card.appendChild(row);
 
     if (afterCard && afterCard.parentNode === list) list.insertBefore(card, afterCard.nextSibling);
     else list.appendChild(card);
