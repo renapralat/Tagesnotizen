@@ -323,10 +323,18 @@
         #kapitelModal #kapReadBar,
         #kapitelModal .kap-addrow,
         #kapitelModal .kap-footer { flex: 0 0 auto; }
-        #kapitelModal .kap-list { flex: 1 1 auto; min-height: 0; max-height: none; }
+        #kapitelModal .kap-list,
+        #kapitelModal #kapOutline { flex: 1 1 auto; min-height: 0; max-height: none; }
         #kapitelModal .kap-footer { position: static; bottom: auto; }
         .kap-list { display: flex; flex-direction: column; gap: 0.8rem; max-height: 62vh; overflow-y: auto; }
         @media (min-width: 700px) { .kap-list { max-height: 72vh; } }
+        .kap-outline { display: flex; flex-direction: column; gap: 0.35rem; overflow-y: auto; max-height: 62vh; }
+        .kap-ol-row { display: flex; align-items: center; gap: 0.3rem; background: #0f172a; border: 1px solid #334155; border-radius: 0.4rem; padding: 0.25rem 0.35rem; }
+        .kap-ol-row.is-abschnitt { margin-left: 1.3rem; border-left: 3px solid #6366f1; }
+        .kap-ol-title { flex: 1; min-width: 0; text-align: left; background: none; border: none; color: #e2e8f0; font-size: 1rem; padding: 0.4rem 0.3rem; cursor: pointer; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .kap-ol-row button:not(.kap-ol-title) { flex: none; background: #334155; border: 1px solid #475569; color: #e2e8f0; border-radius: 0.4rem; padding: 0.35rem 0.45rem; font-size: 0.95rem; cursor: pointer; }
+        .kap-ol-add { display: flex; gap: 0.5rem; margin-top: 0.5rem; }
+        .kap-ol-add button { flex: 1; background: #1e293b; border: 1px solid #475569; color: #e2e8f0; border-radius: 0.4rem; padding: 0.5rem; font-size: 0.95rem; cursor: pointer; }
         .kap-card { background: #0f172a; border: 1px solid #334155; border-radius: 0.5rem; padding: 0.7rem 0.8rem; position: relative; }
         .kap-pin { position: absolute; left: 0.7rem; width: 1.3rem; text-align: center; font-size: 1rem; z-index: 4; pointer-events: none; }
         .kap-pin.hidden { display: none; }
@@ -442,6 +450,7 @@
             <div class="modal-header">
                 <span class="modal-title">📖 Buch</span>
                 <span id="kapSaveStatus" class="kap-status" style="flex:1;text-align:center;"></span>
+                <button id="kapOutlineBtn" class="btn-dark" style="padding:0.45rem 0.7rem;font-size:0.95rem;margin-right:0.4rem;" onclick="toggleOutline()">📑 Gliederung</button>
                 <button class="kap-fertig" style="padding:0.45rem 0.9rem;font-size:1rem;" onclick="closeKapitelEditor()">✓ Fertig</button>
             </div>
             <p id="kapitelInfo" class="tip" style="margin-top:0;margin-bottom:0.8rem;">Schiebe Blöcke mit ⬆️⬇️, hake mehrere an zum Zusammenführen, schreibe mit 🪄 neu. Alles wird automatisch gespeichert.</p>
@@ -450,6 +459,7 @@
                 <button id="kapDelBtn" class="btn-red" onclick="deleteSelectedBlocks()">🗑 Markierte löschen</button>
             </div>
             <div id="kapReadBar" class="kap-readbar hidden"></div>
+            <div id="kapOutline" class="kap-outline hidden"></div>
             <div id="kapitelList" class="kap-list"></div>
             <div class="kap-addrow" style="display:flex;gap:0.5rem;margin-top:0.8rem;">
                 <button class="btn-dark" style="flex:1;" onclick="addNewBlock(1)">➕ Kapitel</button>
@@ -647,7 +657,7 @@ const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZ
 const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 // GitHub Models API
-const APP_VERSION = 'v17';   // sichtbare Versions-Nummer (zur Kontrolle, ob die neue Fassung geladen ist)
+const APP_VERSION = 'v18';   // sichtbare Versions-Nummer (zur Kontrolle, ob die neue Fassung geladen ist)
 const GH_MODELS_URL = 'https://models.inference.ai.azure.com/chat/completions';
 const GH_MODEL_DEFAULT = 'Llama-3.3-70B-Instruct';
 function getGhModel() { return localStorage.getItem('tagesnotizen-model') || GH_MODEL_DEFAULT; }
@@ -1228,6 +1238,11 @@ function openKapitelEditor(entry, scrollHeadingIndex) {
     spellDirtyCard = null;
     kapPinTa = null; kapPinOffset = null; kapPinText = '';
     kapLastChunkText = ''; setReadBar('');
+    // Gliederung beim Öffnen zugeklappt
+    const _ol = document.getElementById('kapOutline'); if (_ol) _ol.classList.add('hidden');
+    list.classList.remove('hidden');
+    const _ar = document.querySelector('#kapitelModal .kap-addrow'); if (_ar) _ar.classList.remove('hidden');
+    const _ob = document.getElementById('kapOutlineBtn'); if (_ob) _ob.textContent = '📑 Gliederung';
     const modal = document.getElementById('kapitelModal');
     if (!modal._spellWired) { modal.addEventListener('click', handleEditorClick, true); modal._spellWired = true; }
     modal.classList.add('active');
@@ -1480,6 +1495,82 @@ function insertBlockAfter(card, level) {
     const t = neu.querySelector('.kap-title');
     if (t) t.focus();
     scheduleAutosave();
+}
+
+// ── Gliederung / Inhaltsverzeichnis (kompakt: verschieben & einfügen) ───────────
+function toggleOutline() {
+    const o = document.getElementById('kapOutline');
+    const list = document.getElementById('kapitelList');
+    const addrow = document.querySelector('#kapitelModal .kap-addrow');
+    const btn = document.getElementById('kapOutlineBtn');
+    const show = o.classList.contains('hidden');
+    if (show) {
+        buildOutline();
+        o.classList.remove('hidden');
+        list.classList.add('hidden');
+        if (addrow) addrow.classList.add('hidden');
+        if (btn) btn.textContent = '📝 Bearbeiten';
+    } else {
+        o.classList.add('hidden');
+        list.classList.remove('hidden');
+        if (addrow) addrow.classList.remove('hidden');
+        if (btn) btn.textContent = '📑 Gliederung';
+        requestAnimationFrame(growAllBlocks); // Felder wieder auf volle Höhe
+    }
+}
+
+function buildOutline() {
+    const o = document.getElementById('kapOutline');
+    if (!o) return;
+    o.innerHTML = '';
+    const cards = [...document.querySelectorAll('#kapitelList .kap-card')];
+    const olBtn = (label, title, fn) => {
+        const b = document.createElement('button');
+        b.textContent = label; b.title = title; b.onclick = fn; return b;
+    };
+    cards.forEach(card => {
+        const level = card.dataset.level;
+        const titleEl = card.querySelector('.kap-title');
+        const ta = card.querySelector('.kap-body');
+        let title = titleEl ? (titleEl.value || '').trim() : '';
+        if (!title) title = level === '0' ? 'Einleitung' : '(ohne Überschrift)';
+        const hasText = !!(ta && ta.value.trim());
+        const icon = level === '1' ? '📖' : (level === '2' ? '📑' : '📝');
+        const dot = hasText ? '🟢' : '⚪';
+        const row = document.createElement('div');
+        row.className = 'kap-ol-row' + (level === '2' ? ' is-abschnitt' : '');
+        const titleBtn = document.createElement('button');
+        titleBtn.className = 'kap-ol-title';
+        titleBtn.textContent = icon + ' ' + title + '  ' + dot;
+        titleBtn.title = 'Zum Bearbeiten springen';
+        titleBtn.onclick = () => jumpToCardFromOutline(card);
+        row.appendChild(titleBtn);
+        if (level !== '0') {
+            row.appendChild(olBtn('⬆️', 'Nach oben', () => { moveBlock(card, -1); buildOutline(); }));
+            row.appendChild(olBtn('⬇️', 'Nach unten', () => { moveBlock(card, 1); buildOutline(); }));
+            row.appendChild(olBtn('➕📖', 'Kapitel darunter', () => { addBlockCard(1, '', '', card); scheduleAutosave(); buildOutline(); }));
+            row.appendChild(olBtn('➕📑', 'Abschnitt darunter', () => { addBlockCard(2, '', '', card); scheduleAutosave(); buildOutline(); }));
+        }
+        o.appendChild(row);
+    });
+    if (!cards.length) { o.innerHTML = '<p class="tip">Noch keine Kapitel oder Abschnitte.</p>'; }
+    const addRow = document.createElement('div');
+    addRow.className = 'kap-ol-add';
+    addRow.appendChild(olBtn('➕ Kapitel ans Ende', '', () => { addBlockCard(1, '', ''); scheduleAutosave(); buildOutline(); }));
+    addRow.appendChild(olBtn('➕ Abschnitt ans Ende', '', () => { addBlockCard(2, '', ''); scheduleAutosave(); buildOutline(); }));
+    o.appendChild(addRow);
+}
+
+// Aus der Gliederung zum Block springen (Gliederung schließen, hinscrollen, Überschrift fokussieren)
+function jumpToCardFromOutline(card) {
+    toggleOutline();
+    requestAnimationFrame(() => {
+        card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        card.classList.add('kap-flash');
+        setTimeout(() => card.classList.remove('kap-flash'), 1400);
+        const t = card.querySelector('.kap-title') || card.querySelector('.kap-body');
+        if (t) t.focus();
+    });
 }
 
 // Block verschieben (−1 = hoch, +1 = runter)
