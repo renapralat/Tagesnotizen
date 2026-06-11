@@ -364,6 +364,10 @@
         .kap-status.pending { color: #fbbf24; }
         .kap-status.warn { color: #f87171; font-weight: 600; }
         .kap-footer { position: sticky; bottom: -1.5rem; background: #1e293b; padding: 0.7rem 0 calc(0.3rem + env(safe-area-inset-bottom)); margin-top: 0.9rem; border-top: 1px solid #334155; z-index: 5; }
+        .ki-style { flex: 1; background: #1e293b; border: 1px solid #475569; color: #e2e8f0; border-radius: 0.4rem; padding: 0.5rem 0.3rem; font-size: 0.9rem; cursor: pointer; }
+        .ki-style.active { background: #7c3aed; border-color: #7c3aed; color: #fff; font-weight: 700; }
+        .ki-check { display: flex; align-items: center; gap: 0.5rem; font-size: 0.95rem; color: #cbd5e1; margin-bottom: 0.5rem; cursor: pointer; }
+        .ki-check input { width: 1.2rem; height: 1.2rem; flex: none; }
         .kap-fertig { background: #16a34a; color: #fff; border: none; border-radius: 0.45rem; font-weight: 700; cursor: pointer; }
         .kap-fertig:hover { background: #15803d; }
         .kap-flash { animation: kapFlash 2.2s ease-out; }
@@ -467,6 +471,36 @@
             </div>
             <div class="kap-footer">
                 <button class="kap-fertig" style="width:100%;font-size:1.1rem;padding:0.8rem;" onclick="closeKapitelEditor()">✓ Fertig – zurück zum Buch</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 🪄 KI-AUSWAHL (Modell + Stil + nur Markiertes) -->
+    <div id="kiOptModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <span class="modal-title">🪄 Schön schreiben</span>
+                <button class="modal-close" onclick="closeKiDialog()">✕</button>
+            </div>
+            <label style="font-size:0.85rem;color:#aaa;display:block;margin-bottom:0.25rem;">KI-Modell</label>
+            <select id="kiOptModel" style="width:100%;padding:0.5rem;background:#2a2a2a;color:#eee;border:1px solid #444;border-radius:6px;font-size:0.95rem;margin-bottom:0.8rem;">
+                <option value="gpt-4o-mini">gpt-4o-mini (OpenAI)</option>
+                <option value="gpt-4o">gpt-4o (OpenAI)</option>
+                <option value="Phi-4">Phi-4 (Microsoft)</option>
+                <option value="Llama-3.3-70B-Instruct">Llama-3.3-70B-Instruct (Meta)</option>
+                <option value="Ministral-3B">Ministral-3B (Mistral)</option>
+            </select>
+            <label style="font-size:0.85rem;color:#aaa;display:block;margin-bottom:0.35rem;">Stil</label>
+            <div id="kiOptStyle" style="display:flex;gap:0.4rem;margin-bottom:0.9rem;">
+                <button type="button" class="ki-style" data-style="schlicht" onclick="setKiStyle('schlicht')">🪨 schlicht</button>
+                <button type="button" class="ki-style" data-style="normal" onclick="setKiStyle('normal')">📝 normal</button>
+                <button type="button" class="ki-style" data-style="blumig" onclick="setKiStyle('blumig')">🌸 blumig</button>
+            </div>
+            <label class="ki-check"><input type="checkbox" id="kiOptSel"> Nur den <b>markierten</b> Teil</label>
+            <label class="ki-check"><input type="checkbox" id="kiOptSpell" checked> Vorher <b>Rechtschreibung</b> prüfen</label>
+            <div class="btn-row" style="margin-top:1rem;">
+                <button class="btn-purple" style="flex:1;" onclick="runKiDialog()">🪄 Los</button>
+                <button class="btn-gray" onclick="closeKiDialog()">Abbrechen</button>
             </div>
         </div>
     </div>
@@ -657,7 +691,7 @@ const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZ
 const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 // GitHub Models API
-const APP_VERSION = 'v18';   // sichtbare Versions-Nummer (zur Kontrolle, ob die neue Fassung geladen ist)
+const APP_VERSION = 'v19';   // sichtbare Versions-Nummer (zur Kontrolle, ob die neue Fassung geladen ist)
 const GH_MODELS_URL = 'https://models.inference.ai.azure.com/chat/completions';
 const GH_MODEL_DEFAULT = 'Llama-3.3-70B-Instruct';
 function getGhModel() { return localStorage.getItem('tagesnotizen-model') || GH_MODEL_DEFAULT; }
@@ -1656,12 +1690,8 @@ function kapitelClear(ta) {
 
 // 📝 Rechtschreibung: korrigiert NUR Rechtschreibung/Zeichensetzung – Inhalt & Wortwahl bleiben
 // Kern: prüft das Textfeld und schreibt das Ergebnis zurück. Gibt true bei Änderung.
-async function spellCheckTextarea(ta) {
-    const text = (ta.value || '').trim();
-    if (!text) return false;
-    if (!getGithubPat()) { showToast('Bitte zuerst den GitHub-Token im Abschnitt „KI" eingeben.', true); return false; }
-    pushKapHistory(ta);
-    setKapStatus('📝 Rechtschreibung wird geprüft …', 'pending');
+// Reiner Rechtschreib-Lauf für einen Text-String (gibt korrigierten Text zurück)
+async function spellCheckString(text, model) {
     const sysPrompt =
         'Du bist ein Korrektor für deutsche Rechtschreibung (geltende deutsche Rechtschreibung in Deutschland). ' +
         'Korrigiere AUSSCHLIESSLICH Rechtschreibung, Groß- und Kleinschreibung, Zeichensetzung und offensichtliche, ' +
@@ -1671,7 +1701,16 @@ async function spellCheckTextarea(ta) {
         'Gib nur den korrigierten Text zurück, ohne Einleitung oder Kommentar.';
     const prompt = 'Korrigiere nur die deutsche Rechtschreibung und Zeichensetzung dieses Textes, ' +
         'ohne Inhalt oder Formulierung zu verändern:\n\n' + text;
-    const res = await callGithubModels(prompt, sysPrompt, 0.1, 2000);
+    return await callGithubModels(prompt, sysPrompt, 0.1, 2000, model);
+}
+
+async function spellCheckTextarea(ta) {
+    const text = (ta.value || '').trim();
+    if (!text) return false;
+    if (!getGithubPat()) { showToast('Bitte zuerst den GitHub-Token im Abschnitt „KI" eingeben.', true); return false; }
+    pushKapHistory(ta);
+    setKapStatus('📝 Rechtschreibung wird geprüft …', 'pending');
+    const res = await spellCheckString(text);
     if (res) { ta.value = res; autoGrow(ta); validatePin(); return true; }
     return false;
 }
@@ -1736,33 +1775,94 @@ function handleEditorClick(ev) {
     finalizeSpell(card);
 }
 
-// 🪄 KI: macht aus den Notizen dieses Kapitels einen schönen Fließtext (direkt ins Feld)
-async function kapitelKI(ta, btn) {
-    const text = (ta.value || '').trim();
-    if (!text) { showToast('Bitte zuerst etwas ins Kapitel schreiben oder sprechen.', true); return; }
+// 🪄 KI: öffnet das Auswahlfenster (Modell + Stil + nur Markiertes)
+let kiDialogTa = null, kiSelStart = 0, kiSelEnd = 0, kiCurStyle = 'normal';
+
+function kapitelKI(ta, btn) { openKiDialog(ta); }
+
+function openKiDialog(ta) {
+    if (!(ta.value || '').trim()) { showToast('Bitte zuerst etwas ins Feld schreiben oder sprechen.', true); return; }
     if (!getGithubPat()) { showToast('Bitte zuerst den GitHub-Token im Abschnitt „KI" eingeben.', true); return; }
+    kiDialogTa = ta;
+    kiSelStart = ta.selectionStart || 0;
+    kiSelEnd = ta.selectionEnd || 0;
+    const hasSel = kiSelEnd > kiSelStart;
+    const m = document.getElementById('kiOptModel');
+    if (m) m.value = localStorage.getItem('tagesnotizen-model') || GH_MODEL_DEFAULT;
+    setKiStyle(localStorage.getItem('tagesnotizen-ki-style') || 'normal');
+    const selBox = document.getElementById('kiOptSel');
+    selBox.checked = hasSel; selBox.disabled = !hasSel;
+    selBox.parentElement.style.opacity = hasSel ? '1' : '0.5';
+    document.getElementById('kiOptSpell').checked = true;
+    document.getElementById('kiOptModal').classList.add('active');
+}
+function setKiStyle(s) {
+    kiCurStyle = s;
+    document.querySelectorAll('#kiOptStyle .ki-style').forEach(b =>
+        b.classList.toggle('active', b.dataset.style === s));
+}
+function closeKiDialog() { document.getElementById('kiOptModal').classList.remove('active'); }
+
+async function runKiDialog() {
+    const ta = kiDialogTa; if (!ta) { closeKiDialog(); return; }
+    const model = document.getElementById('kiOptModel').value;
+    const style = kiCurStyle;
+    const onlySel = document.getElementById('kiOptSel').checked && kiSelEnd > kiSelStart;
+    const doSpell = document.getElementById('kiOptSpell').checked;
+    localStorage.setItem('tagesnotizen-model', model);
+    localStorage.setItem('tagesnotizen-ki-style', style);
+    const top = document.getElementById('modelSelect'); if (top) top.value = model;
+    closeKiDialog();
+    await runKiOnTextarea(ta, { model, style, onlySel, doSpell });
+}
+
+function kiSysPrompt(style) {
+    const base =
+        'Du bist ein einfühlsamer Schriftsteller, der aus Stichworten und Notizen lebendige, gut lesbare Prosa macht. ' +
+        'Die schreibende Person ist immer "ich" und wird niemals durch einen Namen ersetzt. ' +
+        'Norbert ist der Ehemann der schreibenden Person. Alle anderen genannten Namen sind reale Personen. ' +
+        'Behalte alle Details, Namen, Orte und Ereignisse — nichts darf erfunden werden. ' +
+        'Füge insbesondere KEINE Politiker oder Personen des öffentlichen Lebens und KEINE historischen oder ' +
+        'politischen Ereignisse hinzu, die nicht ausdrücklich in den Notizen genannt sind. ';
+    const styleLine = style === 'schlicht'
+        ? 'Schreibe schlicht, nüchtern und sachlich, in klaren, einfachen Sätzen, ohne Schnörkel. '
+        : style === 'blumig'
+            ? 'Schreibe lebendig, warm und bildhaft, mit abwechslungsreicher, gefühlvoller Wortwahl. '
+            : 'Schreibe in einem natürlichen, angenehmen Ton. ';
+    return base + styleLine +
+        'Schreibe einen zusammenhängenden Fließtext ohne Überschriften. ' +
+        'Antworte nur mit dem fertigen Text, ohne Einleitung oder Kommentar.';
+}
+function kiTemp(style) { return style === 'schlicht' ? 0.2 : style === 'blumig' ? 0.6 : 0.35; }
+
+async function runKiOnTextarea(ta, opt) {
+    const start = opt.onlySel ? kiSelStart : 0;
+    const end = opt.onlySel ? kiSelEnd : ta.value.length;
+    let text = ta.value.substring(start, end).trim();
+    if (!text) { showToast('Kein Text ausgewählt.', true); return; }
     pushKapHistory(ta);
-    const old = btn.textContent;
-    btn.disabled = true; btn.textContent = '⏳ …';
     try {
-        const sysPrompt =
-            'Du bist ein einfühlsamer Schriftsteller, der aus Stichworten und Notizen lebendige, gut lesbare Prosa macht. ' +
-            'Die schreibende Person ist immer "ich" und wird niemals durch einen Namen ersetzt. ' +
-            'Norbert ist der Ehemann der schreibenden Person. Alle anderen genannten Namen sind reale Personen. ' +
-            'Behalte alle Details, Namen, Orte und Ereignisse — nichts darf erfunden werden. ' +
-            'Füge insbesondere KEINE Politiker oder Personen des öffentlichen Lebens und KEINE historischen oder ' +
-            'politischen Ereignisse hinzu, die nicht ausdrücklich in den Notizen genannt sind. ' +
-            'Du darfst die Sprache schön, warm und abwechslungsreich machen. ' +
-            'Schreibe einen zusammenhängenden Fließtext ohne Überschriften. ' +
-            'Antworte nur mit dem fertigen Text, ohne Einleitung oder Kommentar.';
-        const prompt = 'Mach aus diesen Notizen einen schönen, zusammenhängenden Text in Prosa:\n\n' + text;
-        const res = await callGithubModels(prompt, sysPrompt, 0.3, 2000);
-        if (res) { ta.value = res; autoGrow(ta); validatePin(); scheduleAutosave(); }
-        else showToast('Die KI hat keinen Text geliefert.', true);
+        let working = text;
+        if (opt.doSpell) {
+            setKapStatus('📝 Rechtschreibung …', 'pending');
+            const corrected = await spellCheckString(working, opt.model);
+            if (corrected) working = corrected;
+        }
+        setKapStatus('🪄 schön schreiben …', 'pending');
+        const styled = await callGithubModels(
+            'Mach aus diesem Text einen schönen, zusammenhängenden Text in Prosa:\n\n' + working,
+            kiSysPrompt(opt.style), kiTemp(opt.style), 2000, opt.model);
+        if (styled) {
+            ta.value = ta.value.substring(0, start) + styled + ta.value.substring(end);
+            autoGrow(ta); validatePin(); scheduleAutosave();
+            showToast('✓ ' + (opt.onlySel ? 'Markierter Teil' : 'Abschnitt') + ' neu geschrieben.');
+        } else {
+            setKapStatus('', '');
+            showToast('Die KI hat keinen Text geliefert.', true);
+        }
     } catch (e) {
+        setKapStatus('', '');
         showToast('Fehler: ' + e.message, true);
-    } finally {
-        btn.disabled = false; btn.textContent = old;
     }
 }
 
@@ -2275,7 +2375,7 @@ function updateKiStatus() {
 
 function getGithubPat() { return localStorage.getItem('tagesnotizen-github-pat') || ''; }
 
-async function callGithubModels(prompt, systemPrompt, temperature = 0.1, maxTokens = 1500) {
+async function callGithubModels(prompt, systemPrompt, temperature = 0.1, maxTokens = 1500, modelOverride) {
     const pat = getGithubPat();
     if (!pat) throw new Error('Kein GitHub Token gesetzt. Bitte unten eingeben.');
 
@@ -2290,7 +2390,7 @@ async function callGithubModels(prompt, systemPrompt, temperature = 0.1, maxToke
             'Authorization': 'Bearer ' + pat
         },
         body: JSON.stringify({
-            model:       getGhModel(),
+            model:       modelOverride || getGhModel(),
             max_tokens:  maxTokens,
             temperature: temperature,
             messages
