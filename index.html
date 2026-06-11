@@ -327,7 +327,9 @@
         #kapitelModal .kap-footer { position: static; bottom: auto; }
         .kap-list { display: flex; flex-direction: column; gap: 0.8rem; max-height: 62vh; overflow-y: auto; }
         @media (min-width: 700px) { .kap-list { max-height: 72vh; } }
-        .kap-card { background: #0f172a; border: 1px solid #334155; border-radius: 0.5rem; padding: 0.7rem 0.8rem; }
+        .kap-card { background: #0f172a; border: 1px solid #334155; border-radius: 0.5rem; padding: 0.7rem 0.8rem; position: relative; }
+        .kap-pin { position: absolute; left: 0.7rem; width: 1.3rem; text-align: center; font-size: 1rem; z-index: 4; pointer-events: none; }
+        .kap-pin.hidden { display: none; }
         .kap-card.is-abschnitt { margin-left: 1.1rem; border-left: 3px solid #6366f1; }
         .kap-card-head { display: flex; align-items: center; gap: 0.4rem; margin-bottom: 0.5rem; flex-wrap: wrap; }
         .kap-num { background: #475569; color: #e2e8f0; font-weight: 700; font-size: 0.8rem; border-radius: 999px; padding: 0.15rem 0.6rem; flex: none; }
@@ -338,7 +340,7 @@
         .kap-mini { background: #334155; border: 1px solid #475569; color: #e2e8f0; font-size: 1rem; cursor: pointer; flex: none; padding: 0.3rem 0.5rem; border-radius: 0.4rem; }
         .kap-mini.kap-delmini { color: #f87171; }
         .kap-mini.kap-ins { font-size: 0.8rem; font-weight: 600; }
-        .kap-body { width: 100%; min-height: 9rem; resize: vertical; overflow: hidden; background: #1e293b; border: 1px solid #475569; border-radius: 0.4rem; padding: 0.55rem 0.65rem; color: #e2e8f0; font-size: 1rem; line-height: 1.6; font-family: inherit; }
+        .kap-body { width: 100%; min-height: 9rem; resize: vertical; overflow: hidden; background: #1e293b; border: 1px solid #475569; border-radius: 0.4rem; padding: 0.55rem 0.65rem 0.55rem 1.5rem; color: #e2e8f0; font-size: 1rem; line-height: 1.6; font-family: inherit; }
         .kap-readbar { display: flex; align-items: center; gap: 0.6rem; background: #78350f; color: #fde68a; border: 1px solid #b45309; border-radius: 0.4rem; padding: 0.55rem 0.75rem; margin-bottom: 0.6rem; font-size: 1rem; line-height: 1.45; font-weight: 600; }
         .kap-readtext { flex: 1; min-width: 0; }
         .kap-readstop { flex: none; background: #dc2626; color: #fff; border: none; border-radius: 0.4rem; padding: 0.5rem 0.9rem; font-size: 1rem; font-weight: 700; cursor: pointer; }
@@ -643,7 +645,7 @@ const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZ
 const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 // GitHub Models API
-const APP_VERSION = 'v11';   // sichtbare Versions-Nummer (zur Kontrolle, ob die neue Fassung geladen ist)
+const APP_VERSION = 'v12';   // sichtbare Versions-Nummer (zur Kontrolle, ob die neue Fassung geladen ist)
 const GH_MODELS_URL = 'https://models.inference.ai.azure.com/chat/completions';
 const GH_MODEL_DEFAULT = 'Llama-3.3-70B-Instruct';
 function getGhModel() { return localStorage.getItem('tagesnotizen-model') || GH_MODEL_DEFAULT; }
@@ -1241,13 +1243,15 @@ function openKapitelEditor(entry, scrollHeadingIndex) {
                     const snip = lastSpokenText.trim().slice(0, 40);
                     const idx = snip ? ta.value.indexOf(snip) : -1;
                     if (idx >= 0) {
-                        setReadBar(lastSpokenText.trim(), true);   // oben anzeigen, wo es war
+                        kapPinTa = ta; kapPinText = lastSpokenText.trim();
+                        setReadBar(kapPinText, true);              // oben anzeigen (antippbar)
                         try {
                             ta.focus();                            // blinkender Cursor an der Stelle
                             ta.setSelectionRange(idx, idx);        // NICHT markieren – nur Cursor setzen
                             ta._caret = idx;
                         } catch (e) {}
                         scrollOffsetIntoView(ta, idx);             // genau dorthin scrollen
+                        placePin(ta, idx);                         // 📍 Stecknadel an die Zeile
                         pinned = true;
                     }
                 }
@@ -1262,27 +1266,63 @@ function openKapitelEditor(entry, scrollHeadingIndex) {
     });
 }
 
+// Misst die senkrechte Position (y) einer Zeichen-Stelle im Textfeld
+function caretYInTextarea(ta, offset) {
+    const cs = getComputedStyle(ta);
+    const div = document.createElement('div');
+    ['fontFamily', 'fontSize', 'fontWeight', 'lineHeight', 'letterSpacing', 'textTransform',
+     'paddingTop', 'paddingLeft', 'paddingRight', 'borderTopWidth', 'borderLeftWidth', 'boxSizing']
+        .forEach(p => { div.style[p] = cs[p]; });
+    div.style.position = 'absolute'; div.style.visibility = 'hidden';
+    div.style.whiteSpace = 'pre-wrap'; div.style.wordWrap = 'break-word';
+    div.style.top = '0'; div.style.left = '0'; div.style.width = ta.clientWidth + 'px';
+    div.textContent = ta.value.slice(0, offset);
+    const span = document.createElement('span'); span.textContent = '​'; div.appendChild(span);
+    document.body.appendChild(div);
+    const y = span.offsetTop;
+    document.body.removeChild(div);
+    return y;
+}
+
 // Scrollt die Editor-Liste so, dass die Zeichen-Stelle `offset` im Textfeld sichtbar wird
 function scrollOffsetIntoView(ta, offset) {
     try {
         const list = document.getElementById('kapitelList');
         if (!list) return;
-        const cs = getComputedStyle(ta);
-        const div = document.createElement('div');
-        ['fontFamily', 'fontSize', 'fontWeight', 'lineHeight', 'letterSpacing', 'textTransform',
-         'paddingTop', 'paddingLeft', 'paddingRight', 'borderTopWidth', 'borderLeftWidth', 'boxSizing']
-            .forEach(p => { div.style[p] = cs[p]; });
-        div.style.position = 'absolute'; div.style.visibility = 'hidden';
-        div.style.whiteSpace = 'pre-wrap'; div.style.wordWrap = 'break-word';
-        div.style.top = '0'; div.style.left = '0'; div.style.width = ta.clientWidth + 'px';
-        div.textContent = ta.value.slice(0, offset);
-        const span = document.createElement('span'); span.textContent = '​'; div.appendChild(span);
-        document.body.appendChild(div);
-        const y = span.offsetTop;
-        document.body.removeChild(div);
+        const y = caretYInTextarea(ta, offset);
         const taTopInList = (ta.getBoundingClientRect().top - list.getBoundingClientRect().top) + list.scrollTop;
         list.scrollTop = Math.max(0, taTopInList + y - 70);
     } catch (e) {}
+}
+
+// Setzt die 📍-Stecknadel in die linke Spalte, genau neben die Zeile der Stelle
+function placePin(ta, offset) {
+    try {
+        const card = ta.closest('.kap-card');
+        if (!card) return;
+        let pin = card.querySelector('.kap-pin');
+        if (!pin) {
+            pin = document.createElement('div');
+            pin.className = 'kap-pin';
+            pin.textContent = '📍';
+            pin.title = 'Zuletzt vorgelesene Stelle';
+            card.appendChild(pin);
+        }
+        const y = caretYInTextarea(ta, offset);
+        pin.style.top = (ta.offsetTop + y) + 'px';
+        pin.classList.remove('hidden');
+    } catch (e) {}
+}
+
+// Springt erneut zur gemerkten Stelle (wenn man oben auf den Satz tippt)
+function jumpToPin() {
+    if (!kapPinTa || !kapPinText) return;
+    const snip = kapPinText.slice(0, 40);
+    const idx = kapPinTa.value.indexOf(snip);
+    if (idx < 0) { showToast('Die Stelle wurde inzwischen verändert.', true); return; }
+    try { kapPinTa.focus(); kapPinTa.setSelectionRange(idx, idx); kapPinTa._caret = idx; } catch (e) {}
+    scrollOffsetIntoView(kapPinTa, idx);
+    placePin(kapPinTa, idx);
 }
 
 // Lässt ein Textfeld so hoch werden, dass der ganze Text sichtbar ist (kein inneres Scrollen)
@@ -1582,6 +1622,8 @@ let kapSpeakTimer = null;
 let kapLastChunkText = '';   // zuletzt vorgelesener Satz (für die Anzeige-Leiste)
 let kapReadTa = null;        // Textfeld, das gerade vorgelesen wird
 let kapReadCurStart = 0;     // Anfang des aktuellen Satzes (für „hier weitermachen")
+let kapPinTa = null;         // Textfeld mit der gemerkten Stelle (📍)
+let kapPinText = '';         // Satz an der gemerkten Stelle (zum Wiederfinden)
 // Zeigt oben deutlich, welcher Satz gerade gelesen wird – mit großem ⏹-Stopp-Knopf
 function setReadBar(text, stopped) {
     const el = document.getElementById('kapReadBar');
@@ -1589,8 +1631,12 @@ function setReadBar(text, stopped) {
     if (!text) { el.classList.add('hidden'); el.innerHTML = ''; return; }
     el.classList.remove('hidden');
     if (stopped) {
-        el.innerHTML = '<span class="kap-readtext">⏹ Gestoppt bei: ' + escHtml(text) + '</span>';
+        el.innerHTML = '<span class="kap-readtext">📍 Stelle (antippen): ' + escHtml(text) + '</span>';
+        el.onclick = jumpToPin;
+        el.style.cursor = 'pointer';
+        return;
     } else {
+        el.onclick = null; el.style.cursor = '';
         el.innerHTML = '<span class="kap-readtext">🔊 ' + escHtml(text) + '</span>' +
             '<button class="kap-readstop" onclick="stopKapReading()">⏹ Stopp</button>';
     }
