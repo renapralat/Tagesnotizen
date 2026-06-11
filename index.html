@@ -647,7 +647,7 @@ const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZ
 const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 // GitHub Models API
-const APP_VERSION = 'v16';   // sichtbare Versions-Nummer (zur Kontrolle, ob die neue Fassung geladen ist)
+const APP_VERSION = 'v17';   // sichtbare Versions-Nummer (zur Kontrolle, ob die neue Fassung geladen ist)
 const GH_MODELS_URL = 'https://models.inference.ai.azure.com/chat/completions';
 const GH_MODEL_DEFAULT = 'Llama-3.3-70B-Instruct';
 function getGhModel() { return localStorage.getItem('tagesnotizen-model') || GH_MODEL_DEFAULT; }
@@ -1419,15 +1419,16 @@ function addBlockCard(level, title, body, afterCard) {
 
         const up   = miniBtn('⬆️', 'Nach oben schieben',  () => moveBlock(card, -1));
         const down = miniBtn('⬇️', 'Nach unten schieben', () => moveBlock(card, 1));
-        const ins  = miniBtn('➕ Abschnitt', 'Abschnitt direkt darunter einfügen', () => addBlockCard(2, '', '', card));
-        ins.classList.add('kap-ins');
+        const insK = miniBtn('➕ Kapitel',   'Neues Kapitel direkt darunter einfügen',   () => insertBlockAfter(card, 1));
+        const insA = miniBtn('➕ Abschnitt', 'Neuen Abschnitt direkt darunter einfügen', () => insertBlockAfter(card, 2));
+        insK.classList.add('kap-ins'); insA.classList.add('kap-ins');
         const del  = miniBtn('🗑', 'Diesen Block löschen', () => {
             if (confirm('Diesen Block wirklich löschen?')) { card.remove(); updateBlockUI(); validatePin(); scheduleAutosave(); }
         });
         del.classList.add('kap-delmini');
 
         head.appendChild(cb); head.appendChild(lvlBtn); head.appendChild(titleInput);
-        head.appendChild(up); head.appendChild(down); head.appendChild(ins); head.appendChild(del);
+        head.appendChild(up); head.appendChild(down); head.appendChild(insK); head.appendChild(insA); head.appendChild(del);
     }
     card.appendChild(head);
 
@@ -1468,6 +1469,17 @@ function addBlockCard(level, title, body, afterCard) {
     updateBlockUI();
     if (level !== 0 && !title && !body) ta.focus();
     return card;
+}
+
+// Fügt direkt unter `card` ein neues Kapitel (1) oder einen Abschnitt (2) ein
+function insertBlockAfter(card, level) {
+    const neu = addBlockCard(level, '', '', card);
+    neu.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    neu.classList.add('kap-flash');
+    setTimeout(() => neu.classList.remove('kap-flash'), 1400);
+    const t = neu.querySelector('.kap-title');
+    if (t) t.focus();
+    scheduleAutosave();
 }
 
 // Block verschieben (−1 = hoch, +1 = runter)
