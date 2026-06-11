@@ -346,6 +346,8 @@
         .kap-footer { position: sticky; bottom: -1.5rem; background: #1e293b; padding: 0.7rem 0 calc(0.3rem + env(safe-area-inset-bottom)); margin-top: 0.9rem; border-top: 1px solid #334155; z-index: 5; }
         .kap-fertig { background: #16a34a; color: #fff; border: none; border-radius: 0.45rem; font-weight: 700; cursor: pointer; }
         .kap-fertig:hover { background: #15803d; }
+        .kap-flash { animation: kapFlash 2.2s ease-out; }
+        @keyframes kapFlash { 0% { box-shadow: 0 0 0 3px #fbbf24; } 60% { box-shadow: 0 0 0 3px #fbbf24; } 100% { box-shadow: 0 0 0 0 rgba(251,191,36,0); } }
         .kind-choice { display: flex; align-items: flex-start; gap: 0.5rem; font-size: 0.9rem; color: #cbd5e1; background: #0f172a; border: 1px solid #334155; border-radius: 0.4rem; padding: 0.55rem 0.7rem; cursor: pointer; line-height: 1.35; }
         .kind-choice input { margin-top: 0.2rem; flex: none; }
         .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem; }
@@ -664,6 +666,7 @@ let micTargetEl = null; // textarea, in die gerade diktiert wird
 let micBtnEl    = null; // zugehöriger Mikrofon-Knopf (für die rote Anzeige)
 let speakingId       = null;  // null | 'summary' | entry-uuid
 let speakResumeTimer = null;  // workaround for Android auto-pause bug
+let lastSpokenHeading = null;  // zuletzt vorgelesene Überschrift (für „im Ändern an dieser Stelle weitermachen")
 
 // ── Init ──────────────────────────────────────────────────────────────────────
 window.addEventListener('DOMContentLoaded', async () => {
@@ -757,14 +760,7 @@ function renderRichText(text, idPrefix, withControls) {
 function speakFromHeading(hIndex) {
     if (speakingId !== null) { stopSpeaking(); return; } // läuft gerade → ausschalten
     if (!currentBook || !currentBook.text) return;
-    const lines = currentBook.text.split('\n');
-    const isHead = (l) => /^##\s+.+/.test(l) || /^Abschnitt\s+.+/i.test(l) || /^#\s+.+/.test(l) || /^Kapitel\s+.+/i.test(l);
-    let count = -1, start = 0;
-    for (let i = 0; i < lines.length; i++) {
-        if (isHead(lines[i])) { count++; if (count === hIndex) { start = i; break; } }
-    }
-    stopSpeaking();
-    startSpeaking(lines.slice(start).join('\n'), 'book');
+    startSpeaking(currentBook.text, 'book', hIndex); // ab dieser Überschrift vorlesen
 }
 
 // Öffnet den Editor und springt zum gewählten Abschnitt
@@ -1004,7 +1000,8 @@ function printBook() {
 // Öffnet den Kapitel-Editor für das Buch der aktuellen Kategorie (neu oder bestehend).
 function openBookEditor() {
     const entry = currentBook || { id: null, datum: BOOK_DATUM, category: selectedCategory, text: '' };
-    openKapitelEditor(entry);
+    // Wurde gerade vorgelesen und gestoppt? Dann im Editor genau zu dieser Stelle springen.
+    openKapitelEditor(entry, lastSpokenHeading != null ? lastSpokenHeading : undefined);
 }
 
 function displayEntries(list) {
@@ -1184,6 +1181,8 @@ function openKapitelEditor(entry, scrollHeadingIndex) {
             const target = cards[scrollHeadingIndex];
             if (target) {
                 target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                target.classList.add('kap-flash');
+                setTimeout(() => target.classList.remove('kap-flash'), 2200);
                 const ta = target.querySelector('.kap-body');
                 if (ta) ta.focus();
             }
@@ -2270,23 +2269,53 @@ function chunkText(text) {
     return chunks;
 }
 
-function startSpeaking(text, id) {
+// Baut Vorlese-Häppchen, die jeweils ihre Überschrift (0-basiert) kennen.
+// So wissen wir beim Stoppen, an welcher Überschrift gerade vorgelesen wurde.
+function buildSpeechChunks(text) {
+    const lines = String(text).split('\n');
+    const isHead = (l) => /^##\s+.+/.test(l) || /^Abschnitt\s+.+/i.test(l) || /^#\s+.+/.test(l) || /^Kapitel\s+.+/i.test(l);
+    const segments = [];
+    let h = -1, buf = [];
+    const flush = () => { const t = buf.join('\n').trim(); if (t) segments.push({ h, text: t }); buf = []; };
+    for (const raw of lines) {
+        if (isHead(raw)) {
+            flush(); h++;
+            const title = raw.replace(/^#{1,2}\s+/, '').replace(/^(Kapitel|Abschnitt)\s+/i, '');
+            buf.push(title);
+        } else buf.push(raw);
+    }
+    flush();
+    const chunks = [];
+    for (const seg of segments) {
+        for (const piece of chunkText(seg.text)) chunks.push({ text: piece, h: seg.h });
+    }
+    return chunks;
+}
+
+function startSpeaking(text, id, startHeading) {
     const synth = window.speechSynthesis;
     synth.cancel();
-    const chunks = chunkText(text);
+    const chunks = buildSpeechChunks(text);
     if (!chunks.length) return;
+    let i = 0;
+    if (startHeading != null) {
+        const idx = chunks.findIndex(c => c.h === startHeading);
+        if (idx >= 0) i = idx;
+    }
     speakingId = id;
     updateSpeakUI();
-    let i = 0;
     const speakNext = () => {
         if (speakingId !== id) return;            // wurde gestoppt/gewechselt
         if (i >= chunks.length) {                 // alle Häppchen gelesen
             if (speakResumeTimer) { clearInterval(speakResumeTimer); speakResumeTimer = null; }
             speakingId = null;
+            lastSpokenHeading = null;             // ganz durchgelesen → keine offene Stelle
             updateSpeakUI();
             return;
         }
-        const utt = new SpeechSynthesisUtterance(chunks[i++]);
+        const ch = chunks[i++];
+        if (ch.h >= 0) lastSpokenHeading = ch.h;  // Position merken
+        const utt = new SpeechSynthesisUtterance(ch.text);
         utt.lang = 'de-DE';
         applyVoice(utt);
         utt.onend = speakNext;
