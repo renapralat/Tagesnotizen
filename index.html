@@ -643,7 +643,7 @@ const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZ
 const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 // GitHub Models API
-const APP_VERSION = 'v9';   // sichtbare Versions-Nummer (zur Kontrolle, ob die neue Fassung geladen ist)
+const APP_VERSION = 'v10';   // sichtbare Versions-Nummer (zur Kontrolle, ob die neue Fassung geladen ist)
 const GH_MODELS_URL = 'https://models.inference.ai.azure.com/chat/completions';
 const GH_MODEL_DEFAULT = 'Llama-3.3-70B-Instruct';
 function getGhModel() { return localStorage.getItem('tagesnotizen-model') || GH_MODEL_DEFAULT; }
@@ -1233,26 +1233,27 @@ function openKapitelEditor(entry, scrollHeadingIndex) {
                 .filter(c => c.dataset.level !== '0');
             const target = cards[scrollHeadingIndex];
             if (target) {
-                target.classList.add('kap-flash');
-                setTimeout(() => target.classList.remove('kap-flash'), 2200);
                 const ta = target.querySelector('.kap-body');
                 let pinned = false;
                 if (ta && lastSpokenText) {
-                    // den zuletzt vorgelesenen Satz im Abschnitt wiederfinden = Stecknadel
+                    // den zuletzt vorgelesenen Satz im Abschnitt wiederfinden = Stelle
                     const snip = lastSpokenText.trim().slice(0, 40);
                     const idx = snip ? ta.value.indexOf(snip) : -1;
                     if (idx >= 0) {
+                        setReadBar(lastSpokenText.trim(), true);   // oben anzeigen, wo es war
                         try {
-                            ta.setSelectionRange(idx, Math.min(ta.value.length, idx + lastSpokenText.trim().length));
+                            ta.focus();                            // blinkender Cursor an der Stelle
+                            ta.setSelectionRange(idx, idx);        // NICHT markieren – nur Cursor setzen
                             ta._caret = idx;
                         } catch (e) {}
-                        setReadBar(lastSpokenText.trim(), true);   // oben anzeigen, wo es war
                         scrollOffsetIntoView(ta, idx);             // genau dorthin scrollen
                         pinned = true;
                     }
                 }
                 if (!pinned) {
                     target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    target.classList.add('kap-flash');
+                    setTimeout(() => target.classList.remove('kap-flash'), 2200);
                     if (ta) { try { ta.setSelectionRange(0, 0); ta._caret = 0; } catch (e) {} }
                 }
             }
