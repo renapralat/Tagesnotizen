@@ -318,6 +318,7 @@
         #kapitelModal .modal-header,
         #kapitelModal #kapitelInfo,
         #kapitelModal #kapitelBatch,
+        #kapitelModal #kapReadBar,
         #kapitelModal .kap-addrow,
         #kapitelModal .kap-footer { flex: 0 0 auto; }
         #kapitelModal .kap-list { flex: 1 1 auto; min-height: 0; max-height: none; }
@@ -336,6 +337,7 @@
         .kap-mini.kap-delmini { color: #f87171; }
         .kap-mini.kap-ins { font-size: 0.8rem; font-weight: 600; }
         .kap-body { width: 100%; min-height: 9rem; resize: vertical; overflow: hidden; background: #1e293b; border: 1px solid #475569; border-radius: 0.4rem; padding: 0.55rem 0.65rem; color: #e2e8f0; font-size: 1rem; line-height: 1.6; font-family: inherit; }
+        .kap-readbar { background: #78350f; color: #fde68a; border: 1px solid #b45309; border-radius: 0.4rem; padding: 0.55rem 0.75rem; margin-bottom: 0.6rem; font-size: 1rem; line-height: 1.45; font-weight: 600; }
         .kap-body::selection { background: #fbbf24; color: #1e293b; }
         .kap-body::-moz-selection { background: #fbbf24; color: #1e293b; }
         .kap-mic { flex: none; font-size: 1.2rem; padding: 0.5rem 0.65rem; border-radius: 0.4rem; align-self: stretch; }
@@ -439,6 +441,7 @@
                 <button id="kapMergeBtn" class="btn-purple" style="flex:1;" onclick="mergeSelectedBlocks()">🔗 Markierte zusammenführen</button>
                 <button id="kapDelBtn" class="btn-red" onclick="deleteSelectedBlocks()">🗑 Markierte löschen</button>
             </div>
+            <div id="kapReadBar" class="kap-readbar hidden"></div>
             <div id="kapitelList" class="kap-list"></div>
             <div class="kap-addrow" style="display:flex;gap:0.5rem;margin-top:0.8rem;">
                 <button class="btn-dark" style="flex:1;" onclick="addNewBlock(1)">➕ Kapitel</button>
@@ -1171,6 +1174,7 @@ function openKapitelEditor(entry, scrollHeadingIndex) {
     updateBlockUI();
     clearTimeout(kapAutoTimer);
     spellDirtyCard = null;
+    kapLastChunkText = ''; setReadBar('');
     const modal = document.getElementById('kapitelModal');
     if (!modal._spellWired) { modal.addEventListener('click', handleEditorClick, true); modal._spellWired = true; }
     modal.classList.add('active');
@@ -1482,6 +1486,15 @@ async function kapitelKI(ta, btn) {
 
 // Vorlesen eines einzelnen Kapitel-Feldes
 let kapSpeakTimer = null;
+let kapLastChunkText = '';   // zuletzt vorgelesener Satz (für die Anzeige-Leiste)
+// Zeigt oben deutlich, welcher Satz gerade gelesen wird (auf jedem Gerät sichtbar)
+function setReadBar(text, stopped) {
+    const el = document.getElementById('kapReadBar');
+    if (!el) return;
+    if (!text) { el.classList.add('hidden'); el.textContent = ''; return; }
+    el.classList.remove('hidden');
+    el.textContent = (stopped ? '⏹ Hier gestoppt: ' : '🔊 liest: ') + text;
+}
 // Zerlegt Text ab startPos in Satz-Häppchen und merkt sich die genaue Stelle (a..b) im Text
 function chunkWithRanges(text, startPos) {
     const chunks = [];
@@ -1505,9 +1518,10 @@ function chunkWithRanges(text, startPos) {
 // Liest einen Abschnitt vor – ab der Cursor-Stelle (falls gesetzt) und markiert den aktuellen Satz.
 function speakKapitel(ta) {
     const synth = window.speechSynthesis;
-    if (speakingId !== null || synth.speaking || synth.pending) {   // läuft → stoppen (Markierung bleibt)
+    if (speakingId !== null || synth.speaking || synth.pending) {   // läuft → stoppen (Stelle bleibt sichtbar)
         stopSpeaking();
         if (kapSpeakTimer) { clearInterval(kapSpeakTimer); kapSpeakTimer = null; }
+        if (kapLastChunkText) setReadBar(kapLastChunkText, true);
         return;
     }
     const full = ta.value || '';
@@ -1523,10 +1537,12 @@ function speakKapitel(ta) {
         if (speakingId !== 'kapitel') return;
         if (i >= chunks.length) {
             if (speakResumeTimer) { clearInterval(speakResumeTimer); speakResumeTimer = null; }
-            speakingId = null; updateSpeakUI(); return;
+            speakingId = null; updateSpeakUI(); setReadBar(''); return;
         }
         const ch = chunks[i++];
         try { ta.setSelectionRange(ch.a, ch.b); } catch (e) {}   // aktuellen Satz markieren
+        kapLastChunkText = full.slice(ch.a, ch.b).trim();
+        setReadBar(kapLastChunkText);                            // oben deutlich anzeigen
         const u = new SpeechSynthesisUtterance(full.slice(ch.a, ch.b));
         u.lang = 'de-DE';
         applyVoice(u);
