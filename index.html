@@ -643,7 +643,7 @@ const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZ
 const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 // GitHub Models API
-const APP_VERSION = 'v8';   // sichtbare Versions-Nummer (zur Kontrolle, ob die neue Fassung geladen ist)
+const APP_VERSION = 'v9';   // sichtbare Versions-Nummer (zur Kontrolle, ob die neue Fassung geladen ist)
 const GH_MODELS_URL = 'https://models.inference.ai.azure.com/chat/completions';
 const GH_MODEL_DEFAULT = 'Llama-3.3-70B-Instruct';
 function getGhModel() { return localStorage.getItem('tagesnotizen-model') || GH_MODEL_DEFAULT; }
@@ -677,6 +677,7 @@ let micBtnEl    = null; // zugehöriger Mikrofon-Knopf (für die rote Anzeige)
 let speakingId       = null;  // null | 'summary' | entry-uuid
 let speakResumeTimer = null;  // workaround for Android auto-pause bug
 let lastSpokenHeading = null;  // zuletzt vorgelesene Überschrift (für „im Ändern an dieser Stelle weitermachen")
+let lastSpokenText = '';       // zuletzt vorgelesener Satz (zum Wiederfinden der Stelle im Editor)
 
 // ── Init ──────────────────────────────────────────────────────────────────────
 window.addEventListener('DOMContentLoaded', async () => {
@@ -735,7 +736,7 @@ function renderRichText(text, idPrefix, withControls) {
     let html = '', buf = [], n = 0, pos = 0, bufStart = 0;
     function flush() {
         if (!buf.length) return;
-        const click = withControls ? ` onclick="speakFromOffset(${bufStart})" title="Ab hier vorlesen (antippen)"` : '';
+        const click = withControls ? ` data-start="${bufStart}" onclick="speakFromClick(event)" title="Genau hier antippen zum Vorlesen"` : '';
         const cls = withControls ? 'rt-text rt-clickable' : 'rt-text';
         html += `<div class="${cls}"${click}>` + inlineFmt(escHtml(buf.join('\n'))) + '</div>';
         buf = [];
@@ -782,6 +783,36 @@ function speakFromOffset(charOffset) {
     if (speakingId !== null) { stopSpeaking(); return; } // läuft → ausschalten
     if (!currentBook || !currentBook.text) return;
     startSpeaking(currentBook.text, 'book', null, charOffset);
+}
+
+// Ermittelt die genau angetippte Zeichen-Stelle und liest ab dort vor
+function speakFromClick(ev) {
+    const el = ev.target.closest('.rt-clickable');
+    if (!el) return;
+    const base = parseInt(el.dataset.start || '0', 10);
+    let within = 0;
+    try {
+        let node = null, off = 0;
+        if (document.caretRangeFromPoint) {
+            const r = document.caretRangeFromPoint(ev.clientX, ev.clientY);
+            if (r) { node = r.startContainer; off = r.startOffset; }
+        } else if (document.caretPositionFromPoint) {
+            const p = document.caretPositionFromPoint(ev.clientX, ev.clientY);
+            if (p) { node = p.offsetNode; off = p.offset; }
+        }
+        if (node && el.contains(node)) within = textOffsetWithin(el, node, off);
+    } catch (e) {}
+    speakFromOffset(base + within);
+}
+function textOffsetWithin(root, target, off) {
+    let total = 0, done = false;
+    (function walk(n) {
+        if (done) return;
+        if (n === target) { if (n.nodeType === 3) total += off; done = true; return; }
+        if (n.nodeType === 3) { total += n.nodeValue.length; return; }
+        for (let i = 0; i < n.childNodes.length; i++) { walk(n.childNodes[i]); if (done) return; }
+    })(root);
+    return total;
 }
 
 // Öffnet den Editor und springt zum gewählten Abschnitt
@@ -1202,15 +1233,54 @@ function openKapitelEditor(entry, scrollHeadingIndex) {
                 .filter(c => c.dataset.level !== '0');
             const target = cards[scrollHeadingIndex];
             if (target) {
-                target.scrollIntoView({ behavior: 'smooth', block: 'start' });
                 target.classList.add('kap-flash');
                 setTimeout(() => target.classList.remove('kap-flash'), 2200);
-                // Cursor an den Anfang des Abschnitts setzen (NICHT fokussieren → springt sonst ans Ende & öffnet Tastatur)
                 const ta = target.querySelector('.kap-body');
-                if (ta) { try { ta.setSelectionRange(0, 0); ta._caret = 0; } catch (e) {} }
+                let pinned = false;
+                if (ta && lastSpokenText) {
+                    // den zuletzt vorgelesenen Satz im Abschnitt wiederfinden = Stecknadel
+                    const snip = lastSpokenText.trim().slice(0, 40);
+                    const idx = snip ? ta.value.indexOf(snip) : -1;
+                    if (idx >= 0) {
+                        try {
+                            ta.setSelectionRange(idx, Math.min(ta.value.length, idx + lastSpokenText.trim().length));
+                            ta._caret = idx;
+                        } catch (e) {}
+                        setReadBar(lastSpokenText.trim(), true);   // oben anzeigen, wo es war
+                        scrollOffsetIntoView(ta, idx);             // genau dorthin scrollen
+                        pinned = true;
+                    }
+                }
+                if (!pinned) {
+                    target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    if (ta) { try { ta.setSelectionRange(0, 0); ta._caret = 0; } catch (e) {} }
+                }
             }
         }
     });
+}
+
+// Scrollt die Editor-Liste so, dass die Zeichen-Stelle `offset` im Textfeld sichtbar wird
+function scrollOffsetIntoView(ta, offset) {
+    try {
+        const list = document.getElementById('kapitelList');
+        if (!list) return;
+        const cs = getComputedStyle(ta);
+        const div = document.createElement('div');
+        ['fontFamily', 'fontSize', 'fontWeight', 'lineHeight', 'letterSpacing', 'textTransform',
+         'paddingTop', 'paddingLeft', 'paddingRight', 'borderTopWidth', 'borderLeftWidth', 'boxSizing']
+            .forEach(p => { div.style[p] = cs[p]; });
+        div.style.position = 'absolute'; div.style.visibility = 'hidden';
+        div.style.whiteSpace = 'pre-wrap'; div.style.wordWrap = 'break-word';
+        div.style.top = '0'; div.style.left = '0'; div.style.width = ta.clientWidth + 'px';
+        div.textContent = ta.value.slice(0, offset);
+        const span = document.createElement('span'); span.textContent = '​'; div.appendChild(span);
+        document.body.appendChild(div);
+        const y = span.offsetTop;
+        document.body.removeChild(div);
+        const taTopInList = (ta.getBoundingClientRect().top - list.getBoundingClientRect().top) + list.scrollTop;
+        list.scrollTop = Math.max(0, taTopInList + y - 70);
+    } catch (e) {}
 }
 
 // Lässt ein Textfeld so hoch werden, dass der ganze Text sichtbar ist (kein inneres Scrollen)
@@ -2427,12 +2497,13 @@ function startSpeaking(text, id, startHeading, startCharOffset) {
         if (i >= chunks.length) {                 // alle Häppchen gelesen
             if (speakResumeTimer) { clearInterval(speakResumeTimer); speakResumeTimer = null; }
             speakingId = null;
-            lastSpokenHeading = null;             // ganz durchgelesen → keine offene Stelle
+            lastSpokenHeading = null; lastSpokenText = '';  // ganz durchgelesen → keine offene Stelle
             updateSpeakUI();
             return;
         }
         const ch = chunks[i++];
         if (ch.h >= 0) lastSpokenHeading = ch.h;  // Position merken
+        lastSpokenText = ch.text;                 // Satz merken (zum Wiederfinden im Editor)
         const utt = new SpeechSynthesisUtterance(ch.text);
         utt.lang = 'de-DE';
         applyVoice(utt);
