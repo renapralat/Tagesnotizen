@@ -695,7 +695,7 @@ const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZ
 const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 // GitHub Models API
-const APP_VERSION = 'v20';   // sichtbare Versions-Nummer (zur Kontrolle, ob die neue Fassung geladen ist)
+const APP_VERSION = 'v21';   // sichtbare Versions-Nummer (zur Kontrolle, ob die neue Fassung geladen ist)
 const GH_MODELS_URL = 'https://models.inference.ai.azure.com/chat/completions';
 const GH_MODEL_DEFAULT = 'Llama-3.3-70B-Instruct';
 function getGhModel() { return localStorage.getItem('tagesnotizen-model') || GH_MODEL_DEFAULT; }
@@ -1582,6 +1582,7 @@ function buildOutline() {
         const dot = hasText ? '🟢' : '⚪';
         const row = document.createElement('div');
         row.className = 'kap-ol-row' + (level === '2' ? ' is-abschnitt' : (level === '3' ? ' is-unter' : ''));
+        row.style.marginLeft = (level === '2' ? 1.6 : level === '3' ? 3.4 : 0) + 'rem'; // Stufen-Einrückung sicherstellen
         const titleBtn = document.createElement('button');
         titleBtn.className = 'kap-ol-title';
         titleBtn.textContent = icon + ' ' + title + '  ' + dot;
