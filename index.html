@@ -700,7 +700,8 @@
             <div class="input-side">
                 <button id="micBtn" class="btn-amber mic-btn side-btn" onclick="toggleMic()" title="Aufnahme starten / stoppen">🎤</button>
                 <span id="recDot" class="rec-dot" style="align-self:center;"></span>
-                <button class="btn-purple side-btn" id="summarizeBtn" onclick="summarizeText()" title="Zusammenfassen" style="font-size:1.2rem;">🪄</button>
+                <button class="btn-purple side-btn" id="summarizeBtn" onclick="summarizeText()" title="Zusammenfassen (Rechtschreibung läuft vorher)" style="font-size:1.2rem;">🪄</button>
+                <button class="btn-dark side-btn" id="spellInputBtn" onclick="spellCheckInput()" title="Nur Rechtschreibung prüfen – Inhalt bleibt gleich" style="font-size:1rem;">📝</button>
                 <button id="headingsToggle" onclick="toggleHeadings()" class="btn-dark side-btn" title="Überschriften / Fließtext" style="font-size:0.8rem;">UE</button>
                 <button class="btn-green side-btn" onclick="addToBuffer()" title="Zwischenspeichern" style="font-size:1.3rem;">+</button>
                 <button class="btn-gray side-btn" onclick="clearInput()" title="Text löschen" style="font-size:1.1rem;">−</button>
@@ -752,7 +753,7 @@ const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZ
 const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 // GitHub Models API
-const APP_VERSION = 'v29';   // sichtbare Versions-Nummer (zur Kontrolle, ob die neue Fassung geladen ist)
+const APP_VERSION = 'v30';   // sichtbare Versions-Nummer (zur Kontrolle, ob die neue Fassung geladen ist)
 const GH_MODELS_URL = 'https://models.inference.ai.azure.com/chat/completions';
 const GH_MODEL_DEFAULT = 'Llama-3.3-70B-Instruct';
 function getGhModel() { return localStorage.getItem('tagesnotizen-model') || GH_MODEL_DEFAULT; }
@@ -2718,12 +2719,31 @@ async function saveDirectly() {
     } catch(e) { showToast('Fehler: ' + e.message, true); }
 }
 
+// 📝 Nur Rechtschreibung des Eingabetextes prüfen (Inhalt bleibt exakt)
+async function spellCheckInput() {
+    const ta = document.getElementById('inputText');
+    const text = (ta.value || '').trim();
+    if (!text) { showToast('Bitte zuerst etwas schreiben oder sprechen.', true); return; }
+    if (!getGithubPat()) { showToast('Bitte zuerst den GitHub-Token im Abschnitt „KI" eingeben.', true); return; }
+    const btn = document.getElementById('spellInputBtn');
+    const old = btn ? btn.textContent : '';
+    if (btn) { btn.disabled = true; btn.textContent = '⏳'; }
+    try {
+        const res = await spellCheckString(text);
+        if (res) { ta.value = res; showToast('✓ Rechtschreibung geprüft.'); }
+        else showToast('Die KI hat keinen Text geliefert.', true);
+    } catch (e) {
+        showToast('Fehler: ' + e.message, true);
+    } finally {
+        if (btn) { btn.disabled = false; btn.textContent = old || '📝'; }
+    }
+}
+
 async function summarizeText() {
     // Datum immer frisch aus dem Eingabefeld lesen, falls es nach editEntry() geändert wurde
     selectedDate = document.getElementById('entryDate').value;
 
-    const allText = collectText();
-    if (!allText) { alert('Bitte Text eingeben oder diktieren.'); return; }
+    if (!collectText()) { alert('Bitte Text eingeben oder diktieren.'); return; }
 
     if (!getGithubPat()) {
         alert('Bitte zuerst den GitHub Token im Abschnitt "KI-ANALYSE" unten eingeben.');
@@ -2737,6 +2757,15 @@ async function summarizeText() {
     btn.textContent = '⏳';
 
     try {
+        // Vor der KI zuerst die Rechtschreibung des aktuellen Eingabetextes (wie bei den Büchern)
+        const _ta = document.getElementById('inputText');
+        if ((_ta.value || '').trim()) {
+            btn.textContent = '📝';
+            try { const _c = await spellCheckString(_ta.value.trim()); if (_c) _ta.value = _c; } catch (e) {}
+            btn.textContent = '⏳';
+        }
+        const allText = collectText();
+
         const { data: existing } = await sb.from('tagesnotizen_entries')
             .select('text').eq('datum', selectedDate).eq('category', selectedCategory)
             .maybeSingle();
