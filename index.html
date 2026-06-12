@@ -287,6 +287,9 @@
         .entry-toc a.lvl2 { padding-left: 1rem; font-size: 0.85rem; color: #93c5fd; }
         .entry-toc a.lvl3 { padding-left: 2.2rem; font-size: 0.82rem; color: #bfdbfe; }
         .ch-media { margin: 0.3rem 0 0.8rem; }
+        /* Medien standardmäßig ausblenden (reines Lesen); im Foto-Modus zeigen */
+        #bookText:not(.show-media) .ch-media,
+        #bookText:not(.show-media) #bookOrphan { display: none; }
         .ch-media-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 0.5rem; }
         .ch-media-grid:empty { display: none; }
         .ch-media-add { display: inline-flex; align-items: center; gap: 0.4rem; margin-top: 0.4rem; font-size: 0.82rem; color: #cbd5e1; background: #1e293b; border: 1px dashed #475569; border-radius: 0.4rem; padding: 0.35rem 0.7rem; cursor: pointer; }
@@ -716,7 +719,7 @@ const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZ
 const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 // GitHub Models API
-const APP_VERSION = 'v24';   // sichtbare Versions-Nummer (zur Kontrolle, ob die neue Fassung geladen ist)
+const APP_VERSION = 'v25';   // sichtbare Versions-Nummer (zur Kontrolle, ob die neue Fassung geladen ist)
 const GH_MODELS_URL = 'https://models.inference.ai.azure.com/chat/completions';
 const GH_MODEL_DEFAULT = 'Llama-3.3-70B-Instruct';
 function getGhModel() { return localStorage.getItem('tagesnotizen-model') || GH_MODEL_DEFAULT; }
@@ -1110,12 +1113,22 @@ async function renderBook(cat) {
                 <div class="entry-actions">
                     <button id="speak-book" class="btn-icon btn-amber speak-btn" onclick="speakBook()" title="Alles vorlesen">🔊</button>
                     <button class="btn-icon btn-blue" onclick="openBookEditor()" title="Buch schreiben / bearbeiten">✏️</button>
+                    <button id="bookMediaBtn" class="btn-icon btn-dark" onclick="toggleBookMedia()" title="Fotos pro Kapitel verwalten">📷</button>
                     <button class="btn-icon btn-dark" onclick="printBook()" title="Als Buch drucken">🖨️</button>
                 </div>
             </div>
-            <div class="entry-text">${toc}${rt.html}<div id="bookOrphan" class="hidden"></div></div>
+            <div class="entry-text" id="bookText">${toc}${rt.html}<div id="bookOrphan" class="hidden"></div></div>
         </div>`;
     loadBookMedia(cat); // Fotos/Dateien pro Kapitel laden
+}
+
+// Schaltet die Buch-Ansicht zwischen reinem Lesen und Foto-Verwaltung um
+function toggleBookMedia() {
+    const t = document.getElementById('bookText');
+    const btn = document.getElementById('bookMediaBtn');
+    if (!t) return;
+    const on = t.classList.toggle('show-media');
+    if (btn) { btn.classList.toggle('btn-amber', on); btn.classList.toggle('btn-dark', !on); btn.textContent = on ? '📖' : '📷'; btn.title = on ? 'Zurück zum Lesen' : 'Fotos pro Kapitel verwalten'; }
 }
 
 function speakBook() {
