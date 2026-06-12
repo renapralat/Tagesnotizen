@@ -280,6 +280,10 @@
         .rt-h1 { font-size: 1.25rem; font-weight: 700; color: #f1f5f9; margin: 1rem 0 0.4rem; padding-bottom: 0.2rem; border-bottom: 1px solid #475569; }
         .rt-h2 { font-size: 1.05rem; font-weight: 700; color: #e2e8f0; margin: 0.8rem 0 0.3rem; }
         .rt-h3 { font-size: 0.98rem; font-weight: 700; color: #cbd5e1; margin: 0.6rem 0 0.25rem; padding-left: 0.8rem; }
+        .rt-h1, .rt-h2, .rt-h3, .rt-hrow { scroll-margin-top: 4rem; } /* nicht hinter der Kopfzeile landen */
+        .rt-h-flash { animation: rtFlash 2.6s ease-out; border-radius: 0.35rem; }
+        @keyframes rtFlash { 0%,65% { background: #fbbf24; box-shadow: 0 0 0 4px #fbbf24; } 100% { background: transparent; box-shadow: 0 0 0 0 rgba(251,191,36,0); } }
+        .rt-h-flash h3, .rt-h-flash h4, .rt-h-flash h5 { color: #1e293b; }
         .entry-link { color: #60a5fa; text-decoration: underline; font-weight: 600; word-break: break-all; }
         .entry-toc { background: #1e293b; border: 1px solid #475569; border-radius: 0.4rem; padding: 0.6rem 0.8rem; margin-bottom: 0.8rem; }
         .entry-toc-title { font-weight: 700; color: #94a3b8; font-size: 0.85rem; margin-bottom: 0.35rem; }
@@ -723,7 +727,7 @@ const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZ
 const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 // GitHub Models API
-const APP_VERSION = 'v26';   // sichtbare Versions-Nummer (zur Kontrolle, ob die neue Fassung geladen ist)
+const APP_VERSION = 'v27';   // sichtbare Versions-Nummer (zur Kontrolle, ob die neue Fassung geladen ist)
 const GH_MODELS_URL = 'https://models.inference.ai.azure.com/chat/completions';
 const GH_MODEL_DEFAULT = 'Llama-3.3-70B-Instruct';
 function getGhModel() { return localStorage.getItem('tagesnotizen-model') || GH_MODEL_DEFAULT; }
@@ -910,7 +914,17 @@ function editSection(hIndex) {
 
 function scrollToHeading(id) {
     const el = document.getElementById(id);
-    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    if (!el) return;
+    el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    flashHeading(el);
+}
+// Hebt die angesprungene Überschrift kurz hervor, damit man sieht, wo man gelandet ist
+function flashHeading(el) {
+    const row = el.closest('.rt-hrow') || el;
+    row.classList.remove('rt-h-flash');
+    void row.offsetWidth; // Animation neu starten
+    row.classList.add('rt-h-flash');
+    setTimeout(() => row.classList.remove('rt-h-flash'), 2600);
 }
 
 function setConnBadge(ok, msg) {
@@ -1142,8 +1156,7 @@ function toggleBookMedia() {
 function gotoChapterMedia(id) {
     const t = document.getElementById('bookText');
     if (t && !t.classList.contains('show-media')) toggleBookMedia();
-    const el = document.getElementById(id);
-    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    requestAnimationFrame(() => scrollToHeading(id)); // nach Layout-Wechsel springen + hervorheben
 }
 
 function speakBook() {
