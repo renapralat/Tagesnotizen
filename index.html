@@ -452,7 +452,6 @@
             <button class="btn-purple" style="flex:1;" onclick="authLogin()">Anmelden</button>
             <button class="btn-dark" onclick="authSignup()">Konto anlegen</button>
         </div>
-        <button class="auth-skip" id="authSkipBtn" onclick="authSkip()">später (zum Testen überspringen)</button>
     </div>
 </div>
 
@@ -753,7 +752,7 @@ const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZ
 const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 // GitHub Models API
-const APP_VERSION = 'v28';   // sichtbare Versions-Nummer (zur Kontrolle, ob die neue Fassung geladen ist)
+const APP_VERSION = 'v29';   // sichtbare Versions-Nummer (zur Kontrolle, ob die neue Fassung geladen ist)
 const GH_MODELS_URL = 'https://models.inference.ai.azure.com/chat/completions';
 const GH_MODEL_DEFAULT = 'Llama-3.3-70B-Instruct';
 function getGhModel() { return localStorage.getItem('tagesnotizen-model') || GH_MODEL_DEFAULT; }
@@ -800,9 +799,11 @@ window.addEventListener('DOMContentLoaded', async () => {
     document.getElementById('exportFrom').value = `${y}-${m}-01`;
     document.getElementById('exportTo').value   = `${y}-${m}-${pad(lastDay)}`;
     loadKiPat();
-    await checkAuth();          // Anmeldung prüfen (zeigt ggf. den Anmelde-Bildschirm)
-    await loadCategories();
-    loadMediaForDate(selectedDate);
+    const _loggedIn = await checkAuth();      // ohne Anmeldung kein Zugriff (Daten sind geschützt)
+    if (_loggedIn) {
+        await loadCategories();
+        loadMediaForDate(selectedDate);
+    }
     document.addEventListener('click', e => {
         const btn = document.getElementById('exportCatBtn');
         const dd  = document.getElementById('exportCatDropdown');
