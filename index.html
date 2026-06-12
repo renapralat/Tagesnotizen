@@ -773,7 +773,7 @@ const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZ
 const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 // GitHub Models API
-const APP_VERSION = 'v34';   // sichtbare Versions-Nummer (zur Kontrolle, ob die neue Fassung geladen ist)
+const APP_VERSION = 'v35';   // sichtbare Versions-Nummer (zur Kontrolle, ob die neue Fassung geladen ist)
 const GH_MODELS_URL = 'https://models.inference.ai.azure.com/chat/completions';
 const GH_MODEL_DEFAULT = 'Llama-3.3-70B-Instruct';
 function getGhModel() { return localStorage.getItem('tagesnotizen-model') || GH_MODEL_DEFAULT; }
@@ -2969,7 +2969,7 @@ function getPronList() {
         if (raw) return JSON.parse(raw);
     } catch (e) {}
     // Voreinstellung: Roger französisch
-    const def = [{ word: 'Roger', say: 'Ro schee' }];
+    const def = [{ word: 'Roger', say: 'Ro scheee' }];
     localStorage.setItem('tagesnotizen-aussprache', JSON.stringify(def));
     return def;
 }
