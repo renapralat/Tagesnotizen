@@ -234,6 +234,8 @@
             cursor: pointer; padding: 0; flex: none;
         }
         .media-card-del:hover { color: #ef4444; }
+        .media-card-mv { background: none; border: none; color: #94a3b8; font-size: 0.95rem; cursor: pointer; padding: 0; flex: none; line-height: 1; }
+        .media-card-mv:hover { color: #38bdf8; }
         .media-card-dl {
             color: #94a3b8; font-size: 0.9rem; text-decoration: none;
             flex: none; line-height: 1;
@@ -486,6 +488,18 @@
         </div>
     </div>
 
+    <!-- MEDIUM ZU ANDERER ÜBERSCHRIFT VERSCHIEBEN -->
+    <div id="moveMediaModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <span class="modal-title">↪ Bild/Datei zuordnen</span>
+                <button class="modal-close" onclick="closeMoveMedia()">✕</button>
+            </div>
+            <p class="tip" style="margin-top:0;">Zu welcher Überschrift soll es gehören?</p>
+            <div id="moveMediaList" style="display:flex;flex-direction:column;gap:0.35rem;max-height:60vh;overflow-y:auto;"></div>
+        </div>
+    </div>
+
     <!-- 🪄 KI-AUSWAHL (Modell + Stil + nur Markiertes) -->
     <div id="kiOptModal" class="modal">
         <div class="modal-content">
@@ -702,7 +716,7 @@ const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZ
 const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 // GitHub Models API
-const APP_VERSION = 'v23';   // sichtbare Versions-Nummer (zur Kontrolle, ob die neue Fassung geladen ist)
+const APP_VERSION = 'v24';   // sichtbare Versions-Nummer (zur Kontrolle, ob die neue Fassung geladen ist)
 const GH_MODELS_URL = 'https://models.inference.ai.azure.com/chat/completions';
 const GH_MODEL_DEFAULT = 'Llama-3.3-70B-Instruct';
 function getGhModel() { return localStorage.getItem('tagesnotizen-model') || GH_MODEL_DEFAULT; }
@@ -1099,7 +1113,7 @@ async function renderBook(cat) {
                     <button class="btn-icon btn-dark" onclick="printBook()" title="Als Buch drucken">🖨️</button>
                 </div>
             </div>
-            <div class="entry-text">${toc}${rt.html}</div>
+            <div class="entry-text">${toc}${rt.html}<div id="bookOrphan" class="hidden"></div></div>
         </div>`;
     loadBookMedia(cat); // Fotos/Dateien pro Kapitel laden
 }
@@ -3183,15 +3197,16 @@ function renderMediaGrid(items) {
 }
 
 // Baut die HTML-Karte für ein Medium (für Tag UND Buch-Kapitel verwendet)
-function mediaCardHtml(item) {
+function mediaCardHtml(item, isBook) {
         const url = `${SUPABASE_URL}/storage/v1/object/public/${MEDIA_BUCKET}/${item.storage_path}`;
         const dlUrl = `${url}?download=${encodeURIComponent(item.filename)}`;
         const desc = item.description ? escHtml(item.description) : escHtml(item.filename);
         const dlBtn = `<a class="media-card-dl" href="${dlUrl}" title="Herunterladen" download>⬇️</a>`;
+        const mvBtn = isBook ? `<button class="media-card-mv" onclick="openMoveMedia('${item.id}')" title="Zu anderer Überschrift verschieben">↪</button>` : '';
         const delBtn = `<button class="media-card-del" onclick="deleteMedia('${item.id}','${item.storage_path}')" title="Löschen">✕</button>`;
         const footer = `
                 <div class="media-card-footer">
-                    ${dlBtn}
+                    ${dlBtn}${mvBtn}
                     <span class="media-card-desc" title="${desc}">${desc}</span>
                     ${delBtn}
                 </div>`;
@@ -3304,12 +3319,58 @@ async function loadBookMedia(cat) {
     } catch (e) { /* still */ }
     const byAnchor = {};
     items.forEach(it => { (byAnchor[it.anchor || ''] = byAnchor[it.anchor || ''] || []).push(it); });
+    const known = new Set();
     boxes.forEach(box => {
         const anchor = box.dataset.anchor || '';
+        known.add(anchor);
         const grid = box.querySelector('.ch-media-grid');
         const list = byAnchor[anchor] || [];
-        grid.innerHTML = list.map(mediaCardHtml).join('');
+        grid.innerHTML = list.map(it => mediaCardHtml(it, true)).join('');
     });
+    // Medien, deren Überschrift es nicht (mehr) gibt → gesammelt anzeigen
+    const orphan = document.getElementById('bookOrphan');
+    if (orphan) {
+        const lost = items.filter(it => !known.has(it.anchor || ''));
+        if (lost.length) {
+            orphan.innerHTML = '<div class="entry-toc-title" style="margin-top:0.6rem;">📦 Noch nicht zugeordnete Medien (Überschrift umbenannt?) – mit ↪ zuordnen</div>' +
+                '<div class="ch-media-grid">' + lost.map(it => mediaCardHtml(it, true)).join('') + '</div>';
+            orphan.classList.remove('hidden');
+        } else { orphan.innerHTML = ''; orphan.classList.add('hidden'); }
+    }
+}
+
+// Überschriften des aktuellen Buchs ermitteln (für den Zuordnen-Dialog)
+function getBookHeadings() {
+    if (!currentBook || !currentBook.text) return [];
+    return renderRichText(currentBook.text, 'mv').headings; // [{level,title,id}]
+}
+
+let moveMediaId = null;
+function openMoveMedia(id) {
+    moveMediaId = id;
+    const list = document.getElementById('moveMediaList');
+    const heads = getBookHeadings();
+    if (!heads.length) { showToast('Dieses Buch hat noch keine Überschriften.', true); return; }
+    list.innerHTML = heads.map(h => {
+        const indent = h.level === 2 ? 1.3 : h.level === 3 ? 2.6 : 0;
+        const icon = h.level === 1 ? '📖' : h.level === 2 ? '📑' : '📄';
+        return `<button class="btn-dark" style="text-align:left;margin-left:${indent}rem;" onclick="doMoveMedia(${JSON.stringify(h.title)})">${icon} ${escHtml(h.title)}</button>`;
+    }).join('');
+    document.getElementById('moveMediaModal').classList.add('active');
+}
+function closeMoveMedia() {
+    document.getElementById('moveMediaModal').classList.remove('active');
+    moveMediaId = null;
+}
+async function doMoveMedia(anchor) {
+    if (!moveMediaId) { closeMoveMedia(); return; }
+    try {
+        const { error } = await sb.from('tagesnotizen_media').update({ anchor }).eq('id', moveMediaId);
+        if (error) throw error;
+        closeMoveMedia();
+        showToast('✅ Zugeordnet zu „' + anchor + '".');
+        await loadBookMedia(selectedCategory);
+    } catch (e) { showToast('Fehler: ' + e.message, true); }
 }
 
 // Lädt Dateien zu einem Kapitel/Abschnitt hoch (anchor = Überschrift)
