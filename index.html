@@ -320,6 +320,14 @@
         .ki-status.ok  { color: #34d399; }
         .ki-status.err { color: #f87171; }
 
+        /* Anmelden */
+        .auth-overlay { position: fixed; inset: 0; background: #0f172a; z-index: 2000; display: flex; align-items: center; justify-content: center; padding: 1.2rem; }
+        .auth-overlay.hidden { display: none; }
+        .auth-box { background: #1e293b; border: 1px solid #475569; border-radius: 0.6rem; padding: 1.5rem; width: 100%; max-width: 360px; }
+        .auth-box input { width: 100%; padding: 0.7rem; margin-bottom: 0.6rem; background: #0f172a; color: #e2e8f0; border: 1px solid #475569; border-radius: 0.4rem; font-size: 1rem; }
+        .auth-msg { font-size: 0.9rem; color: #fbbf24; min-height: 1.2rem; margin: 0.2rem 0 0.6rem; }
+        .auth-skip { display: block; width: 100%; margin-top: 0.8rem; background: none; border: none; color: #64748b; font-size: 0.85rem; cursor: pointer; text-decoration: underline; }
+
         /* Modal */
         .modal {
             display: none; position: fixed;
@@ -431,6 +439,23 @@
 </head>
 <body>
 <div id="toast"></div>
+
+<!-- ANMELDEN (Sicherheit) -->
+<div id="authOverlay" class="auth-overlay hidden">
+    <div class="auth-box">
+        <h2 style="margin:0 0 0.3rem;">🔒 Anmelden</h2>
+        <p class="tip" style="margin-top:0;">Damit nur <b>Du</b> Deine Texte und Bilder sehen kannst.</p>
+        <input type="email" id="authEmail" placeholder="E-Mail" autocomplete="username">
+        <input type="password" id="authPass" placeholder="Passwort (selbst wählen)" autocomplete="current-password">
+        <p id="authMsg" class="auth-msg"></p>
+        <div class="btn-row">
+            <button class="btn-purple" style="flex:1;" onclick="authLogin()">Anmelden</button>
+            <button class="btn-dark" onclick="authSignup()">Konto anlegen</button>
+        </div>
+        <button class="auth-skip" id="authSkipBtn" onclick="authSkip()">später (zum Testen überspringen)</button>
+    </div>
+</div>
+
 <div class="container">
 
     <!-- NEW CATEGORY MODAL -->
@@ -543,6 +568,7 @@
 
     <div class="header">
         <h1 class="title">📔 Tagesnotizen</h1>
+        <button id="authBtn" onclick="authButtonClick()" title="Anmelden" style="background:none;border:none;font-size:1.2rem;cursor:pointer;margin-left:auto;">🔒</button>
         <span id="connBadge" class="conn-badge">
             <span class="conn-dot"></span>&nbsp;Verbinde…
         </span>
@@ -727,7 +753,7 @@ const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZ
 const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 // GitHub Models API
-const APP_VERSION = 'v27';   // sichtbare Versions-Nummer (zur Kontrolle, ob die neue Fassung geladen ist)
+const APP_VERSION = 'v28';   // sichtbare Versions-Nummer (zur Kontrolle, ob die neue Fassung geladen ist)
 const GH_MODELS_URL = 'https://models.inference.ai.azure.com/chat/completions';
 const GH_MODEL_DEFAULT = 'Llama-3.3-70B-Instruct';
 function getGhModel() { return localStorage.getItem('tagesnotizen-model') || GH_MODEL_DEFAULT; }
@@ -774,6 +800,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     document.getElementById('exportFrom').value = `${y}-${m}-01`;
     document.getElementById('exportTo').value   = `${y}-${m}-${pad(lastDay)}`;
     loadKiPat();
+    await checkAuth();          // Anmeldung prüfen (zeigt ggf. den Anmelde-Bildschirm)
     await loadCategories();
     loadMediaForDate(selectedDate);
     document.addEventListener('click', e => {
@@ -783,6 +810,79 @@ window.addEventListener('DOMContentLoaded', async () => {
             closeExportCatDropdown();
     });
 });
+
+// ── Anmelden (Supabase Auth) ────────────────────────────────────────────────────
+async function checkAuth() {
+    try {
+        const { data } = await sb.auth.getSession();
+        if (data && data.session) { updateAuthBtn(true); return true; }
+    } catch (e) {}
+    // nicht angemeldet → Anmelde-Bildschirm zeigen (E-Mail vorausgefüllt)
+    const em = document.getElementById('authEmail');
+    if (em && !em.value) em.value = 'renapralat@gmail.com';
+    document.getElementById('authOverlay').classList.remove('hidden');
+    updateAuthBtn(false);
+    return false;
+}
+function setAuthMsg(t, err) {
+    const el = document.getElementById('authMsg');
+    if (el) { el.textContent = t || ''; el.style.color = err ? '#f87171' : '#fbbf24'; }
+}
+async function authLogin() {
+    const email = document.getElementById('authEmail').value.trim();
+    const password = document.getElementById('authPass').value;
+    if (!email || !password) { setAuthMsg('Bitte E-Mail und Passwort eingeben.', true); return; }
+    setAuthMsg('Anmelden …');
+    const { error } = await sb.auth.signInWithPassword({ email, password });
+    if (error) { setAuthMsg('Fehler: ' + error.message, true); return; }
+    document.getElementById('authOverlay').classList.add('hidden');
+    setAuthMsg('');
+    updateAuthBtn(true);
+    showToast('✅ Angemeldet.');
+    await reloadAfterAuth();
+}
+async function authSignup() {
+    const email = document.getElementById('authEmail').value.trim();
+    const password = document.getElementById('authPass').value;
+    if (!email || password.length < 6) { setAuthMsg('Bitte E-Mail und ein Passwort (mind. 6 Zeichen).', true); return; }
+    setAuthMsg('Konto wird angelegt …');
+    const { data, error } = await sb.auth.signUp({ email, password });
+    if (error) { setAuthMsg('Fehler: ' + error.message, true); return; }
+    if (data && data.session) {
+        document.getElementById('authOverlay').classList.add('hidden');
+        setAuthMsg(''); updateAuthBtn(true);
+        showToast('✅ Konto angelegt & angemeldet.');
+        await reloadAfterAuth();
+    } else {
+        setAuthMsg('Konto angelegt. Falls eine Bestätigungs-E-Mail kommt: Link anklicken, dann „Anmelden".');
+    }
+}
+function authSkip() { document.getElementById('authOverlay').classList.add('hidden'); }
+async function authLogout() {
+    try { await sb.auth.signOut(); } catch (e) {}
+    updateAuthBtn(false);
+    showToast('Abgemeldet.');
+    location.reload();
+}
+function authButtonClick() {
+    sb.auth.getSession().then(({ data }) => {
+        if (data && data.session) { if (confirm('Abmelden?')) authLogout(); }
+        else { const o = document.getElementById('authOverlay'); o.classList.remove('hidden'); }
+    });
+}
+function updateAuthBtn(loggedIn) {
+    const b = document.getElementById('authBtn');
+    if (!b) return;
+    b.textContent = loggedIn ? '🔓' : '🔒';
+    b.title = loggedIn ? 'Angemeldet – tippen zum Abmelden' : 'Nicht angemeldet – tippen zum Anmelden';
+}
+async function reloadAfterAuth() {
+    try {
+        await loadCategories();
+        if (selectedCategory) await renderEntries();
+        loadMediaForDate(selectedDate);
+    } catch (e) {}
+}
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 function getTodayDate() {
