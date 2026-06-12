@@ -702,6 +702,7 @@
                 <span id="recDot" class="rec-dot" style="align-self:center;"></span>
                 <button class="btn-purple side-btn" id="summarizeBtn" onclick="summarizeText()" title="Zusammenfassen (Rechtschreibung läuft vorher)" style="font-size:1.2rem;">🪄</button>
                 <button class="btn-dark side-btn" id="spellInputBtn" onclick="spellCheckInput()" title="Nur Rechtschreibung prüfen – Inhalt bleibt gleich" style="font-size:1rem;">📝</button>
+                <button class="btn-dark side-btn" onclick="wrapQuotesInput()" title="Wort in Anführungszeichen setzen (erst markieren)" style="font-size:1rem;">„"</button>
                 <button id="headingsToggle" onclick="toggleHeadings()" class="btn-dark side-btn" title="Überschriften / Fließtext" style="font-size:0.8rem;">UE</button>
                 <button class="btn-green side-btn" onclick="addToBuffer()" title="Zwischenspeichern" style="font-size:1.3rem;">+</button>
                 <button class="btn-gray side-btn" onclick="clearInput()" title="Text löschen" style="font-size:1.1rem;">−</button>
@@ -753,7 +754,7 @@ const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZ
 const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 // GitHub Models API
-const APP_VERSION = 'v30';   // sichtbare Versions-Nummer (zur Kontrolle, ob die neue Fassung geladen ist)
+const APP_VERSION = 'v31';   // sichtbare Versions-Nummer (zur Kontrolle, ob die neue Fassung geladen ist)
 const GH_MODELS_URL = 'https://models.inference.ai.azure.com/chat/completions';
 const GH_MODEL_DEFAULT = 'Llama-3.3-70B-Instruct';
 function getGhModel() { return localStorage.getItem('tagesnotizen-model') || GH_MODEL_DEFAULT; }
@@ -2719,6 +2720,20 @@ async function saveDirectly() {
     } catch(e) { showToast('Fehler: ' + e.message, true); }
 }
 
+// Setzt das markierte Wort in deutsche Anführungszeichen „…" (oder fügt leere ein)
+function wrapQuotesInput() {
+    const ta = document.getElementById('inputText');
+    const s = ta.selectionStart, e = ta.selectionEnd, v = ta.value;
+    if (e > s) {
+        ta.value = v.slice(0, s) + '„' + v.slice(s, e) + '"' + v.slice(e);
+        ta.selectionStart = s; ta.selectionEnd = e + 2;
+    } else {
+        ta.value = v.slice(0, s) + '„"' + v.slice(s);
+        ta.selectionStart = ta.selectionEnd = s + 1;
+    }
+    ta.focus();
+}
+
 // 📝 Nur Rechtschreibung des Eingabetextes prüfen (Inhalt bleibt exakt)
 async function spellCheckInput() {
     const ta = document.getElementById('inputText');
@@ -2757,11 +2772,13 @@ async function summarizeText() {
     btn.textContent = '⏳';
 
     try {
-        // Vor der KI zuerst die Rechtschreibung des aktuellen Eingabetextes (wie bei den Büchern)
+        // Vor der KI zuerst die Rechtschreibung – aber nur bei normal langen Texten
+        // (bei sehr langen, z. B. Tagesprotokoll, überspringen, sonst dauert es zu lange)
         const _ta = document.getElementById('inputText');
-        if ((_ta.value || '').trim()) {
+        const _t = (_ta.value || '').trim();
+        if (_t && _t.length <= 1800) {
             btn.textContent = '📝';
-            try { const _c = await spellCheckString(_ta.value.trim()); if (_c) _ta.value = _c; } catch (e) {}
+            try { const _c = await spellCheckString(_t); if (_c) _ta.value = _c; } catch (e) {}
             btn.textContent = '⏳';
         }
         const allText = collectText();
