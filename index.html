@@ -286,6 +286,10 @@
         .entry-toc a { display: block; color: #60a5fa; text-decoration: none; font-size: 0.92rem; padding: 0.12rem 0; cursor: pointer; }
         .entry-toc a.lvl2 { padding-left: 1rem; font-size: 0.85rem; color: #93c5fd; }
         .entry-toc a.lvl3 { padding-left: 2.2rem; font-size: 0.82rem; color: #bfdbfe; }
+        .toc-row { display: flex; align-items: center; gap: 0.3rem; }
+        .toc-row a { flex: 1; min-width: 0; }
+        .toc-cam { flex: none; background: none; border: none; cursor: pointer; font-size: 1rem; padding: 0.15rem 0.35rem; border-radius: 0.3rem; }
+        .toc-cam:hover { background: #334155; }
         .ch-media { margin: 0.3rem 0 0.8rem; }
         /* Medien standardmäßig ausblenden (reines Lesen); im Foto-Modus zeigen */
         #bookText:not(.show-media) .ch-media,
@@ -719,7 +723,7 @@ const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZ
 const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 // GitHub Models API
-const APP_VERSION = 'v25';   // sichtbare Versions-Nummer (zur Kontrolle, ob die neue Fassung geladen ist)
+const APP_VERSION = 'v26';   // sichtbare Versions-Nummer (zur Kontrolle, ob die neue Fassung geladen ist)
 const GH_MODELS_URL = 'https://models.inference.ai.azure.com/chat/completions';
 const GH_MODEL_DEFAULT = 'Llama-3.3-70B-Instruct';
 function getGhModel() { return localStorage.getItem('tagesnotizen-model') || GH_MODEL_DEFAULT; }
@@ -1103,7 +1107,10 @@ async function renderBook(cat) {
     let toc = '';
     if (rt.headings.length >= 1) {
         toc = '<div class="entry-toc"><div class="entry-toc-title">📑 Inhalt</div>' +
-            rt.headings.map(h => `<a class="lvl${h.level}" onclick="scrollToHeading('${h.id}')">${escHtml(h.title)}</a>`).join('') +
+            rt.headings.map(h => `<div class="toc-row">` +
+                `<a class="lvl${h.level}" onclick="scrollToHeading('${h.id}')">${escHtml(h.title)}</a>` +
+                `<button class="toc-cam" onclick="gotoChapterMedia('${h.id}')" title="Fotos/Dateien zu „${escHtml(h.title)}"">📷</button>` +
+                `</div>`).join('') +
             '</div>';
     }
     c.innerHTML = `
@@ -1129,6 +1136,14 @@ function toggleBookMedia() {
     if (!t) return;
     const on = t.classList.toggle('show-media');
     if (btn) { btn.classList.toggle('btn-amber', on); btn.classList.toggle('btn-dark', !on); btn.textContent = on ? '📖' : '📷'; btn.title = on ? 'Zurück zum Lesen' : 'Fotos pro Kapitel verwalten'; }
+}
+
+// Vom Inhaltsverzeichnis: Foto-Modus an und direkt zu diesem Kapitel springen
+function gotoChapterMedia(id) {
+    const t = document.getElementById('bookText');
+    if (t && !t.classList.contains('show-media')) toggleBookMedia();
+    const el = document.getElementById(id);
+    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
 function speakBook() {
