@@ -284,6 +284,12 @@
         .entry-toc a { display: block; color: #60a5fa; text-decoration: none; font-size: 0.92rem; padding: 0.12rem 0; cursor: pointer; }
         .entry-toc a.lvl2 { padding-left: 1rem; font-size: 0.85rem; color: #93c5fd; }
         .entry-toc a.lvl3 { padding-left: 2.2rem; font-size: 0.82rem; color: #bfdbfe; }
+        .ch-media { margin: 0.3rem 0 0.8rem; }
+        .ch-media-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 0.5rem; }
+        .ch-media-grid:empty { display: none; }
+        .ch-media-add { display: inline-flex; align-items: center; gap: 0.4rem; margin-top: 0.4rem; font-size: 0.82rem; color: #cbd5e1; background: #1e293b; border: 1px dashed #475569; border-radius: 0.4rem; padding: 0.35rem 0.7rem; cursor: pointer; }
+        .ch-media-add:hover { background: #334155; }
+        .ch-media-add input[type="file"] { display: none; }
         .entry-toc a:hover { text-decoration: underline; }
 
         /* KI Section */
@@ -696,7 +702,7 @@ const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZ
 const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 // GitHub Models API
-const APP_VERSION = 'v22';   // sichtbare Versions-Nummer (zur Kontrolle, ob die neue Fassung geladen ist)
+const APP_VERSION = 'v23';   // sichtbare Versions-Nummer (zur Kontrolle, ob die neue Fassung geladen ist)
 const GH_MODELS_URL = 'https://models.inference.ai.azure.com/chat/completions';
 const GH_MODEL_DEFAULT = 'Llama-3.3-70B-Instruct';
 function getGhModel() { return localStorage.getItem('tagesnotizen-model') || GH_MODEL_DEFAULT; }
@@ -811,6 +817,12 @@ function renderRichText(text, idPrefix, withControls) {
                 html += `<div class="rt-hrow">${head}` +
                     `<button class="rt-htool" onclick="speakFromHeading(${hi})" title="Ab hier vorlesen">🔊</button>` +
                     `<button class="rt-htool" onclick="editSection(${hi})" title="Diesen Abschnitt bearbeiten">✏️</button>` +
+                    `</div>` +
+                    `<div class="ch-media" data-anchor="${escHtml(title)}">` +
+                        `<div class="ch-media-grid"></div>` +
+                        `<label class="ch-media-add">📷 Foto/Datei zu „${escHtml(title)}"` +
+                            `<input type="file" accept="image/*,audio/*,video/*,application/pdf,.pdf,.doc,.docx,.txt,.rtf,.odt,.xls,.xlsx,.csv,.ppt,.pptx" multiple onchange="uploadChapterMedia(this.files, this.closest('.ch-media-add'))">` +
+                        `</label>` +
                     `</div>`;
             } else {
                 html += head;
@@ -1089,6 +1101,7 @@ async function renderBook(cat) {
             </div>
             <div class="entry-text">${toc}${rt.html}</div>
         </div>`;
+    loadBookMedia(cat); // Fotos/Dateien pro Kapitel laden
 }
 
 function speakBook() {
@@ -3152,7 +3165,7 @@ async function loadMediaForDate(datum) {
     grid.innerHTML = '<p class="media-progress">Lade Medien…</p>';
     try {
         const { data, error } = await sb.from('tagesnotizen_media')
-            .select('*').eq('datum', datum).order('created_at');
+            .select('*').eq('datum', datum).is('category', null).order('created_at');
         if (error) throw error;
         renderMediaGrid(data || []);
     } catch (e) {
@@ -3166,7 +3179,11 @@ function renderMediaGrid(items) {
         grid.innerHTML = '<p class="empty-msg" style="font-size:0.85rem;">Noch keine Medien für diesen Tag.</p>';
         return;
     }
-    grid.innerHTML = items.map(item => {
+    grid.innerHTML = items.map(mediaCardHtml).join('');
+}
+
+// Baut die HTML-Karte für ein Medium (für Tag UND Buch-Kapitel verwendet)
+function mediaCardHtml(item) {
         const url = `${SUPABASE_URL}/storage/v1/object/public/${MEDIA_BUCKET}/${item.storage_path}`;
         const dlUrl = `${url}?download=${encodeURIComponent(item.filename)}`;
         const desc = item.description ? escHtml(item.description) : escHtml(item.filename);
@@ -3195,7 +3212,6 @@ function renderMediaGrid(items) {
                 <audio controls src="${url}"></audio>${footer}
             </div>`;
         } else {
-            // Dokument (PDF, Word, Tabelle, Text …) – als anklickbare Karte zum Öffnen/Herunterladen
             const icon = docIcon(item.filename);
             return `
             <div class="media-card" id="mc-${item.id}">
@@ -3204,7 +3220,6 @@ function renderMediaGrid(items) {
                 </a>${footer}
             </div>`;
         }
-    }).join('');
 }
 
 // Passendes Symbol je nach Dateiendung des Dokuments.
@@ -3270,8 +3285,67 @@ async function deleteMedia(id, storagePath) {
         if (dbErr) throw dbErr;
         document.getElementById('mc-' + id)?.remove();
         showToast('✅ Gelöscht.');
-        await loadMediaForDate(selectedDate);
+        if (categoryKind[selectedCategory] === 'buch') await loadBookMedia(selectedCategory);
+        else await loadMediaForDate(selectedDate);
     } catch (e) { showToast('Fehler: ' + e.message, true); }
+}
+
+// ── Buch-Medien: Fotos/Dateien pro Kapitel/Abschnitt/Unterabschnitt ─────────────
+// Lädt alle Medien eines Buchs und verteilt sie auf die Kapitel-Bereiche (nach Überschrift).
+async function loadBookMedia(cat) {
+    const boxes = [...document.querySelectorAll('#entriesContainer .ch-media')];
+    if (!boxes.length) return;
+    let items = [];
+    try {
+        const { data, error } = await sb.from('tagesnotizen_media')
+            .select('*').eq('category', cat).order('created_at');
+        if (error) throw error;
+        items = data || [];
+    } catch (e) { /* still */ }
+    const byAnchor = {};
+    items.forEach(it => { (byAnchor[it.anchor || ''] = byAnchor[it.anchor || ''] || []).push(it); });
+    boxes.forEach(box => {
+        const anchor = box.dataset.anchor || '';
+        const grid = box.querySelector('.ch-media-grid');
+        const list = byAnchor[anchor] || [];
+        grid.innerHTML = list.map(mediaCardHtml).join('');
+    });
+}
+
+// Lädt Dateien zu einem Kapitel/Abschnitt hoch (anchor = Überschrift)
+async function uploadChapterMedia(files, labelEl) {
+    if (!files || files.length === 0) return;
+    const box = labelEl.closest('.ch-media');
+    const anchor = box ? box.dataset.anchor : '';
+    const cat = selectedCategory;
+    if (!cat) { showToast('Kein Buch gewählt.', true); return; }
+    const progress = document.getElementById('mediaUploadProgress');
+    if (progress) { progress.classList.remove('hidden'); }
+    let ok = 0;
+    for (const file of Array.from(files)) {
+        if (progress) progress.textContent = `Lade hoch: ${file.name}…`;
+        const ext = (file.name.split('.').pop() || 'dat').toLowerCase();
+        const uid = crypto.randomUUID();
+        const path = `buch/${uid}.${ext}`;
+        let type = 'file';
+        if (file.type.startsWith('image/'))      type = 'image';
+        else if (file.type.startsWith('audio/')) type = 'audio';
+        else if (file.type.startsWith('video/')) type = 'video';
+        try {
+            const { error: upErr } = await sb.storage.from(MEDIA_BUCKET).upload(path, file, {
+                cacheControl: '3600', upsert: false, contentType: file.type
+            });
+            if (upErr) throw upErr;
+            const { error: dbErr } = await sb.from('tagesnotizen_media').insert({
+                datum: BOOK_DATUM, category: cat, anchor, type, filename: file.name, storage_path: path
+            });
+            if (dbErr) throw dbErr;
+            ok++;
+        } catch (e) { showToast(`Fehler bei ${file.name}: ${e.message}`, true); }
+    }
+    if (progress) progress.classList.add('hidden');
+    if (ok > 0) showToast(`✅ ${ok} Datei${ok > 1 ? 'en' : ''} hinzugefügt.`);
+    await loadBookMedia(cat);
 }
 
 function openLightbox(url) {
