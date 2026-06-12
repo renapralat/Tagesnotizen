@@ -535,6 +535,24 @@
         </div>
     </div>
 
+    <!-- 🗣️ AUSSPRACHE -->
+    <div id="pronModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <span class="modal-title">🗣️ Aussprache beim Vorlesen</span>
+                <button class="modal-close" onclick="closePron()">✕</button>
+            </div>
+            <p class="tip" style="margin-top:0;">Wie soll ein Name vorgelesen werden? Schreibe die „gesprochene" Form (z. B. <b>Roger → Roschee</b>). Im Text bleibt das Original unverändert.</p>
+            <div id="pronList" style="display:flex;flex-direction:column;gap:0.35rem;margin-bottom:0.6rem;"></div>
+            <div style="display:flex;gap:0.4rem;align-items:center;">
+                <input id="pronWord" placeholder="Wort (z. B. Roger)" style="flex:1;margin-bottom:0;">
+                <span style="color:#94a3b8;">→</span>
+                <input id="pronSay" placeholder="so vorlesen (Roschee)" style="flex:1;margin-bottom:0;">
+                <button class="btn-green" onclick="addPron()" style="flex:none;">＋</button>
+            </div>
+        </div>
+    </div>
+
     <!-- 🪄 KI-AUSWAHL (Modell + Stil + nur Markiertes) -->
     <div id="kiOptModal" class="modal">
         <div class="modal-content">
@@ -600,6 +618,7 @@
                     <option value="">Standard-Stimme des Geräts</option>
                 </select>
                 <button class="btn-amber" style="flex:none;padding:0.45rem 0.7rem;border-radius:6px;" onclick="testVoice()" title="Stimme anhören">▶︎ Probe</button>
+                <button class="btn-dark" style="flex:none;padding:0.45rem 0.7rem;border-radius:6px;" onclick="openPron()" title="Aussprache von Namen festlegen">🗣️</button>
             </div>
         </div>
         <div id="tokenPanel" class="hidden">
@@ -754,7 +773,7 @@ const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZ
 const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 // GitHub Models API
-const APP_VERSION = 'v31';   // sichtbare Versions-Nummer (zur Kontrolle, ob die neue Fassung geladen ist)
+const APP_VERSION = 'v32';   // sichtbare Versions-Nummer (zur Kontrolle, ob die neue Fassung geladen ist)
 const GH_MODELS_URL = 'https://models.inference.ai.azure.com/chat/completions';
 const GH_MODEL_DEFAULT = 'Llama-3.3-70B-Instruct';
 function getGhModel() { return localStorage.getItem('tagesnotizen-model') || GH_MODEL_DEFAULT; }
@@ -2134,7 +2153,7 @@ function speakKapitel(ta) {
         try { ta.setSelectionRange(ch.a, ch.b); } catch (e) {}   // aktuellen Satz markieren
         kapLastChunkText = full.slice(ch.a, ch.b).trim();
         setReadBar(kapLastChunkText);                            // oben deutlich anzeigen
-        const u = new SpeechSynthesisUtterance(full.slice(ch.a, ch.b));
+        const u = new SpeechSynthesisUtterance(applyPronunciation(full.slice(ch.a, ch.b)));
         u.lang = 'de-DE';
         applyVoice(u);
         u.onend = speakNext;
@@ -2943,6 +2962,67 @@ function updateSpeakUI() {
     if (btn) btn.classList.add('speaking');
 }
 
+// ── Aussprache-Liste (Wort → so vorlesen) ───────────────────────────────────────
+function getPronList() {
+    try {
+        const raw = localStorage.getItem('tagesnotizen-aussprache');
+        if (raw) return JSON.parse(raw);
+    } catch (e) {}
+    // Voreinstellung: Roger französisch
+    const def = [{ word: 'Roger', say: 'Roschee' }];
+    localStorage.setItem('tagesnotizen-aussprache', JSON.stringify(def));
+    return def;
+}
+function savePronList(list) { localStorage.setItem('tagesnotizen-aussprache', JSON.stringify(list)); }
+function escapeRegExp(s) { return String(s).replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); }
+// Ersetzt Wörter NUR fürs Vorlesen (nicht im sichtbaren Text)
+function applyPronunciation(text) {
+    let out = String(text || '');
+    for (const e of getPronList()) {
+        if (!e.word || !e.say) continue;
+        try { out = out.replace(new RegExp('\\b' + escapeRegExp(e.word) + '\\b', 'gi'), e.say); } catch (x) {}
+    }
+    return out;
+}
+function openPron() { renderPronList(); document.getElementById('pronModal').classList.add('active'); }
+function closePron() { document.getElementById('pronModal').classList.remove('active'); }
+function renderPronList() {
+    const box = document.getElementById('pronList');
+    const list = getPronList();
+    if (!list.length) { box.innerHTML = '<p class="tip" style="margin:0;">Noch keine Einträge.</p>'; return; }
+    box.innerHTML = list.map((e, i) =>
+        `<div style="display:flex;align-items:center;gap:0.4rem;background:#0f172a;border:1px solid #334155;border-radius:0.4rem;padding:0.35rem 0.5rem;">
+            <span style="flex:1;"><b>${escHtml(e.word)}</b> → ${escHtml(e.say)}</span>
+            <button class="btn-amber" style="padding:0.25rem 0.5rem;" onclick="testPron(${i})" title="anhören">▶︎</button>
+            <button class="media-card-del" onclick="delPron(${i})" title="Löschen" style="font-size:1rem;">✕</button>
+        </div>`).join('');
+}
+function addPron() {
+    const w = document.getElementById('pronWord').value.trim();
+    const s = document.getElementById('pronSay').value.trim();
+    if (!w || !s) { showToast('Bitte Wort und Aussprache eingeben.', true); return; }
+    const list = getPronList();
+    list.push({ word: w, say: s });
+    savePronList(list);
+    document.getElementById('pronWord').value = '';
+    document.getElementById('pronSay').value = '';
+    renderPronList();
+}
+function delPron(i) {
+    const list = getPronList();
+    list.splice(i, 1);
+    savePronList(list);
+    renderPronList();
+}
+function testPron(i) {
+    const e = getPronList()[i];
+    if (!e) return;
+    try { window.speechSynthesis.cancel(); } catch (x) {}
+    const u = new SpeechSynthesisUtterance(e.say);
+    u.lang = 'de-DE'; applyVoice(u);
+    window.speechSynthesis.speak(u);
+}
+
 function stripMarkdown(text) {
     return text
         .replace(/\*\*(.*?)\*\*/g, '$1')
@@ -3031,7 +3111,7 @@ function startSpeaking(text, id, startHeading, startCharOffset) {
         const ch = chunks[i++];
         if (ch.h >= 0) lastSpokenHeading = ch.h;  // Position merken
         lastSpokenText = ch.text;                 // Satz merken (zum Wiederfinden im Editor)
-        const utt = new SpeechSynthesisUtterance(ch.text);
+        const utt = new SpeechSynthesisUtterance(applyPronunciation(ch.text));
         utt.lang = 'de-DE';
         applyVoice(utt);
         utt.onend = speakNext;
