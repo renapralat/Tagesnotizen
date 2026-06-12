@@ -773,7 +773,7 @@ const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZ
 const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 // GitHub Models API
-const APP_VERSION = 'v32';   // sichtbare Versions-Nummer (zur Kontrolle, ob die neue Fassung geladen ist)
+const APP_VERSION = 'v33';   // sichtbare Versions-Nummer (zur Kontrolle, ob die neue Fassung geladen ist)
 const GH_MODELS_URL = 'https://models.inference.ai.azure.com/chat/completions';
 const GH_MODEL_DEFAULT = 'Llama-3.3-70B-Instruct';
 function getGhModel() { return localStorage.getItem('tagesnotizen-model') || GH_MODEL_DEFAULT; }
@@ -2992,10 +2992,17 @@ function renderPronList() {
     if (!list.length) { box.innerHTML = '<p class="tip" style="margin:0;">Noch keine Einträge.</p>'; return; }
     box.innerHTML = list.map((e, i) =>
         `<div style="display:flex;align-items:center;gap:0.4rem;background:#0f172a;border:1px solid #334155;border-radius:0.4rem;padding:0.35rem 0.5rem;">
-            <span style="flex:1;"><b>${escHtml(e.word)}</b> → ${escHtml(e.say)}</span>
-            <button class="btn-amber" style="padding:0.25rem 0.5rem;" onclick="testPron(${i})" title="anhören">▶︎</button>
+            <b style="flex:none;">${escHtml(e.word)}</b><span style="color:#94a3b8;">→</span>
+            <input id="pronsay-${i}" value="${escHtml(e.say)}" onchange="updatePron(${i}, this.value)" style="flex:1;min-width:0;margin-bottom:0;">
+            <button class="btn-amber" style="flex:none;padding:0.25rem 0.5rem;" onclick="testPron(${i})" title="anhören">▶︎</button>
             <button class="media-card-del" onclick="delPron(${i})" title="Löschen" style="font-size:1rem;">✕</button>
         </div>`).join('');
+}
+function updatePron(i, val) {
+    const list = getPronList();
+    if (!list[i]) return;
+    list[i].say = String(val).trim();
+    savePronList(list);
 }
 function addPron() {
     const w = document.getElementById('pronWord').value.trim();
@@ -3015,10 +3022,12 @@ function delPron(i) {
     renderPronList();
 }
 function testPron(i) {
-    const e = getPronList()[i];
-    if (!e) return;
+    const fld = document.getElementById('pronsay-' + i);
+    const say = fld ? fld.value.trim() : (getPronList()[i] || {}).say;
+    if (fld) updatePron(i, fld.value);   // gleich speichern, was im Feld steht
+    if (!say) return;
     try { window.speechSynthesis.cancel(); } catch (x) {}
-    const u = new SpeechSynthesisUtterance(e.say);
+    const u = new SpeechSynthesisUtterance(say);
     u.lang = 'de-DE'; applyVoice(u);
     window.speechSynthesis.speak(u);
 }
