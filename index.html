@@ -773,7 +773,7 @@ const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZ
 const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 // GitHub Models API
-const APP_VERSION = 'v35';   // sichtbare Versions-Nummer (zur Kontrolle, ob die neue Fassung geladen ist)
+const APP_VERSION = 'v36';   // sichtbare Versions-Nummer (zur Kontrolle, ob die neue Fassung geladen ist)
 const GH_MODELS_URL = 'https://models.inference.ai.azure.com/chat/completions';
 const GH_MODEL_DEFAULT = 'Llama-3.3-70B-Instruct';
 function getGhModel() { return localStorage.getItem('tagesnotizen-model') || GH_MODEL_DEFAULT; }
@@ -2763,11 +2763,14 @@ async function spellCheckInput() {
     const old = btn ? btn.textContent : '';
     if (btn) { btn.disabled = true; btn.textContent = '⏳'; }
     try {
-        const res = await spellCheckString(text);
+        const res = await Promise.race([
+            spellCheckString(text),
+            new Promise((_, rej) => setTimeout(() => rej(new Error('Zeitüberschreitung – das Modell hat nicht geantwortet. Bitte oben ein anderes Modell wählen (z. B. gpt-4o-mini) und nochmal.')), 30000))
+        ]);
         if (res) { ta.value = res; showToast('✓ Rechtschreibung geprüft.'); }
         else showToast('Die KI hat keinen Text geliefert.', true);
     } catch (e) {
-        showToast('Fehler: ' + e.message, true);
+        showToast('Rechtschreibung: ' + e.message, true);
     } finally {
         if (btn) { btn.disabled = false; btn.textContent = old || '📝'; }
     }
@@ -2791,15 +2794,6 @@ async function summarizeText() {
     btn.textContent = '⏳';
 
     try {
-        // Vor der KI zuerst die Rechtschreibung – aber nur bei normal langen Texten
-        // (bei sehr langen, z. B. Tagesprotokoll, überspringen, sonst dauert es zu lange)
-        const _ta = document.getElementById('inputText');
-        const _t = (_ta.value || '').trim();
-        if (_t && _t.length <= 1800) {
-            btn.textContent = '📝';
-            try { const _c = await spellCheckString(_t); if (_c) _ta.value = _c; } catch (e) {}
-            btn.textContent = '⏳';
-        }
         const allText = collectText();
 
         const { data: existing } = await sb.from('tagesnotizen_entries')
