@@ -542,12 +542,22 @@
                 <span class="modal-title">🗣️ Aussprache beim Vorlesen</span>
                 <button class="modal-close" onclick="closePron()">✕</button>
             </div>
-            <p class="tip" style="margin-top:0;">Wie soll ein Name vorgelesen werden? Schreibe die „gesprochene" Form (z. B. <b>Roger → Roschee</b>). Im Text bleibt das Original unverändert.</p>
+            <p class="tip" style="margin-top:0;">Pro Wort eine <b>Sprache</b> wählen (z. B. Französisch für „Roger") – wird in dieser Sprache vorgelesen, <i>falls die Stimme auf dem Gerät vorhanden ist</i>. Sonst greift die <b>lautmalerische</b> Ersatz-Schreibweise (z. B. „Ro scheee"). Im Text bleibt das Original.</p>
             <div id="pronList" style="display:flex;flex-direction:column;gap:0.35rem;margin-bottom:0.6rem;"></div>
-            <div style="display:flex;gap:0.4rem;align-items:center;">
-                <input id="pronWord" placeholder="Wort (z. B. Roger)" style="flex:1;margin-bottom:0;">
-                <span style="color:#94a3b8;">→</span>
-                <input id="pronSay" placeholder="so vorlesen (Roschee)" style="flex:1;margin-bottom:0;">
+            <div style="display:flex;gap:0.4rem;align-items:center;flex-wrap:wrap;">
+                <input id="pronWord" placeholder="Wort (z. B. Roger)" style="flex:1;min-width:6rem;margin-bottom:0;">
+                <select id="pronLang" style="flex:none;background:#1e293b;color:#e2e8f0;border:1px solid #475569;border-radius:0.3rem;padding:0.4rem;">
+                    <option value="">lautmalerisch</option>
+                    <option value="en">Englisch</option>
+                    <option value="fr">Französisch</option>
+                    <option value="es">Spanisch</option>
+                    <option value="it">Italienisch</option>
+                    <option value="nl">Niederländisch</option>
+                    <option value="da">Dänisch</option>
+                    <option value="pt">Portugiesisch</option>
+                    <option value="tr">Türkisch</option>
+                </select>
+                <input id="pronSay" placeholder="Ersatz (Ro scheee)" style="flex:1;min-width:6rem;margin-bottom:0;">
                 <button class="btn-green" onclick="addPron()" style="flex:none;">＋</button>
             </div>
         </div>
@@ -773,7 +783,7 @@ const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZ
 const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 // GitHub Models API
-const APP_VERSION = 'v37';   // sichtbare Versions-Nummer (zur Kontrolle, ob die neue Fassung geladen ist)
+const APP_VERSION = 'v38';   // sichtbare Versions-Nummer (zur Kontrolle, ob die neue Fassung geladen ist)
 const GH_MODELS_URL = 'https://models.inference.ai.azure.com/chat/completions';
 const GH_MODEL_DEFAULT = 'Llama-3.3-70B-Instruct';
 function getGhModel() { return localStorage.getItem('tagesnotizen-model') || GH_MODEL_DEFAULT; }
@@ -2153,12 +2163,7 @@ function speakKapitel(ta) {
         try { ta.setSelectionRange(ch.a, ch.b); } catch (e) {}   // aktuellen Satz markieren
         kapLastChunkText = full.slice(ch.a, ch.b).trim();
         setReadBar(kapLastChunkText);                            // oben deutlich anzeigen
-        const u = new SpeechSynthesisUtterance(applyPronunciation(full.slice(ch.a, ch.b)));
-        u.lang = 'de-DE';
-        applyVoice(u);
-        u.onend = speakNext;
-        u.onerror = speakNext;
-        synth.speak(u);
+        speakChunkSegments(full.slice(ch.a, ch.b), speakNext, 'kapitel'); // ggf. mehrsprachig
     };
     speakNext();
     if (speakResumeTimer) clearInterval(speakResumeTimer);
@@ -2956,73 +2961,144 @@ function updateSpeakUI() {
     if (btn) btn.classList.add('speaking');
 }
 
-// ── Aussprache-Liste (Wort → so vorlesen) ───────────────────────────────────────
+// ── Aussprache-Liste (Wort → Sprache und/oder lautmalerisch) ─────────────────────
+// Eintrag: { word, lang: ''|'en'|'fr'|... , say: "lautmalerischer Ersatz" }
 function getPronList() {
     try {
         const raw = localStorage.getItem('tagesnotizen-aussprache');
         if (raw) return JSON.parse(raw);
     } catch (e) {}
-    // Voreinstellung: Roger französisch
-    const def = [{ word: 'Roger', say: 'Ro scheee' }];
+    // Voreinstellung: Roger französisch, mit lautmalerischem Notnagel
+    const def = [{ word: 'Roger', lang: 'fr', say: 'Ro scheee' }];
     localStorage.setItem('tagesnotizen-aussprache', JSON.stringify(def));
     return def;
 }
 function savePronList(list) { localStorage.setItem('tagesnotizen-aussprache', JSON.stringify(list)); }
 function escapeRegExp(s) { return String(s).replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); }
-// Ersetzt Wörter NUR fürs Vorlesen (nicht im sichtbaren Text)
+
+const PRON_LANGS = { '': 'lautmalerisch', en: 'Englisch', fr: 'Französisch', es: 'Spanisch', it: 'Italienisch', nl: 'Niederländisch', da: 'Dänisch', pt: 'Portugiesisch', tr: 'Türkisch' };
+function langCode(l) {
+    const m = { en: 'en-US', fr: 'fr-FR', es: 'es-ES', it: 'it-IT', nl: 'nl-NL', da: 'da-DK', pt: 'pt-PT', tr: 'tr-TR', de: 'de-DE' };
+    return m[l] || '';
+}
+// Gibt eine installierte Stimme für die Sprache zurück (oder null)
+function voiceForLang(code) {
+    if (!code) return null;
+    const pre = code.slice(0, 2).toLowerCase();
+    const voices = window.speechSynthesis ? window.speechSynthesis.getVoices() : [];
+    return voices.find(v => (v.lang || '').toLowerCase().startsWith(pre)) || null;
+}
+
+// Zerlegt einen Text in Sprach-Segmente: Wörter mit eigener Sprache (und vorhandener Stimme)
+// bekommen ihre Sprache; lautmalerische Wörter werden ersetzt; Rest ist Deutsch.
+function buildLangSegments(text) {
+    let t = String(text || '');
+    const langEntries = [];
+    for (const e of getPronList()) {
+        if (!e.word) continue;
+        const code = e.lang ? langCode(e.lang) : '';
+        if (code && voiceForLang(code)) {
+            langEntries.push({ word: e.word, code });
+        } else if (e.say) {
+            try { t = t.replace(new RegExp('\\b' + escapeRegExp(e.word) + '\\b', 'gi'), e.say); } catch (x) {}
+        }
+    }
+    if (!langEntries.length) return [{ text: t, lang: 'de-DE' }];
+    const map = {}; langEntries.forEach(e => { map[e.word.toLowerCase()] = e.code; });
+    const pattern = langEntries.map(e => escapeRegExp(e.word)).sort((a, b) => b.length - a.length).join('|');
+    let re; try { re = new RegExp('\\b(' + pattern + ')\\b', 'gi'); } catch (x) { return [{ text: t, lang: 'de-DE' }]; }
+    const segs = []; let last = 0, m;
+    while ((m = re.exec(t)) !== null) {
+        if (m.index > last) segs.push({ text: t.slice(last, m.index), lang: 'de-DE' });
+        segs.push({ text: m[0], lang: map[m[0].toLowerCase()] || 'de-DE' });
+        last = m.index + m[0].length;
+    }
+    if (last < t.length) segs.push({ text: t.slice(last), lang: 'de-DE' });
+    return segs.filter(s => s.text.trim());
+}
+
+// Spricht den Text eines Häppchens – ggf. in mehreren Sprachen nacheinander.
+// Ruft done() auf, wenn alle Segmente gelesen sind. id = aktuelle speakingId.
+function speakChunkSegments(chunkText, done, id) {
+    const segs = buildLangSegments(chunkText);
+    if (!segs.length) { done(); return; }
+    let j = 0;
+    const nextSeg = () => {
+        if (speakingId !== id) return;     // gestoppt/gewechselt
+        if (j >= segs.length) { done(); return; }
+        const s = segs[j++];
+        const u = new SpeechSynthesisUtterance(s.text);
+        u.lang = s.lang || 'de-DE';
+        if (u.lang === 'de-DE') applyVoice(u);
+        else { const v = voiceForLang(u.lang); if (v) u.voice = v; }
+        u.onend = nextSeg; u.onerror = nextSeg;
+        window.speechSynthesis.speak(u);
+    };
+    nextSeg();
+}
+
+// (Behalten für evtl. andere Aufrufer – reine lautmalerische Ersetzung)
 function applyPronunciation(text) {
     let out = String(text || '');
     for (const e of getPronList()) {
-        if (!e.word || !e.say) continue;
+        if (!e.word || !e.say || (e.lang && voiceForLang(langCode(e.lang)))) continue;
         try { out = out.replace(new RegExp('\\b' + escapeRegExp(e.word) + '\\b', 'gi'), e.say); } catch (x) {}
     }
     return out;
 }
+
 function openPron() { renderPronList(); document.getElementById('pronModal').classList.add('active'); }
 function closePron() { document.getElementById('pronModal').classList.remove('active'); }
+function langOptions(sel) {
+    return Object.keys(PRON_LANGS).map(k =>
+        `<option value="${k}"${k === (sel || '') ? ' selected' : ''}>${PRON_LANGS[k]}</option>`).join('');
+}
 function renderPronList() {
     const box = document.getElementById('pronList');
     const list = getPronList();
     if (!list.length) { box.innerHTML = '<p class="tip" style="margin:0;">Noch keine Einträge.</p>'; return; }
     box.innerHTML = list.map((e, i) =>
-        `<div style="display:flex;align-items:center;gap:0.4rem;background:#0f172a;border:1px solid #334155;border-radius:0.4rem;padding:0.35rem 0.5rem;">
-            <b style="flex:none;">${escHtml(e.word)}</b><span style="color:#94a3b8;">→</span>
-            <input id="pronsay-${i}" value="${escHtml(e.say)}" onchange="updatePron(${i}, this.value)" style="flex:1;min-width:0;margin-bottom:0;">
+        `<div style="display:flex;align-items:center;gap:0.4rem;flex-wrap:wrap;background:#0f172a;border:1px solid #334155;border-radius:0.4rem;padding:0.4rem 0.5rem;">
+            <b style="flex:none;">${escHtml(e.word)}</b>
+            <select onchange="updatePronLang(${i}, this.value)" style="flex:none;background:#1e293b;color:#e2e8f0;border:1px solid #475569;border-radius:0.3rem;padding:0.25rem;">${langOptions(e.lang)}</select>
+            <input id="pronsay-${i}" value="${escHtml(e.say || '')}" onchange="updatePron(${i}, this.value)" placeholder="lautmalerisch (Ersatz)" style="flex:1;min-width:6rem;margin-bottom:0;">
             <button class="btn-amber" style="flex:none;padding:0.25rem 0.5rem;" onclick="testPron(${i})" title="anhören">▶︎</button>
             <button class="media-card-del" onclick="delPron(${i})" title="Löschen" style="font-size:1rem;">✕</button>
         </div>`).join('');
 }
 function updatePron(i, val) {
-    const list = getPronList();
-    if (!list[i]) return;
-    list[i].say = String(val).trim();
-    savePronList(list);
+    const list = getPronList(); if (!list[i]) return;
+    list[i].say = String(val).trim(); savePronList(list);
+}
+function updatePronLang(i, val) {
+    const list = getPronList(); if (!list[i]) return;
+    list[i].lang = val; savePronList(list);
 }
 function addPron() {
     const w = document.getElementById('pronWord').value.trim();
+    const lang = document.getElementById('pronLang').value;
     const s = document.getElementById('pronSay').value.trim();
-    if (!w || !s) { showToast('Bitte Wort und Aussprache eingeben.', true); return; }
+    if (!w) { showToast('Bitte ein Wort eingeben.', true); return; }
+    if (!lang && !s) { showToast('Bitte eine Sprache wählen oder eine lautmalerische Form eingeben.', true); return; }
     const list = getPronList();
-    list.push({ word: w, say: s });
+    list.push({ word: w, lang: lang, say: s });
     savePronList(list);
     document.getElementById('pronWord').value = '';
     document.getElementById('pronSay').value = '';
     renderPronList();
 }
 function delPron(i) {
-    const list = getPronList();
-    list.splice(i, 1);
-    savePronList(list);
-    renderPronList();
+    const list = getPronList(); list.splice(i, 1); savePronList(list); renderPronList();
 }
 function testPron(i) {
+    const list = getPronList(); const e = list[i]; if (!e) return;
     const fld = document.getElementById('pronsay-' + i);
-    const say = fld ? fld.value.trim() : (getPronList()[i] || {}).say;
-    if (fld) updatePron(i, fld.value);   // gleich speichern, was im Feld steht
-    if (!say) return;
+    if (fld) { e.say = fld.value.trim(); list[i].say = e.say; savePronList(list); }
     try { window.speechSynthesis.cancel(); } catch (x) {}
-    const u = new SpeechSynthesisUtterance(say);
-    u.lang = 'de-DE'; applyVoice(u);
+    const code = e.lang ? langCode(e.lang) : '';
+    const v = code ? voiceForLang(code) : null;
+    const u = new SpeechSynthesisUtterance(v ? e.word : (e.say || e.word));
+    if (v) { u.lang = code; u.voice = v; } else { u.lang = 'de-DE'; applyVoice(u); }
     window.speechSynthesis.speak(u);
 }
 
@@ -3114,12 +3190,7 @@ function startSpeaking(text, id, startHeading, startCharOffset) {
         const ch = chunks[i++];
         if (ch.h >= 0) lastSpokenHeading = ch.h;  // Position merken
         lastSpokenText = ch.text;                 // Satz merken (zum Wiederfinden im Editor)
-        const utt = new SpeechSynthesisUtterance(applyPronunciation(ch.text));
-        utt.lang = 'de-DE';
-        applyVoice(utt);
-        utt.onend = speakNext;
-        utt.onerror = speakNext;
-        synth.speak(utt);
+        speakChunkSegments(ch.text, speakNext, id); // ggf. mehrsprachig vorlesen
     };
     speakNext();
     // Workaround: Android/Chrome pausiert TTS automatisch – regelmäßig fortsetzen
