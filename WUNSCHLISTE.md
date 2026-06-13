@@ -3,13 +3,14 @@
 Hier sammle ich **konkrete Anforderungen und Ideen**, die im Chat aufkamen, damit nichts verloren geht.
 Ein neuer Chat kann sagen: „Lies WUNSCHLISTE.md und PROJEKT-STAND.md".
 
-## 🔊 Sprachausgabe (Vorlesen) – größtes offenes Thema
-- **Per-Wort-Spracherkennung beim Vorlesen:** Englische/französische Wörter (z. B. „Sale", „Move", „Update", „Roger") sollen **automatisch in der richtigen Sprache** ausgesprochen werden. In Deutschland ist sehr viel Englisches im Alltag.
-  - Die kostenlose Browser-Stimme kann das **nicht** – sie spricht alles „deutsch" und kann die Sprache pro Wort nicht erkennen.
-  - **Lösung nur mit kostenpflichtigem Cloud-Sprachdienst** (Google Cloud TTS / Amazon Polly / ElevenLabs): kann **echte Lautschrift (IPA)**, **mehrsprachig**, klingt **natürlicher** und **gleich auf allen Geräten**.
-- **Echte Lautschrift hinterlegen** (statt Umschreibung) – ebenfalls nur mit Cloud-Dienst.
-- **Aktueller Behelf (eingebaut):** 🗣️-Liste mit lautmalerischer Umschreibung, pro Gerät. Beispiele: `Roger → Ro scheee`, `Move → Muuv`, `Update → Apdejt`, `Sale → Seil`.
-- Beobachtung: Die **Spracherkennung (Sprechen → Text)** erkennt englische Wörter oft **richtig**; die **Sprachausgabe (Text → Sprechen)** nicht. → eigentlich ein Manko der einfachen TTS.
+## 🔊 Sprachausgabe (Vorlesen)
+- **ERLEDIGT (v38/v39): Mehrsprachiges Vorlesen pro Wort.** In der 🗣️-Liste pro Wort eine Sprache wählbar (z. B. Französisch für „Roger") → wird in echter Sprachstimme gelesen, *wenn die Stimme am Gerät installiert ist*; sonst lautmalerischer Ersatz. Funktioniert kostenlos mit den Geräte-Stimmen.
+- **Noch offen / nur mit kostenpflichtigem Cloud-TTS (Google/Amazon/ElevenLabs):**
+  - **Garantiert auf jedem Gerät** dieselbe, **natürliche** Stimme (unabhängig von installierten Stimmen).
+  - **Nahtlos ohne Pause** beim Sprachwechsel (aktuell kleiner Übergang, weil die Geräte-Stimme umschalten muss).
+  - **Echte Lautschrift (IPA)** statt lautmalerischer Umschreibung.
+- **Idee (klein, kostenlos):** pro Sprache **auswählen, welche** der installierten Stimmen genommen wird (z. B. französisch *männlich* statt weiblich, passend zur deutschen Männerstimme). Aktuell nimmt die App automatisch die erste gefundene Stimme der Sprache.
+- Beobachtung: Die **Spracherkennung (Sprechen → Text)** erkennt Fremdwörter oft **richtig**; die einfache **Sprachausgabe** kann die Sprache pro Wort nicht selbst erkennen – darum die 🗣️-Liste.
 
 ## 🖨️ Druck & Nachlass
 - **Druck mit Bild-Hinweisen:** Text drucken (spart Tinte), pro Kapitel kleiner Vermerk „📷 dazu gibt es Bilder: …". Bilder selbst nicht drucken.

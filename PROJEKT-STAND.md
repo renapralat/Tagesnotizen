@@ -2,7 +2,7 @@
 
 **Kurz:** Meine eigene Tagebuch- & Buch-App. Ziel: **alles an einem Ort** – Notizen, Bücher (Lebenslauf/Erinnerungen), Bilder, Dokumente. Für den **Nachlass**: später alles aufs Papier + Bilder auf ein separates Medium.
 
-**Aktuelle Version:** v29 (oben im Buch/Editor sichtbar als „· vNN" – zum Prüfen, ob die neueste Fassung geladen ist).
+**Aktuelle Version:** v39 (oben im Buch/Editor sichtbar als „· vNN" – zum Prüfen, ob die neueste Fassung geladen ist).
 
 ---
 
@@ -34,6 +34,9 @@ Eine Buch-Kategorie = ein Buch mit **drei Ebenen**: 📖 Kapitel → 📑 Abschn
 - GitHub Models (Token im Bereich „🤖 KI-Analyse"). Modelle: gpt-4o-mini, gpt-4o, Phi-4, Llama-3.3-70B, **Ministral-3B**.
 - gpt-4o-mini & Ministral-3B bleiben am ehesten beim Inhalt. KI erfindet **keine** Politiker/Ereignisse (so eingestellt).
 - Vorlese-Stimme **pro Gerät** auswählbar (Stimmen sind geräteabhängig).
+- **Rechtschreibung** auch bei Tagesnotizen: 📝-Knopf (Inhalt bleibt exakt). „"-Knopf zum Setzen von Anführungszeichen. (Der 🪄-Zauberstab macht KEINE Auto-Rechtschreibung mehr – das hatte ihn blockiert.)
+- **🗣️ Aussprache-Liste (schwarzer Knopf):** pro Wort eine **Sprache** wählbar (Englisch/Französisch/…) → wird **in echter Sprachstimme** vorgelesen, *falls die Stimme auf dem Gerät installiert ist*. Sonst greift die **lautmalerische Ersatz-Schreibweise** (z. B. Roger → „Ro scheee"). Vorlesen erfolgt **segmentweise mehrsprachig** (Deutsch drumherum + Fremdwort in seiner Sprache). Voreingestellt: **Roger → Französisch** (Ersatz „Ro scheee"). Im Text bleibt immer das Original.
+  - Hinweis: kleiner Übergang/Pause beim Stimmwechsel ist technisch bedingt; nahtlos nur mit kostenpflichtigem Cloud-TTS. Sprachstimmen müssen am Gerät installiert sein (Einstellungen → Sprachausgabe).
 
 ## 4) Sicherheit – ERLEDIGT (Schritt 1) ✅
 - **Login** (Supabase Auth, E-Mail + Passwort). Konto: renapralat@gmail.com. Anmeldung pro Gerät **einmal**, bleibt gespeichert (immer dasselbe github.io-Lesezeichen nutzen!).
