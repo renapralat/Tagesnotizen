@@ -783,7 +783,7 @@ const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZ
 const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 // GitHub Models API
-const APP_VERSION = 'v38';   // sichtbare Versions-Nummer (zur Kontrolle, ob die neue Fassung geladen ist)
+const APP_VERSION = 'v39';   // sichtbare Versions-Nummer (zur Kontrolle, ob die neue Fassung geladen ist)
 const GH_MODELS_URL = 'https://models.inference.ai.azure.com/chat/completions';
 const GH_MODEL_DEFAULT = 'Llama-3.3-70B-Instruct';
 function getGhModel() { return localStorage.getItem('tagesnotizen-model') || GH_MODEL_DEFAULT; }
@@ -3022,19 +3022,15 @@ function buildLangSegments(text) {
 function speakChunkSegments(chunkText, done, id) {
     const segs = buildLangSegments(chunkText);
     if (!segs.length) { done(); return; }
-    let j = 0;
-    const nextSeg = () => {
-        if (speakingId !== id) return;     // gestoppt/gewechselt
-        if (j >= segs.length) { done(); return; }
-        const s = segs[j++];
+    // Alle Segmente sofort in die Warteschlange legen → kleinere Pause beim Sprachwechsel
+    segs.forEach((s, k) => {
         const u = new SpeechSynthesisUtterance(s.text);
         u.lang = s.lang || 'de-DE';
         if (u.lang === 'de-DE') applyVoice(u);
         else { const v = voiceForLang(u.lang); if (v) u.voice = v; }
-        u.onend = nextSeg; u.onerror = nextSeg;
+        if (k === segs.length - 1) { u.onend = done; u.onerror = done; } // weiter zum nächsten Häppchen
         window.speechSynthesis.speak(u);
-    };
-    nextSeg();
+    });
 }
 
 // (Behalten für evtl. andere Aufrufer – reine lautmalerische Ersetzung)
