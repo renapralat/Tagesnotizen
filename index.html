@@ -618,7 +618,7 @@
                     <option value="">Standard-Stimme des Geräts</option>
                 </select>
                 <button class="btn-amber" style="flex:none;padding:0.45rem 0.7rem;border-radius:6px;" onclick="testVoice()" title="Stimme anhören">▶︎ Probe</button>
-                <button class="btn-dark" style="flex:none;padding:0.45rem 0.7rem;border-radius:6px;" onclick="openPron()" title="Aussprache von Namen festlegen">🗣️</button>
+                <button class="btn-dark" style="flex:none;padding:0.45rem 0.7rem;border-radius:6px;background:#000;color:#fff;border:1px solid #333;" onclick="openPron()" title="Aussprache von Namen festlegen">🗣️</button>
             </div>
         </div>
         <div id="tokenPanel" class="hidden">
@@ -773,7 +773,7 @@ const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZ
 const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 // GitHub Models API
-const APP_VERSION = 'v36';   // sichtbare Versions-Nummer (zur Kontrolle, ob die neue Fassung geladen ist)
+const APP_VERSION = 'v37';   // sichtbare Versions-Nummer (zur Kontrolle, ob die neue Fassung geladen ist)
 const GH_MODELS_URL = 'https://models.inference.ai.azure.com/chat/completions';
 const GH_MODEL_DEFAULT = 'Llama-3.3-70B-Instruct';
 function getGhModel() { return localStorage.getItem('tagesnotizen-model') || GH_MODEL_DEFAULT; }
