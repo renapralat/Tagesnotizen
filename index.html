@@ -724,6 +724,10 @@
 
     <!-- INPUT -->
     <div id="inputSection" class="section hidden">
+        <div id="editBanner" class="hidden" style="display:flex;align-items:center;gap:0.5rem;background:#78350f;color:#fde68a;border:1px solid #b45309;border-radius:0.4rem;padding:0.5rem 0.7rem;margin-bottom:0.6rem;font-size:0.9rem;">
+            <span style="flex:1;">✏️ Du bearbeitest einen gespeicherten Eintrag – <b>Speichern/KI ersetzt ihn</b> (nichts wird angehängt).</span>
+            <button class="btn-gray" style="flex:none;padding:0.3rem 0.6rem;" onclick="cancelEdit()">Abbrechen</button>
+        </div>
         <div class="input-area">
             <textarea id="inputText" placeholder="Sprechen oder schreiben…"></textarea>
             <div class="input-side">
@@ -783,7 +787,7 @@ const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZ
 const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 // GitHub Models API
-const APP_VERSION = 'v39';   // sichtbare Versions-Nummer (zur Kontrolle, ob die neue Fassung geladen ist)
+const APP_VERSION = 'v40';   // sichtbare Versions-Nummer (zur Kontrolle, ob die neue Fassung geladen ist)
 const GH_MODELS_URL = 'https://models.inference.ai.azure.com/chat/completions';
 const GH_MODEL_DEFAULT = 'Llama-3.3-70B-Instruct';
 function getGhModel() { return localStorage.getItem('tagesnotizen-model') || GH_MODEL_DEFAULT; }
@@ -806,6 +810,7 @@ let bufferByCategory = {};
 let currentSummary   = '';
 let currentSummaryDate = '';
 let savedInputText   = '';
+let editingEntryId   = null;   // wenn gesetzt: gespeicherten Eintrag BEARBEITEN (ersetzen, nicht anhängen)
 let isRecording      = false;
 let recognition      = null;
 let micBefore = '';  // text before cursor position when mic started
@@ -1068,6 +1073,7 @@ function setConnBadge(ok, msg) {
 // ── Date ──────────────────────────────────────────────────────────────────────
 function onDateChange() {
     selectedDate = document.getElementById('entryDate').value;
+    if (typeof exitEditMode === 'function') exitEditMode(); // Datum gewechselt → kein Bearbeiten-Modus mehr
     if (selectedCategory) renderEntries();
     loadMediaForDate(selectedDate);
 }
@@ -1116,6 +1122,7 @@ function selectCategory(cat) {
         bufferByCategory[selectedCategory] = [...buffer];
     }
     selectedCategory = cat;
+    if (typeof exitEditMode === 'function') exitEditMode(); // Kategorie gewechselt → kein Bearbeiten-Modus mehr
     const isBook = categoryKind[cat] === 'buch';
     renderCategories();
     document.getElementById('currentTagDisplay').textContent = (isBook ? '📖 ' : '#') + cat;
@@ -1417,7 +1424,23 @@ function editEntry(id) {
     document.getElementById('inputText').value = e.text;
     document.getElementById('summarySection').classList.add('hidden');
     currentSummary = '';
+    editingEntryId = id;          // Bearbeiten-Modus: Speichern/KI ERSETZT diesen Eintrag
+    updateEditBanner();
     window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+// Zeigt/versteckt den Bearbeiten-Hinweis
+function updateEditBanner() {
+    const b = document.getElementById('editBanner');
+    if (b) b.classList.toggle('hidden', !editingEntryId);
+}
+// Bearbeiten-Modus verlassen (ohne zu speichern)
+function exitEditMode() { editingEntryId = null; updateEditBanner(); }
+function cancelEdit() {
+    editingEntryId = null;
+    document.getElementById('inputText').value = '';
+    updateEditBanner();
+    showToast('Bearbeiten abgebrochen.');
 }
 
 // ── Block-Editor: Buch aus verschiebbaren Blöcken (Kapitel & Abschnitte) ────────
@@ -2447,6 +2470,7 @@ function setRecStatus(active) {
 function addToBuffer() {
     const text = document.getElementById('inputText').value.trim();
     if (!text) return;
+    exitEditMode(); // Zwischenspeichern = neue Notiz sammeln, kein Bearbeiten mehr
     buffer.push(text);
     renderBuffer();
     micReset = true;
@@ -2496,6 +2520,7 @@ function clearInput() {
     micReset = true;
     micBefore = micAfter = micDone = '';
     document.getElementById('inputText').value = '';
+    exitEditMode();
     if (isRecording) {
         isRecording = false;
         try { recognition && recognition.stop(); } catch(e) {}
@@ -2731,13 +2756,20 @@ async function saveDirectly() {
     if (!text) { showToast('Bitte Text eingeben.', true); return; }
     if (!selectedCategory) { showToast('Bitte zuerst eine Kategorie wählen.', true); return; }
     try {
-        const { data: ex } = await sb.from('tagesnotizen_entries')
-            .select('id, text').eq('datum', selectedDate).eq('category', selectedCategory).maybeSingle();
-        const textToSave = (ex && ex.text.trim()) ? ex.text.trim() + '\n\n' + text : text;
+        let textToSave;
+        if (editingEntryId) {
+            // Bearbeiten-Modus: den gespeicherten Eintrag ERSETZEN (nicht anhängen)
+            textToSave = text;
+        } else {
+            const { data: ex } = await sb.from('tagesnotizen_entries')
+                .select('id, text').eq('datum', selectedDate).eq('category', selectedCategory).maybeSingle();
+            textToSave = (ex && ex.text.trim()) ? ex.text.trim() + '\n\n' + text : text;
+        }
         await saveEntry(selectedDate, selectedCategory, textToSave);
         buffer = [];
         if (selectedCategory) bufferByCategory[selectedCategory] = [];
         document.getElementById('inputText').value = '';
+        exitEditMode();
         renderBuffer();
         showToast('✅ Gespeichert.');
         await renderEntries();
@@ -2801,7 +2833,8 @@ async function summarizeText() {
     try {
         const allText = collectText();
 
-        const { data: existing } = await sb.from('tagesnotizen_entries')
+        // Im Bearbeiten-Modus NICHT mit dem gespeicherten Eintrag mischen (sonst Verdopplung/Namensverwirrung)
+        const { data: existing } = editingEntryId ? { data: null } : await sb.from('tagesnotizen_entries')
             .select('text').eq('datum', selectedDate).eq('category', selectedCategory)
             .maybeSingle();
 
@@ -2869,6 +2902,7 @@ async function saveSummary() {
         document.getElementById('summarySection').classList.add('hidden');
         currentSummary = '';
         savedInputText = '';
+        exitEditMode();
         await renderEntries();
         showToast('✅ Eintrag gespeichert!');
     } catch (e) { showToast('❌ ' + e.message, true); }
