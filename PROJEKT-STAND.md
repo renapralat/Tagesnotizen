@@ -2,7 +2,9 @@
 
 **Kurz:** Meine eigene Tagebuch- & Buch-App. Ziel: **alles an einem Ort** – Notizen, Bücher (Lebenslauf/Erinnerungen), Bilder, Dokumente. Für den **Nachlass**: später alles aufs Papier + Bilder auf ein separates Medium.
 
-**Aktuelle Version:** v39 (oben im Buch/Editor sichtbar als „· vNN" – zum Prüfen, ob die neueste Fassung geladen ist).
+**Aktuelle Version:** v40 (oben im Buch/Editor sichtbar als „· vNN" – zum Prüfen, ob die neueste Fassung geladen ist).
+
+**Neu in v40:** Bearbeiten-Modus bei Tagesnotizen/Protokollen – wird ein **gespeicherter** Eintrag über ✏️ geöffnet, ERSETZT Speichern/KI ihn (kein Anhängen/Vermischen mehr, keine Namensverwirrung). Brauner Hinweis-Balken + „Abbrechen".
 
 ---
 
