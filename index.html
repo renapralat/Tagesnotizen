@@ -197,14 +197,113 @@
 
         .section-title { font-size: 1.05rem; font-weight: 700; margin-bottom: 1rem; color: #e2e8f0; }
 
+        /* Media Gallery */
+        .media-upload-row {
+            display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center; margin-bottom: 0.75rem;
+        }
+        .media-upload-row label {
+            flex: 1 1 30%; min-width: 110px; display: flex; align-items: center; justify-content: center;
+            gap: 0.4rem; background: #3b82f6; color: #fff; font-weight: 600;
+            font-size: 0.9rem; padding: 0.5rem 0.75rem; border-radius: 0.375rem;
+            cursor: pointer; transition: opacity 0.15s;
+        }
+        .media-upload-row label:hover { opacity: 0.85; }
+        .media-upload-row input[type="file"] { display: none; }
+        .media-date-label { font-size: 0.8rem; color: #94a3b8; }
+        .media-grid {
+            display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+            gap: 0.6rem;
+        }
+        .media-card {
+            background: #334155; border: 1px solid #475569; border-radius: 0.4rem;
+            overflow: hidden; position: relative;
+        }
+        .media-card img {
+            width: 100%; aspect-ratio: 1; object-fit: cover; display: block; cursor: pointer;
+        }
+        .media-card audio { width: 100%; padding: 0.4rem; display: block; }
+        .media-card-footer {
+            padding: 0.3rem 0.4rem; display: flex; justify-content: space-between; align-items: center;
+        }
+        .media-card-desc {
+            font-size: 0.72rem; color: #94a3b8; flex: 1; overflow: hidden;
+            text-overflow: ellipsis; white-space: nowrap;
+        }
+        .media-card-del {
+            background: none; border: none; color: #475569; font-size: 0.85rem;
+            cursor: pointer; padding: 0; flex: none;
+        }
+        .media-card-del:hover { color: #ef4444; }
+        .media-card-mv { background: none; border: none; color: #94a3b8; font-size: 0.95rem; cursor: pointer; padding: 0; flex: none; line-height: 1; }
+        .media-card-mv:hover { color: #38bdf8; }
+        .media-card-dl {
+            color: #94a3b8; font-size: 0.9rem; text-decoration: none;
+            flex: none; line-height: 1;
+        }
+        .media-card-dl:hover { color: #38bdf8; }
+        .media-progress {
+            font-size: 0.8rem; color: #94a3b8; text-align: center; padding: 0.5rem;
+        }
+        /* Lightbox */
+        #mediaLightbox {
+            display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.92); z-index: 2000;
+            align-items: center; justify-content: center;
+        }
+        #mediaLightbox.active { display: flex; }
+        #mediaLightbox img {
+            max-width: 95vw; max-height: 90vh; border-radius: 0.4rem;
+            object-fit: contain;
+        }
+        #mediaLightboxClose {
+            position: absolute; top: 1rem; right: 1rem;
+            background: rgba(255,255,255,0.15); border: none; color: #fff;
+            font-size: 1.5rem; width: 2.5rem; height: 2.5rem; border-radius: 50%;
+            cursor: pointer; display: flex; align-items: center; justify-content: center;
+        }
+
         .entry {
             background: #334155; border: 1px solid #475569;
             border-radius: 0.4rem; padding: 0.9rem; margin-bottom: 0.65rem;
         }
         .entry-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem; }
+        .entry-header.book-head { position: sticky; top: 0; z-index: 20; background: #334155; padding: 0.5rem 0; margin: -0.2rem 0 0.5rem; border-bottom: 1px solid #475569; }
         .entry-date { color: #94a3b8; font-size: 0.875rem; font-weight: 700; }
         .entry-actions { display: flex; gap: 0.4rem; }
-        .entry-text { line-height: 1.65; white-space: pre-wrap; word-break: break-word; font-size: 0.95rem; }
+        .rt-hrow { display: flex; align-items: center; gap: 0.4rem; flex-wrap: wrap; }
+        .rt-hrow > h3, .rt-hrow > h4 { flex: 1; margin-top: 0.6rem; }
+        .rt-htool { background: #475569; border: 1px solid #64748b; color: #e2e8f0; font-size: 1rem; cursor: pointer; padding: 0.25rem 0.5rem; border-radius: 0.4rem; flex: none; }
+        .entry-text { line-height: 1.65; word-break: break-word; font-size: 0.95rem; }
+        .rt-text { white-space: pre-wrap; }
+        .rt-clickable { cursor: pointer; border-radius: 0.3rem; transition: background 0.15s; }
+        .rt-clickable:hover { background: #3f4c63; }
+        .rt-h1 { font-size: 1.25rem; font-weight: 700; color: #f1f5f9; margin: 1rem 0 0.4rem; padding-bottom: 0.2rem; border-bottom: 1px solid #475569; }
+        .rt-h2 { font-size: 1.05rem; font-weight: 700; color: #e2e8f0; margin: 0.8rem 0 0.3rem; }
+        .rt-h3 { font-size: 0.98rem; font-weight: 700; color: #cbd5e1; margin: 0.6rem 0 0.25rem; padding-left: 0.8rem; }
+        .rt-h1, .rt-h2, .rt-h3, .rt-hrow { scroll-margin-top: 4rem; } /* nicht hinter der Kopfzeile landen */
+        .rt-h-flash { animation: rtFlash 2.6s ease-out; border-radius: 0.35rem; }
+        @keyframes rtFlash { 0%,65% { background: #fbbf24; box-shadow: 0 0 0 4px #fbbf24; } 100% { background: transparent; box-shadow: 0 0 0 0 rgba(251,191,36,0); } }
+        .rt-h-flash h3, .rt-h-flash h4, .rt-h-flash h5 { color: #1e293b; }
+        .entry-link { color: #60a5fa; text-decoration: underline; font-weight: 600; word-break: break-all; }
+        .entry-toc { background: #1e293b; border: 1px solid #475569; border-radius: 0.4rem; padding: 0.6rem 0.8rem; margin-bottom: 0.8rem; }
+        .entry-toc-title { font-weight: 700; color: #94a3b8; font-size: 0.85rem; margin-bottom: 0.35rem; }
+        .entry-toc a { display: block; color: #60a5fa; text-decoration: none; font-size: 0.92rem; padding: 0.12rem 0; cursor: pointer; }
+        .entry-toc a.lvl2 { padding-left: 1rem; font-size: 0.85rem; color: #93c5fd; }
+        .entry-toc a.lvl3 { padding-left: 2.2rem; font-size: 0.82rem; color: #bfdbfe; }
+        .toc-row { display: flex; align-items: center; gap: 0.3rem; }
+        .toc-row a { flex: 1; min-width: 0; }
+        .toc-cam { flex: none; background: none; border: none; cursor: pointer; font-size: 1rem; padding: 0.15rem 0.35rem; border-radius: 0.3rem; }
+        .toc-cam:hover { background: #334155; }
+        .ch-media { margin: 0.3rem 0 0.8rem; }
+        /* Medien standardmäßig ausblenden (reines Lesen); im Foto-Modus zeigen */
+        #bookText:not(.show-media) .ch-media,
+        #bookText:not(.show-media) #bookOrphan { display: none; }
+        .ch-media-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 0.5rem; }
+        .ch-media-grid:empty { display: none; }
+        .ch-media-add { display: inline-flex; align-items: center; gap: 0.4rem; margin-top: 0.4rem; font-size: 0.82rem; color: #cbd5e1; background: #1e293b; border: 1px dashed #475569; border-radius: 0.4rem; padding: 0.35rem 0.7rem; cursor: pointer; }
+        .ch-media-add:hover { background: #334155; }
+        .ch-media-add input[type="file"] { display: none; }
+        .entry-toc a:hover { text-decoration: underline; }
 
         /* KI Section */
         .ki-header {
@@ -221,6 +320,14 @@
         .ki-status.ok  { color: #34d399; }
         .ki-status.err { color: #f87171; }
 
+        /* Anmelden */
+        .auth-overlay { position: fixed; inset: 0; background: #0f172a; z-index: 2000; display: flex; align-items: center; justify-content: center; padding: 1.2rem; }
+        .auth-overlay.hidden { display: none; }
+        .auth-box { background: #1e293b; border: 1px solid #475569; border-radius: 0.6rem; padding: 1.5rem; width: 100%; max-width: 360px; }
+        .auth-box input { width: 100%; padding: 0.7rem; margin-bottom: 0.6rem; background: #0f172a; color: #e2e8f0; border: 1px solid #475569; border-radius: 0.4rem; font-size: 1rem; }
+        .auth-msg { font-size: 0.9rem; color: #fbbf24; min-height: 1.2rem; margin: 0.2rem 0 0.6rem; }
+        .auth-skip { display: block; width: 100%; margin-top: 0.8rem; background: none; border: none; color: #64748b; font-size: 0.85rem; cursor: pointer; text-decoration: underline; }
+
         /* Modal */
         .modal {
             display: none; position: fixed;
@@ -233,6 +340,71 @@
             background: #1e293b; padding: 1.5rem; border-radius: 0.5rem;
             width: 100%; max-width: 420px; border: 1px solid #475569;
         }
+        .modal-content.modal-wide { max-width: min(980px, 94vw); }
+        /* Editor-Fenster: passt immer auf den Bildschirm – Kopf & „Fertig" bleiben sichtbar, nur die Mitte scrollt */
+        #kapitelModal .modal-content {
+            display: flex; flex-direction: column;
+            max-height: 96vh; max-height: 96dvh; overflow: hidden;
+        }
+        #kapitelModal .modal-header,
+        #kapitelModal #kapitelInfo,
+        #kapitelModal #kapitelBatch,
+        #kapitelModal #kapReadBar,
+        #kapitelModal .kap-addrow,
+        #kapitelModal .kap-footer { flex: 0 0 auto; }
+        #kapitelModal .kap-list,
+        #kapitelModal #kapOutline { flex: 1 1 auto; min-height: 0; max-height: none; }
+        #kapitelModal .kap-footer { position: static; bottom: auto; }
+        .kap-list { display: flex; flex-direction: column; gap: 0.8rem; max-height: 62vh; overflow-y: auto; }
+        @media (min-width: 700px) { .kap-list { max-height: 72vh; } }
+        .kap-outline { display: flex; flex-direction: column; gap: 0.35rem; overflow-y: auto; max-height: 62vh; }
+        .kap-ol-row { display: flex; align-items: center; gap: 0.3rem; background: #0f172a; border: 1px solid #334155; border-radius: 0.4rem; padding: 0.25rem 0.35rem; }
+        .kap-ol-row.is-abschnitt { margin-left: 1.3rem; border-left: 3px solid #6366f1; }
+        .kap-ol-row.is-unter { margin-left: 2.6rem; border-left: 3px solid #a78bfa; }
+        .kap-ol-title { flex: 1; min-width: 0; text-align: left; background: none; border: none; color: #e2e8f0; font-size: 1rem; padding: 0.4rem 0.3rem; cursor: pointer; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .kap-ol-row button:not(.kap-ol-title) { flex: none; background: #334155; border: 1px solid #475569; color: #e2e8f0; border-radius: 0.4rem; padding: 0.35rem 0.45rem; font-size: 0.95rem; cursor: pointer; }
+        .kap-ol-add { display: flex; gap: 0.5rem; margin-top: 0.5rem; }
+        .kap-ol-add button { flex: 1; background: #1e293b; border: 1px solid #475569; color: #e2e8f0; border-radius: 0.4rem; padding: 0.5rem; font-size: 0.95rem; cursor: pointer; }
+        .kap-card { background: #0f172a; border: 1px solid #334155; border-radius: 0.5rem; padding: 0.7rem 0.8rem; position: relative; }
+        .kap-pin { position: absolute; left: 0.7rem; width: 1.3rem; text-align: center; font-size: 1rem; z-index: 4; pointer-events: none; }
+        .kap-pin.hidden { display: none; }
+        .kap-card.is-abschnitt { margin-left: 1.1rem; border-left: 3px solid #6366f1; }
+        .kap-card.is-unter { margin-left: 2.2rem; border-left: 3px solid #a78bfa; }
+        .kap-card-head { display: flex; align-items: center; gap: 0.4rem; margin-bottom: 0.5rem; flex-wrap: wrap; }
+        .kap-num { background: #475569; color: #e2e8f0; font-weight: 700; font-size: 0.8rem; border-radius: 999px; padding: 0.15rem 0.6rem; flex: none; }
+        .kap-lvl { border: none; cursor: pointer; }
+        .kap-sel { width: 1.3rem; height: 1.3rem; flex: none; }
+        .kap-title { flex: 1; min-width: 8rem; font-size: 1rem; font-weight: 700; color: #f1f5f9; background: #1e293b; border: 1px solid #475569; border-radius: 0.4rem; padding: 0.45rem 0.6rem; }
+        .kap-introlabel { font-weight: 400; color: #94a3b8; }
+        .kap-mini { background: #334155; border: 1px solid #475569; color: #e2e8f0; font-size: 1rem; cursor: pointer; flex: none; padding: 0.3rem 0.5rem; border-radius: 0.4rem; }
+        .kap-mini.kap-delmini { color: #f87171; }
+        .kap-mini.kap-ins { font-size: 0.8rem; font-weight: 600; }
+        .kap-body { width: 100%; min-height: 9rem; resize: vertical; overflow: hidden; background: #1e293b; border: 1px solid #475569; border-radius: 0.4rem; padding: 0.55rem 0.65rem 0.55rem 1.5rem; color: #e2e8f0; font-size: 1rem; line-height: 1.6; font-family: inherit; }
+        .kap-readbar { display: flex; align-items: center; gap: 0.6rem; background: #78350f; color: #fde68a; border: 1px solid #b45309; border-radius: 0.4rem; padding: 0.55rem 0.75rem; margin-bottom: 0.6rem; font-size: 1rem; line-height: 1.45; font-weight: 600; }
+        .kap-readtext { flex: 1; min-width: 0; }
+        .kap-readstop { flex: none; background: #dc2626; color: #fff; border: none; border-radius: 0.4rem; padding: 0.5rem 0.9rem; font-size: 1rem; font-weight: 700; cursor: pointer; }
+        .kap-body::selection { background: #fbbf24; color: #1e293b; }
+        .kap-body::-moz-selection { background: #fbbf24; color: #1e293b; }
+        .kap-side { display: flex; flex-direction: column; gap: 0.4rem; flex: none; position: sticky; top: 0.4rem; align-self: flex-start; z-index: 2; }
+        .kap-side > button { width: 3rem; border-radius: 0.4rem; }
+        .kap-mic { flex: none; font-size: 1.5rem; padding: 0.6rem 0; }
+        .kap-mic.recording { background: #dc2626; animation: pulse 0.9s ease-in-out infinite; }
+        .kap-side .kap-tool { font-size: 1.3rem; padding: 0.45rem 0; text-align: center; }
+        .kap-status { font-size: 0.85rem; color: #94a3b8; }
+        .kap-status.ok { color: #4ade80; font-weight: 600; }
+        .kap-status.pending { color: #fbbf24; }
+        .kap-status.warn { color: #f87171; font-weight: 600; }
+        .kap-footer { position: sticky; bottom: -1.5rem; background: #1e293b; padding: 0.7rem 0 calc(0.3rem + env(safe-area-inset-bottom)); margin-top: 0.9rem; border-top: 1px solid #334155; z-index: 5; }
+        .ki-style { flex: 1; background: #1e293b; border: 1px solid #475569; color: #e2e8f0; border-radius: 0.4rem; padding: 0.5rem 0.3rem; font-size: 0.9rem; cursor: pointer; }
+        .ki-style.active { background: #7c3aed; border-color: #7c3aed; color: #fff; font-weight: 700; }
+        .ki-check { display: flex; align-items: center; gap: 0.5rem; font-size: 0.95rem; color: #cbd5e1; margin-bottom: 0.5rem; cursor: pointer; }
+        .ki-check input { width: 1.2rem; height: 1.2rem; flex: none; }
+        .kap-fertig { background: #16a34a; color: #fff; border: none; border-radius: 0.45rem; font-weight: 700; cursor: pointer; }
+        .kap-fertig:hover { background: #15803d; }
+        .kap-flash { animation: kapFlash 2.2s ease-out; }
+        @keyframes kapFlash { 0% { box-shadow: 0 0 0 3px #fbbf24; } 60% { box-shadow: 0 0 0 3px #fbbf24; } 100% { box-shadow: 0 0 0 0 rgba(251,191,36,0); } }
+        .kind-choice { display: flex; align-items: flex-start; gap: 0.5rem; font-size: 0.9rem; color: #cbd5e1; background: #0f172a; border: 1px solid #334155; border-radius: 0.4rem; padding: 0.55rem 0.7rem; cursor: pointer; line-height: 1.35; }
+        .kind-choice input { margin-top: 0.2rem; flex: none; }
         .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem; }
         .modal-title { font-size: 1.15rem; font-weight: 700; }
         .modal-close {
@@ -267,6 +439,22 @@
 </head>
 <body>
 <div id="toast"></div>
+
+<!-- ANMELDEN (Sicherheit) -->
+<div id="authOverlay" class="auth-overlay hidden">
+    <div class="auth-box">
+        <h2 style="margin:0 0 0.3rem;">🔒 Anmelden</h2>
+        <p class="tip" style="margin-top:0;">Damit nur <b>Du</b> Deine Texte und Bilder sehen kannst.</p>
+        <input type="email" id="authEmail" placeholder="E-Mail" autocomplete="username">
+        <input type="password" id="authPass" placeholder="Passwort (selbst wählen)" autocomplete="current-password">
+        <p id="authMsg" class="auth-msg"></p>
+        <div class="btn-row">
+            <button class="btn-purple" style="flex:1;" onclick="authLogin()">Anmelden</button>
+            <button class="btn-dark" onclick="authSignup()">Konto anlegen</button>
+        </div>
+    </div>
+</div>
+
 <div class="container">
 
     <!-- NEW CATEGORY MODAL -->
@@ -279,6 +467,11 @@
             <label class="form-label">Name:</label>
             <input type="text" id="newCatInput" placeholder="Kategorie-Name…"
                    onkeydown="if(event.key==='Enter')addCategory()">
+            <label class="form-label" style="margin-top:0.9rem;">Art:</label>
+            <div style="display:flex;flex-direction:column;gap:0.5rem;margin-bottom:0.3rem;">
+                <label class="kind-choice"><input type="radio" name="newCatKind" value="tag" checked> 📅 <b>Tag-Kategorie</b> – tägliche Notizen wie bisher</label>
+                <label class="kind-choice"><input type="radio" name="newCatKind" value="buch"> 📖 <b>Buch-Kategorie</b> – ein Buch mit Kapiteln (Lebenslauf, „Mein Sohn"…)</label>
+            </div>
             <div class="btn-row" style="margin-top:0;">
                 <button class="btn-gray" onclick="closeNewCatModal()">Abbrechen</button>
                 <button class="btn-green" onclick="addCategory()">+ Hinzufügen</button>
@@ -286,12 +479,161 @@
         </div>
     </div>
 
-    <!-- HEADER -->
+    <!-- MOVE ENTRY MODAL -->
+    <div id="moveEntryModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <span class="modal-title">📦 Eintrag umziehen</span>
+                <button class="modal-close" onclick="closeMoveEntryModal()">✕</button>
+            </div>
+            <p id="moveEntryInfo" class="form-label" style="margin-bottom:0.6rem;"></p>
+            <label class="form-label">In welche Kategorie?</label>
+            <div id="moveEntryTargets" style="display:flex;flex-direction:column;gap:0.45rem;max-height:50vh;overflow-y:auto;"></div>
+            <div class="btn-row" style="margin-top:0.7rem;">
+                <button class="btn-gray" onclick="closeMoveEntryModal()">Abbrechen</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- KAPITEL-EDITOR -->
+    <div id="kapitelModal" class="modal">
+        <div class="modal-content modal-wide">
+            <div class="modal-header">
+                <span class="modal-title">📖 Buch</span>
+                <span id="kapSaveStatus" class="kap-status" style="flex:1;text-align:center;"></span>
+                <button id="kapOutlineBtn" class="btn-dark" style="padding:0.45rem 0.7rem;font-size:0.95rem;margin-right:0.4rem;" onclick="toggleOutline()">📑 Gliederung</button>
+                <button class="kap-fertig" style="padding:0.45rem 0.9rem;font-size:1rem;" onclick="closeKapitelEditor()">✓ Fertig</button>
+            </div>
+            <p id="kapitelInfo" class="tip" style="margin-top:0;margin-bottom:0.8rem;">Schiebe Blöcke mit ⬆️⬇️, hake mehrere an zum Zusammenführen, schreibe mit 🪄 neu. Alles wird automatisch gespeichert.</p>
+            <div id="kapitelBatch" class="hidden" style="display:flex;gap:0.5rem;margin-bottom:0.7rem;">
+                <button id="kapMergeBtn" class="btn-purple" style="flex:1;" onclick="mergeSelectedBlocks()">🔗 Markierte zusammenführen</button>
+                <button id="kapDelBtn" class="btn-red" onclick="deleteSelectedBlocks()">🗑 Markierte löschen</button>
+            </div>
+            <div id="kapReadBar" class="kap-readbar hidden"></div>
+            <div id="kapOutline" class="kap-outline hidden"></div>
+            <div id="kapitelList" class="kap-list"></div>
+            <div class="kap-addrow" style="display:flex;gap:0.5rem;margin-top:0.8rem;">
+                <button class="btn-dark" style="flex:1;" onclick="addNewBlock(1)">➕ Kapitel</button>
+                <button class="btn-dark" style="flex:1;" onclick="addNewBlock(2)">➕ Abschnitt</button>
+                <button class="btn-dark" style="flex:1;" onclick="addNewBlock(3)">➕ Unterabschnitt</button>
+            </div>
+            <div class="kap-footer">
+                <button class="kap-fertig" style="width:100%;font-size:1.1rem;padding:0.8rem;" onclick="closeKapitelEditor()">✓ Fertig – zurück zum Buch</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MEDIUM ZU ANDERER ÜBERSCHRIFT VERSCHIEBEN -->
+    <div id="moveMediaModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <span class="modal-title">↪ Bild/Datei zuordnen</span>
+                <button class="modal-close" onclick="closeMoveMedia()">✕</button>
+            </div>
+            <p class="tip" style="margin-top:0;">Zu welcher Überschrift soll es gehören?</p>
+            <div id="moveMediaList" style="display:flex;flex-direction:column;gap:0.35rem;max-height:60vh;overflow-y:auto;"></div>
+        </div>
+    </div>
+
+    <!-- 🗣️ AUSSPRACHE -->
+    <div id="pronModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <span class="modal-title">🗣️ Aussprache beim Vorlesen</span>
+                <button class="modal-close" onclick="closePron()">✕</button>
+            </div>
+            <p class="tip" style="margin-top:0;">Pro Wort eine <b>Sprache</b> wählen (z. B. Französisch für „Roger") – wird in dieser Sprache vorgelesen, <i>falls die Stimme auf dem Gerät vorhanden ist</i>. Sonst greift die <b>lautmalerische</b> Ersatz-Schreibweise (z. B. „Ro scheee"). Im Text bleibt das Original.</p>
+            <div id="pronList" style="display:flex;flex-direction:column;gap:0.35rem;margin-bottom:0.6rem;"></div>
+            <div style="display:flex;gap:0.4rem;align-items:center;flex-wrap:wrap;">
+                <input id="pronWord" placeholder="Wort (z. B. Roger)" style="flex:1;min-width:6rem;margin-bottom:0;">
+                <select id="pronLang" style="flex:none;background:#1e293b;color:#e2e8f0;border:1px solid #475569;border-radius:0.3rem;padding:0.4rem;">
+                    <option value="">lautmalerisch</option>
+                    <option value="en">Englisch</option>
+                    <option value="fr">Französisch</option>
+                    <option value="es">Spanisch</option>
+                    <option value="it">Italienisch</option>
+                    <option value="nl">Niederländisch</option>
+                    <option value="da">Dänisch</option>
+                    <option value="pt">Portugiesisch</option>
+                    <option value="tr">Türkisch</option>
+                </select>
+                <input id="pronSay" placeholder="Ersatz (Ro scheee)" style="flex:1;min-width:6rem;margin-bottom:0;">
+                <button class="btn-green" onclick="addPron()" style="flex:none;">＋</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 🪄 KI-AUSWAHL (Modell + Stil + nur Markiertes) -->
+    <div id="kiOptModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <span class="modal-title">🪄 Schön schreiben</span>
+                <button class="modal-close" onclick="closeKiDialog()">✕</button>
+            </div>
+            <label style="font-size:0.85rem;color:#aaa;display:block;margin-bottom:0.25rem;">KI-Modell</label>
+            <select id="kiOptModel" style="width:100%;padding:0.5rem;background:#2a2a2a;color:#eee;border:1px solid #444;border-radius:6px;font-size:0.95rem;margin-bottom:0.8rem;">
+                <option value="gpt-4o-mini">gpt-4o-mini (OpenAI)</option>
+                <option value="gpt-4o">gpt-4o (OpenAI)</option>
+                <option value="Phi-4">Phi-4 (Microsoft)</option>
+                <option value="Llama-3.3-70B-Instruct">Llama-3.3-70B-Instruct (Meta)</option>
+                <option value="Ministral-3B">Ministral-3B (Mistral)</option>
+            </select>
+            <label style="font-size:0.85rem;color:#aaa;display:block;margin-bottom:0.35rem;">Stil</label>
+            <div id="kiOptStyle" style="display:flex;gap:0.4rem;margin-bottom:0.9rem;">
+                <button type="button" class="ki-style" data-style="schlicht" onclick="setKiStyle('schlicht')">🪨 schlicht</button>
+                <button type="button" class="ki-style" data-style="normal" onclick="setKiStyle('normal')">📝 normal</button>
+                <button type="button" class="ki-style" data-style="blumig" onclick="setKiStyle('blumig')">🌸 blumig</button>
+            </div>
+            <label class="ki-check"><input type="checkbox" id="kiOptSel"> Nur den <b>markierten</b> Teil</label>
+            <label class="ki-check"><input type="checkbox" id="kiOptSpell" checked> Vorher <b>Rechtschreibung</b> prüfen</label>
+            <div class="btn-row" style="margin-top:1rem;">
+                <button class="btn-purple" style="flex:1;" onclick="runKiDialog()">🪄 Los</button>
+                <button class="btn-gray" onclick="closeKiDialog()">Abbrechen</button>
+            </div>
+        </div>
+    </div>
+
     <div class="header">
         <h1 class="title">📔 Tagesnotizen</h1>
+        <button id="authBtn" onclick="authButtonClick()" title="Anmelden" style="background:none;border:none;font-size:1.2rem;cursor:pointer;margin-left:auto;">🔒</button>
         <span id="connBadge" class="conn-badge">
             <span class="conn-dot"></span>&nbsp;Verbinde…
         </span>
+    </div>
+
+    <!-- KI-ANALYSE -->
+    <div class="section">
+        <div class="ki-header">
+            <span class="ki-title">🤖 KI-ANALYSE</span>
+            <div style="display:flex;align-items:center;gap:0.5rem;">
+                <span id="kiDot" class="ki-dot"></span>
+                <button class="btn-dark" style="font-size:0.75rem;padding:0.2rem 0.55rem;" onclick="toggleTokenPanel()">Token verwalten</button>
+            </div>
+        </div>
+        <p id="kiStatus" class="ki-status"></p>
+        <div style="margin-top:0.5rem;">
+            <label style="font-size:0.8rem;color:#aaa;display:block;margin-bottom:0.25rem;">🔊 Vorlese-Stimme (auf diesem Gerät):</label>
+            <div style="display:flex;gap:0.4rem;">
+                <select id="voiceSelect" onchange="saveVoiceChoice()" style="flex:1;min-width:0;padding:0.45rem 0.5rem;background:#2a2a2a;color:#eee;border:1px solid #444;border-radius:6px;font-size:0.9rem;">
+                    <option value="">Standard-Stimme des Geräts</option>
+                </select>
+                <button class="btn-amber" style="flex:none;padding:0.45rem 0.7rem;border-radius:6px;" onclick="testVoice()" title="Stimme anhören">▶︎ Probe</button>
+                <button class="btn-dark" style="flex:none;padding:0.45rem 0.7rem;border-radius:6px;background:#000;color:#fff;border:1px solid #333;" onclick="openPron()" title="Aussprache von Namen festlegen">🗣️</button>
+            </div>
+        </div>
+        <div id="tokenPanel" class="hidden">
+            <label style="font-size:0.8rem;color:#aaa;display:block;margin:0.6rem 0 0.25rem;">GitHub-Token</label>
+            <input type="password" id="githubPatInput" placeholder="github_pat_…" style="margin-bottom:0.35rem;">
+            <p id="tokenSavedNote" class="ki-status" style="margin:0 0 0.5rem;"></p>
+            <div class="btn-row">
+                <button class="btn-gray" onclick="clearGithubPat()">Löschen</button>
+                <button class="btn-blue" onclick="saveGithubPat()">Speichern</button>
+            </div>
+            <div class="tip" style="margin-top:0.4rem;">
+                GitHub Models stellt aktuell keine kostenlosen KI-Modelle mehr bereit – alle KI-Buttons in der App sind deshalb ausgegraut.<br>
+                Der Token bleibt hier gespeichert, falls die Anbindung (oder ein anderer Anbieter) später wieder aktiviert wird.
+            </div>
+        </div>
     </div>
 
     <!-- SEARCH -->
@@ -318,10 +660,8 @@
             <button class="btn-red  btn-icon" onclick="deleteRange()"  title="Zeitraum löschen">🗑️</button>
             <button class="btn-blue btn-icon ai-only" onclick="generateZeitraumGeschichte()" title="KI pausiert – GitHub Models aktuell nicht verfügbar">📖</button>
         </div>
-        <!-- Zeile 2: +/- Kategorie | Kategorie-Auswahl | Tag-Export -->
+        <!-- Zeile 2: Kategorie-Auswahl | Tag-Export -->
         <div style="display:flex;gap:0.35rem;align-items:center;margin-bottom:0.5rem;">
-            <button class="btn-icon btn-dark" onclick="openNewCatModal()" title="Neue Kategorie" style="font-size:0.85rem;">+🏷️</button>
-            <button class="btn-icon btn-dark" onclick="deleteSelectedCategory()" title="Kategorie löschen" style="font-size:0.85rem;">−🏷️</button>
             <div style="position:relative;flex:1;">
                 <button id="exportCatBtn" onclick="toggleExportCatDropdown()"
                         style="width:100%;display:flex;justify-content:space-between;align-items:center;font-size:0.78rem;padding:0.3rem 0.5rem;background:#1e293b;color:#f1f5f9;border:1px solid #334155;border-radius:0.5rem;cursor:pointer;">
@@ -337,17 +677,47 @@
             <button class="btn-red  btn-icon" onclick="deleteDay()"  title="Tag löschen">🗑️</button>
             <button class="btn-blue btn-icon ai-only" onclick="generateTagesgeschichte()" title="KI pausiert – GitHub Models aktuell nicht verfügbar">📖</button>
         </div>
-        <!-- Eintragsdatum -->
-        <div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.5rem;">
+        <!-- Eintragsdatum + Kategorie verwalten -->
+        <div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.5rem;flex-wrap:wrap;">
             <span>📅</span>
-            <input type="date" id="entryDate" onchange="onDateChange()" style="flex:1;margin-bottom:0;">
+            <input type="date" id="entryDate" onchange="onDateChange()" style="flex:none;width:8.5rem;margin-bottom:0;">
+            <span style="flex:1;min-width:0.5rem;"></span>
+            <button class="btn-icon btn-dark" onclick="openNewCatModal()" title="Neue Kategorie anlegen" style="font-size:0.85rem;">+🏷️</button>
+            <button class="btn-icon btn-dark" onclick="deleteSelectedCategory()" title="Gewählte Kategorie löschen" style="font-size:0.85rem;">−🏷️</button>
+            <button class="btn-icon btn-dark" onclick="moveCategory(-1)" title="Gewählte Kategorie nach links" style="font-size:0.85rem;">◀</button>
+            <button class="btn-icon btn-dark" onclick="moveCategory(1)" title="Gewählte Kategorie nach rechts" style="font-size:0.85rem;">▶</button>
+            <span style="flex:1;min-width:0.5rem;"></span>
+            <button class="btn-icon" onclick="openGoogleCalendar()" title="Diesen Tag im Google-Kalender öffnen" style="background:#1a73e8;color:#fff;flex:none;">📆 Kalender</button>
         </div>
         <!-- Kategorie-Chips (Aufnahme + Export) -->
         <div id="categoryGrid" class="tag-grid"></div>
     </div>
 
+    <!-- MEDIEN -->
+    <div class="section" id="mediaSection">
+        <div style="margin-bottom:0.75rem;">
+            <span class="section-title" style="margin-bottom:0;">📷 Medien & Dokumente zum Tag<span id="mediaDateLabel" style="font-weight:inherit;"></span></span>
+        </div>
+        <div class="media-upload-row">
+            <label>
+                <input type="file" id="mediaFileInput" accept="image/*,audio/*,video/*,application/pdf,.pdf,.doc,.docx,.txt,.rtf,.odt,.xls,.xlsx,.csv,.ppt,.pptx" multiple onchange="uploadMediaFiles(this.files)">
+                📎 Hochladen
+            </label>
+            <label style="background:#10b981;">
+                <input type="file" id="mediaCameraInput" accept="image/*" capture="environment" onchange="uploadMediaFiles(this.files)">
+                📷 Kamera
+            </label>
+        </div>
+        <div id="mediaUploadProgress" class="media-progress hidden"></div>
+        <div id="mediaGrid" class="media-grid"></div>
+    </div>
+
     <!-- INPUT -->
     <div id="inputSection" class="section hidden">
+        <div id="editBanner" class="hidden" style="display:flex;align-items:center;gap:0.5rem;background:#78350f;color:#fde68a;border:1px solid #b45309;border-radius:0.4rem;padding:0.5rem 0.7rem;margin-bottom:0.6rem;font-size:0.9rem;">
+            <span style="flex:1;">✏️ Du bearbeitest einen gespeicherten Eintrag – <b>Speichern/KI ersetzt ihn</b> (nichts wird angehängt).</span>
+            <button class="btn-gray" style="flex:none;padding:0.3rem 0.6rem;" onclick="cancelEdit()">Abbrechen</button>
+        </div>
         <div class="input-area">
             <textarea id="inputText" placeholder="Sprechen oder schreiben…"></textarea>
             <div class="input-side">
@@ -357,7 +727,9 @@
                 <button class="btn-gray side-btn" onclick="clearInput()" title="Text löschen" style="font-size:1.1rem;">−</button>
                 <button class="btn-green side-btn" onclick="saveDirectly()" title="Direkt speichern" style="font-size:1rem;">💾</button>
                 <button class="btn-blue side-btn" onclick="copyToClipboard()" title="Text in Zwischenablage kopieren – zum Einfügen in Claude o.ä." style="font-size:1.1rem;">📋</button>
+                <button class="btn-dark side-btn" onclick="wrapQuotesInput()" title="Wort in Anführungszeichen setzen (erst markieren)" style="font-size:1rem;">„"</button>
                 <button class="btn-purple side-btn ai-only" id="summarizeBtn" onclick="summarizeText()" title="KI pausiert – GitHub Models aktuell nicht verfügbar" style="font-size:1.2rem;">🪄</button>
+                <button class="btn-dark side-btn ai-only" id="spellInputBtn" onclick="spellCheckInput()" title="KI pausiert – GitHub Models aktuell nicht verfügbar" style="font-size:1rem;">📝</button>
                 <button id="headingsToggle" onclick="toggleHeadings()" class="btn-dark side-btn ai-only" title="KI pausiert – nur für KI-Zusammenfassung relevant" style="font-size:0.8rem;">UE</button>
             </div>
         </div>
@@ -390,28 +762,12 @@
         </div>
     </div>
 
-    <!-- KI-ANALYSE -->
-    <div class="section">
-        <div class="ki-header">
-            <span class="ki-title">🤖 KI-ANALYSE</span>
-            <div style="display:flex;align-items:center;gap:0.5rem;">
-                <span id="kiDot" class="ki-dot"></span>
-                <button class="btn-dark" style="font-size:0.75rem;padding:0.2rem 0.55rem;" onclick="toggleTokenPanel()">Token verwalten</button>
-            </div>
-        </div>
-        <p id="kiStatus" class="ki-status"></p>
-        <div id="tokenPanel" class="hidden">
-            <input type="password" id="githubPatInput" placeholder="github_pat_…" style="margin-bottom:0.5rem;">
-            <div class="btn-row">
-                <button class="btn-gray" onclick="clearGithubPat()">Löschen</button>
-                <button class="btn-blue" onclick="saveGithubPat()">Speichern</button>
-            </div>
-            <div class="tip" style="margin-top:0.4rem;">
-                GitHub Models stellt aktuell keine kostenlosen KI-Modelle mehr bereit – die KI-Buttons oben sind deshalb ausgegraut.<br>
-                Der Token bleibt hier gespeichert, falls die Anbindung (oder ein anderer Anbieter) später wieder aktiviert wird.
-            </div>
-        </div>
+    <!-- LIGHTBOX -->
+    <div id="mediaLightbox" onclick="closeLightbox()">
+        <button id="mediaLightboxClose" onclick="closeLightbox()">✕</button>
+        <img id="mediaLightboxImg" src="" alt="">
     </div>
+
 
 </div>
 
@@ -422,6 +778,7 @@ const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZ
 const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 // GitHub Models API
+const APP_VERSION = 'v41';   // sichtbare Versions-Nummer (zur Kontrolle, ob die neue Fassung geladen ist)
 // GitHub Models bietet aktuell keine kostenlosen Modelle mehr an — die KI-Buttons
 // (Klasse "ai-only") sind deshalb ausgegraut. Token bleibt gespeichert für später.
 // Sobald wieder ein Anbieter verfügbar ist: hier auf false setzen.
@@ -435,20 +792,33 @@ const BUFFER_STORAGE_KEY = 'tagesnotizen-buffer';
 let selectedDate     = getTodayDate();
 let selectedCategory = null;
 let categories       = [];
+let categoryKind     = {};   // name -> 'tag' | 'buch'
+let currentBook      = null; // aktuell angezeigtes Buch (Eintrag der Buch-Kategorie)
+const BOOK_DATUM     = '2000-01-01'; // fester Platzhalter: pro Buch-Kategorie genau ein Eintrag
+
+// Geschützte Kategorien: können nicht gelöscht werden (siehe deleteSelectedCategory).
+const PROTECTED_CATEGORIES = ['Bilder', 'Tagesprotokoll', 'Prosa'];
+function isProtectedCategory(cat) { return PROTECTED_CATEGORIES.includes(cat); }
+
 let entries          = [];
 let buffer           = [];
 let bufferByCategory = {};
 let currentSummary   = '';
 let currentSummaryDate = '';
 let savedInputText   = '';
+let editingEntryId   = null;   // wenn gesetzt: gespeicherten Eintrag BEARBEITEN (ersetzen, nicht anhängen)
 let isRecording      = false;
 let recognition      = null;
 let micBefore = '';  // text before cursor position when mic started
 let micAfter  = '';  // text after cursor position when mic started
 let micDone   = '';  // text dictated since last mic start (across session restarts)
 let micReset  = false; // when true, onresult skips commit, onend skips restart
+let micTargetEl = null; // textarea, in die gerade diktiert wird
+let micBtnEl    = null; // zugehöriger Mikrofon-Knopf (für die rote Anzeige)
 let speakingId       = null;  // null | 'summary' | entry-uuid
 let speakResumeTimer = null;  // workaround for Android auto-pause bug
+let lastSpokenHeading = null;  // zuletzt vorgelesene Überschrift (für „im Ändern an dieser Stelle weitermachen")
+let lastSpokenText = '';       // zuletzt vorgelesener Satz (zum Wiederfinden der Stelle im Editor)
 
 // ── Init ──────────────────────────────────────────────────────────────────────
 window.addEventListener('DOMContentLoaded', async () => {
@@ -463,7 +833,11 @@ window.addEventListener('DOMContentLoaded', async () => {
     applyAiFeatureState();
     loadBufferStorage();
     loadKiPat();
-    await loadCategories();
+    const _loggedIn = await checkAuth();      // ohne Anmeldung kein Zugriff (Daten sind geschützt)
+    if (_loggedIn) {
+        await loadCategories();
+        loadMediaForDate(selectedDate);
+    }
     document.addEventListener('click', e => {
         const btn = document.getElementById('exportCatBtn');
         const dd  = document.getElementById('exportCatDropdown');
@@ -471,6 +845,79 @@ window.addEventListener('DOMContentLoaded', async () => {
             closeExportCatDropdown();
     });
 });
+
+// ── Anmelden (Supabase Auth) ────────────────────────────────────────────────────
+async function checkAuth() {
+    try {
+        const { data } = await sb.auth.getSession();
+        if (data && data.session) { updateAuthBtn(true); return true; }
+    } catch (e) {}
+    // nicht angemeldet → Anmelde-Bildschirm zeigen (E-Mail vorausgefüllt)
+    const em = document.getElementById('authEmail');
+    if (em && !em.value) em.value = 'renapralat@gmail.com';
+    document.getElementById('authOverlay').classList.remove('hidden');
+    updateAuthBtn(false);
+    return false;
+}
+function setAuthMsg(t, err) {
+    const el = document.getElementById('authMsg');
+    if (el) { el.textContent = t || ''; el.style.color = err ? '#f87171' : '#fbbf24'; }
+}
+async function authLogin() {
+    const email = document.getElementById('authEmail').value.trim();
+    const password = document.getElementById('authPass').value;
+    if (!email || !password) { setAuthMsg('Bitte E-Mail und Passwort eingeben.', true); return; }
+    setAuthMsg('Anmelden …');
+    const { error } = await sb.auth.signInWithPassword({ email, password });
+    if (error) { setAuthMsg('Fehler: ' + error.message, true); return; }
+    document.getElementById('authOverlay').classList.add('hidden');
+    setAuthMsg('');
+    updateAuthBtn(true);
+    showToast('✅ Angemeldet.');
+    await reloadAfterAuth();
+}
+async function authSignup() {
+    const email = document.getElementById('authEmail').value.trim();
+    const password = document.getElementById('authPass').value;
+    if (!email || password.length < 6) { setAuthMsg('Bitte E-Mail und ein Passwort (mind. 6 Zeichen).', true); return; }
+    setAuthMsg('Konto wird angelegt …');
+    const { data, error } = await sb.auth.signUp({ email, password });
+    if (error) { setAuthMsg('Fehler: ' + error.message, true); return; }
+    if (data && data.session) {
+        document.getElementById('authOverlay').classList.add('hidden');
+        setAuthMsg(''); updateAuthBtn(true);
+        showToast('✅ Konto angelegt & angemeldet.');
+        await reloadAfterAuth();
+    } else {
+        setAuthMsg('Konto angelegt. Falls eine Bestätigungs-E-Mail kommt: Link anklicken, dann „Anmelden".');
+    }
+}
+function authSkip() { document.getElementById('authOverlay').classList.add('hidden'); }
+async function authLogout() {
+    try { await sb.auth.signOut(); } catch (e) {}
+    updateAuthBtn(false);
+    showToast('Abgemeldet.');
+    location.reload();
+}
+function authButtonClick() {
+    sb.auth.getSession().then(({ data }) => {
+        if (data && data.session) { if (confirm('Abmelden?')) authLogout(); }
+        else { const o = document.getElementById('authOverlay'); o.classList.remove('hidden'); }
+    });
+}
+function updateAuthBtn(loggedIn) {
+    const b = document.getElementById('authBtn');
+    if (!b) return;
+    b.textContent = loggedIn ? '🔓' : '🔒';
+    b.title = loggedIn ? 'Angemeldet – tippen zum Abmelden' : 'Nicht angemeldet – tippen zum Anmelden';
+}
+async function reloadAfterAuth() {
+    try {
+        await loadCategories();
+        if (selectedCategory) await renderEntries();
+        loadMediaForDate(selectedDate);
+    } catch (e) {}
+}
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 function getTodayDate() {
@@ -483,6 +930,136 @@ function escHtml(s) {
     return String(s)
         .replace(/&/g,'&amp;').replace(/</g,'&lt;')
         .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// Text sicher anzeigen UND Web-Adressen (https://…) in anklickbare Links wandeln
+function linkify(s) {
+    return escHtml(s).replace(
+        /(https?:\/\/[^\s<]+[^\s<.,;:!?)\]}"'])/g,
+        '<a href="$1" target="_blank" rel="noopener" class="entry-link">$1</a>'
+    );
+}
+
+// Fettdruck **so** und Web-Adressen in bereits HTML-sicherem Text auszeichnen
+function inlineFmt(escaped) {
+    return escaped
+        .replace(/\*\*([^*\n]+)\*\*/g, '<strong>$1</strong>')
+        .replace(/(https?:\/\/[^\s<]+[^\s<.,;:!?)\]}"'])/g,
+            '<a href="$1" target="_blank" rel="noopener" class="entry-link">$1</a>');
+}
+
+// Text in Buch-Form rendern: Überschriften (# / Kapitel, ## / Abschnitt) + Inhaltsverzeichnis
+function renderRichText(text, idPrefix, withControls) {
+    const lines = String(text).split('\n');
+    const headings = [];
+    let html = '', buf = [], n = 0, pos = 0, bufStart = 0;
+    function flush() {
+        if (!buf.length) return;
+        const click = withControls ? ` data-start="${bufStart}" onclick="speakFromClick(event)" title="Genau hier antippen zum Vorlesen"` : '';
+        const cls = withControls ? 'rt-text rt-clickable' : 'rt-text';
+        html += `<div class="${cls}"${click}>` + inlineFmt(escHtml(buf.join('\n'))) + '</div>';
+        buf = [];
+    }
+    for (const raw of lines) {
+        let m, lvl = 0, title = '';
+        if      ((m = raw.match(/^###\s+(.+)$/))           || (m = raw.match(/^Unterabschnitt\s+(.+)$/i))) { lvl = 3; title = m[1]; }
+        else if ((m = raw.match(/^##\s+(.+)$/))            || (m = raw.match(/^Abschnitt\s+(.+)$/i))) { lvl = 2; title = m[1]; }
+        else if ((m = raw.match(/^#\s+(.+)$/))             || (m = raw.match(/^Kapitel\s+(.+)$/i)))    { lvl = 1; title = m[1]; }
+        if (lvl) {
+            flush();
+            const hi = n;
+            const id = idPrefix + '-h' + (n++);
+            title = title.trim();
+            headings.push({ level: lvl, title, id });
+            const tag = lvl === 1 ? 'h3' : (lvl === 3 ? 'h5' : 'h4');
+            const head = `<${tag} id="${id}" class="rt-h${lvl}">${inlineFmt(escHtml(title))}</${tag}>`;
+            if (withControls) {
+                html += `<div class="rt-hrow">${head}` +
+                    `<button class="rt-htool" onclick="speakFromHeading(${hi})" title="Ab hier vorlesen">🔊</button>` +
+                    `<button class="rt-htool" onclick="editSection(${hi})" title="Diesen Abschnitt bearbeiten">✏️</button>` +
+                    `</div>` +
+                    `<div class="ch-media" data-anchor="${escHtml(title)}">` +
+                        `<div class="ch-media-grid"></div>` +
+                        `<label class="ch-media-add">📷 Foto/Datei zu „${escHtml(title)}"` +
+                            `<input type="file" accept="image/*,audio/*,video/*,application/pdf,.pdf,.doc,.docx,.txt,.rtf,.odt,.xls,.xlsx,.csv,.ppt,.pptx" multiple onchange="uploadChapterMedia(this.files, this.closest('.ch-media-add'))">` +
+                        `</label>` +
+                    `</div>`;
+            } else {
+                html += head;
+            }
+        } else {
+            if (!buf.length) bufStart = pos;
+            buf.push(raw);
+        }
+        pos += raw.length + 1; // Zeichen-Position mitzählen (für „ab hier vorlesen")
+    }
+    flush();
+    return { html, headings };
+}
+
+// Liest das Buch ab der gewählten Überschrift vor
+function speakFromHeading(hIndex) {
+    if (speakingId !== null) { stopSpeaking(); return; } // läuft gerade → ausschalten
+    if (!currentBook || !currentBook.text) return;
+    startSpeaking(currentBook.text, 'book', hIndex); // ab dieser Überschrift vorlesen
+}
+
+// In der Anzeige eine Stelle (Absatz) antippen → ab dort vorlesen
+function speakFromOffset(charOffset) {
+    if (speakingId !== null) { stopSpeaking(); return; } // läuft → ausschalten
+    if (!currentBook || !currentBook.text) return;
+    startSpeaking(currentBook.text, 'book', null, charOffset);
+}
+
+// Ermittelt die genau angetippte Zeichen-Stelle und liest ab dort vor
+function speakFromClick(ev) {
+    const el = ev.target.closest('.rt-clickable');
+    if (!el) return;
+    const base = parseInt(el.dataset.start || '0', 10);
+    let within = 0;
+    try {
+        let node = null, off = 0;
+        if (document.caretRangeFromPoint) {
+            const r = document.caretRangeFromPoint(ev.clientX, ev.clientY);
+            if (r) { node = r.startContainer; off = r.startOffset; }
+        } else if (document.caretPositionFromPoint) {
+            const p = document.caretPositionFromPoint(ev.clientX, ev.clientY);
+            if (p) { node = p.offsetNode; off = p.offset; }
+        }
+        if (node && el.contains(node)) within = textOffsetWithin(el, node, off);
+    } catch (e) {}
+    speakFromOffset(base + within);
+}
+function textOffsetWithin(root, target, off) {
+    let total = 0, done = false;
+    (function walk(n) {
+        if (done) return;
+        if (n === target) { if (n.nodeType === 3) total += off; done = true; return; }
+        if (n.nodeType === 3) { total += n.nodeValue.length; return; }
+        for (let i = 0; i < n.childNodes.length; i++) { walk(n.childNodes[i]); if (done) return; }
+    })(root);
+    return total;
+}
+
+// Öffnet den Editor und springt zum gewählten Abschnitt
+function editSection(hIndex) {
+    if (!currentBook) { openBookEditor(); return; }
+    openKapitelEditor(currentBook, hIndex);
+}
+
+function scrollToHeading(id) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    flashHeading(el);
+}
+// Hebt die angesprungene Überschrift kurz hervor, damit man sieht, wo man gelandet ist
+function flashHeading(el) {
+    const row = el.closest('.rt-hrow') || el;
+    row.classList.remove('rt-h-flash');
+    void row.offsetWidth; // Animation neu starten
+    row.classList.add('rt-h-flash');
+    setTimeout(() => row.classList.remove('rt-h-flash'), 2600);
 }
 
 function setConnBadge(ok, msg) {
@@ -522,16 +1099,29 @@ async function copyToClipboard() {
 // ── Date ──────────────────────────────────────────────────────────────────────
 function onDateChange() {
     selectedDate = document.getElementById('entryDate').value;
+    if (typeof exitEditMode === 'function') exitEditMode(); // Datum gewechselt → kein Bearbeiten-Modus mehr
     if (selectedCategory) renderEntries();
+    loadMediaForDate(selectedDate);
+}
+
+// Öffnet den Google-Kalender im Tagesansicht-Modus am aktuell gewählten Datum.
+function openGoogleCalendar() {
+    const d = selectedDate || getTodayDate();
+    const [y, m, day] = d.split('-');
+    // Google-Kalender Tagesansicht: /r/day/JAHR/MONAT/TAG  (Monat/Tag ohne führende Null)
+    const url = `https://calendar.google.com/calendar/u/0/r/day/${y}/${Number(m)}/${Number(day)}`;
+    window.open(url, '_blank', 'noopener');
 }
 
 // ── Categories ────────────────────────────────────────────────────────────────
 async function loadCategories() {
     try {
         const { data, error } = await sb
-            .from('tagesnotizen_categories').select('name').order('position');
+            .from('tagesnotizen_categories').select('name, kind').order('position');
         if (error) throw error;
         categories = data.map(r => r.name);
+        categoryKind = {};
+        data.forEach(r => categoryKind[r.name] = r.kind || 'tag');
         renderCategories();
         updateExportSelect();
         setConnBadge(true, 'Cloud verbunden');
@@ -546,28 +1136,37 @@ function renderCategories() {
     categories.forEach(cat => {
         const btn = document.createElement('button');
         btn.className = 'tag-btn' + (cat === selectedCategory ? ' active' : '');
-        btn.textContent = '#' + cat;
+        const pre = categoryKind[cat] === 'buch' ? '📖 ' : '#';
+        btn.textContent = pre + cat + (isProtectedCategory(cat) ? ' 🔒' : '');
         btn.onclick = () => selectCategory(cat);
         grid.appendChild(btn);
     });
 }
 
 function selectCategory(cat) {
-    persistBufferStorage();
+    if (selectedCategory && categoryKind[selectedCategory] !== 'buch') persistBufferStorage();
     selectedCategory = cat;
+    if (typeof exitEditMode === 'function') exitEditMode(); // Kategorie gewechselt → kein Bearbeiten-Modus mehr
+    const isBook = categoryKind[cat] === 'buch';
     renderCategories();
-    document.getElementById('currentTagDisplay').textContent = '#' + cat;
-    document.getElementById('inputSection').classList.remove('hidden');
+    document.getElementById('currentTagDisplay').textContent = (isBook ? '📖 ' : '#') + cat;
+    // Bei Buch-Kategorien das gefährliche Tages-Eingabefeld ausblenden.
+    document.getElementById('inputSection').classList.toggle('hidden', isBook);
+    document.getElementById('mediaSection').classList.toggle('hidden', isBook);
     document.getElementById('summarySection').classList.add('hidden');
     currentSummary = '';
-    document.getElementById('inputText').value = '';
-    buffer = bufferByCategory[cat] ? [...bufferByCategory[cat]] : [];
-    renderBuffer();
+    if (!isBook) {
+        document.getElementById('inputText').value = '';
+        buffer = bufferByCategory[cat] ? [...bufferByCategory[cat]] : [];
+        renderBuffer();
+    }
     renderEntries();
 }
 
 function openNewCatModal() {
     document.getElementById('newCatInput').value = '';
+    const tagRadio = document.querySelector('input[name="newCatKind"][value="tag"]');
+    if (tagRadio) tagRadio.checked = true;
     document.getElementById('newCatModal').classList.add('active');
     setTimeout(() => document.getElementById('newCatInput').focus(), 120);
 }
@@ -577,21 +1176,52 @@ async function addCategory() {
     const name = document.getElementById('newCatInput').value.trim();
     if (!name) return;
     if (categories.includes(name)) { alert('Diese Kategorie existiert bereits.'); return; }
+    const kindEl = document.querySelector('input[name="newCatKind"]:checked');
+    const kind = kindEl ? kindEl.value : 'tag';
     try {
         const { error } = await sb.from('tagesnotizen_categories')
-            .insert({ name, position: categories.length });
+            .insert({ name, position: categories.length, kind });
         if (error) throw error;
         categories.push(name);
+        categoryKind[name] = kind;
         closeNewCatModal();
         renderCategories();
         updateExportSelect();
     } catch (e) { alert('Fehler: ' + e.message); }
 }
 
+// Verschiebt die aktuell gewählte Kategorie in der Reihenfolge nach links/rechts.
+async function moveCategory(direction) {
+    if (!selectedCategory) { alert('Bitte zuerst eine Kategorie auswählen, die Du verschieben möchtest.'); return; }
+    const i = categories.indexOf(selectedCategory);
+    const j = i + direction;
+    if (i < 0 || j < 0 || j >= categories.length) return; // schon am Rand
+    [categories[i], categories[j]] = [categories[j], categories[i]];
+    renderCategories();
+    updateExportSelect();
+    try {
+        // Reihenfolge sauber durchnummerieren und in der Datenbank speichern
+        await Promise.all(categories.map((name, idx) =>
+            sb.from('tagesnotizen_categories').update({ position: idx }).eq('name', name)));
+    } catch (e) { showToast('Reihenfolge konnte nicht gespeichert werden: ' + e.message, true); }
+}
+
 async function deleteSelectedCategory() {
     if (!selectedCategory) { alert('Bitte zuerst eine Kategorie auswählen.'); return; }
     const cat = selectedCategory;
-    if (!confirm(`Kategorie „${cat}" und alle Einträge wirklich löschen?`)) return;
+    if (isProtectedCategory(cat)) {
+        alert(`🔒 Die Kategorie „${cat}" ist geschützt und kann nicht gelöscht werden.\n\nDeine Bilder, das Tagesprotokoll und die Prosa bleiben so immer erhalten.`);
+        return;
+    }
+    // Anzahl der betroffenen Einträge ermitteln, damit klar ist, was verloren geht
+    let count = 0;
+    try {
+        const { count: c } = await sb.from('tagesnotizen_entries')
+            .select('id', { count: 'exact', head: true }).eq('category', cat);
+        count = c || 0;
+    } catch (e) {}
+    if (!confirm(`Kategorie „${cat}" löschen?\n\nDazu gehören ${count} Eintrag/Einträge, die ebenfalls gelöscht werden.`)) return;
+    if (!confirm(`Wirklich endgültig löschen?\n\n„${cat}" und alle ${count} Einträge sind danach für immer weg.\nDieser Schritt kann NICHT rückgängig gemacht werden.`)) return;
     try {
         await sb.from('tagesnotizen_entries').delete().eq('category', cat);
         const { error } = await sb.from('tagesnotizen_categories').delete().eq('name', cat);
@@ -624,8 +1254,92 @@ async function loadEntries() {
 }
 
 async function renderEntries() {
+    if (selectedCategory && categoryKind[selectedCategory] === 'buch') {
+        await renderBook(selectedCategory);
+        return;
+    }
     await loadEntries();
     displayEntries(entries);
+}
+
+// ── Buch-Ansicht (Buch-Kategorie) ───────────────────────────────────────────────
+async function renderBook(cat) {
+    const c = document.getElementById('entriesContainer');
+    c.innerHTML = '<p class="empty-msg">Buch wird geladen…</p>';
+    let book = null;
+    try {
+        const { data, error } = await sb.from('tagesnotizen_entries')
+            .select('id, datum, category, text').eq('category', cat)
+            .order('updated_at', { ascending: false }).limit(1);
+        if (error) throw error;
+        book = (data && data[0]) ? data[0] : null;
+    } catch (e) { c.innerHTML = '<p class="empty-msg">Fehler: ' + escHtml(e.message) + '</p>'; return; }
+    currentBook = book;
+    if (!book || !book.text.trim()) {
+        c.innerHTML =
+            '<div class="entry"><p class="empty-msg">📖 Dieses Buch ist noch leer.</p>' +
+            '<button class="btn-purple" style="width:100%;font-size:1.05rem;padding:0.7rem;" onclick="openBookEditor()">📖 Buch beginnen</button></div>';
+        return;
+    }
+    const rt = renderRichText(book.text, 'book', true);
+    let toc = '';
+    if (rt.headings.length >= 1) {
+        toc = '<div class="entry-toc"><div class="entry-toc-title">📑 Inhalt</div>' +
+            rt.headings.map(h => `<div class="toc-row">` +
+                `<a class="lvl${h.level}" onclick="scrollToHeading('${h.id}')">${escHtml(h.title)}</a>` +
+                `<button class="toc-cam" onclick="gotoChapterMedia('${h.id}')" title="Fotos/Dateien zu „${escHtml(h.title)}"">📷</button>` +
+                `</div>`).join('') +
+            '</div>';
+    }
+    c.innerHTML = `
+        <div class="entry">
+            <div class="entry-header book-head">
+                <span class="entry-date">📖 ${escHtml(cat)} · ${APP_VERSION}</span>
+                <div class="entry-actions">
+                    <button id="speak-book" class="btn-icon btn-amber speak-btn" onclick="speakBook()" title="Alles vorlesen">🔊</button>
+                    <button class="btn-icon btn-blue" onclick="openBookEditor()" title="Buch schreiben / bearbeiten">✏️</button>
+                    <button id="bookMediaBtn" class="btn-icon btn-dark" onclick="toggleBookMedia()" title="Fotos pro Kapitel verwalten">📷</button>
+                    <button class="btn-icon btn-dark" onclick="printBook()" title="Als Buch drucken">🖨️</button>
+                </div>
+            </div>
+            <div class="entry-text" id="bookText">${toc}${rt.html}<div id="bookOrphan" class="hidden"></div></div>
+        </div>`;
+    loadBookMedia(cat); // Fotos/Dateien pro Kapitel laden
+}
+
+// Schaltet die Buch-Ansicht zwischen reinem Lesen und Foto-Verwaltung um
+function toggleBookMedia() {
+    const t = document.getElementById('bookText');
+    const btn = document.getElementById('bookMediaBtn');
+    if (!t) return;
+    const on = t.classList.toggle('show-media');
+    if (btn) { btn.classList.toggle('btn-amber', on); btn.classList.toggle('btn-dark', !on); btn.textContent = on ? '📖' : '📷'; btn.title = on ? 'Zurück zum Lesen' : 'Fotos pro Kapitel verwalten'; }
+}
+
+// Vom Inhaltsverzeichnis: Foto-Modus an und direkt zu diesem Kapitel springen
+function gotoChapterMedia(id) {
+    const t = document.getElementById('bookText');
+    if (t && !t.classList.contains('show-media')) toggleBookMedia();
+    requestAnimationFrame(() => scrollToHeading(id)); // nach Layout-Wechsel springen + hervorheben
+}
+
+function speakBook() {
+    const prev = speakingId;
+    stopSpeaking();
+    if (prev !== null) return;
+    if (currentBook && currentBook.text) startSpeaking(currentBook.text, 'book');
+}
+
+function printBook() {
+    if (!currentBook) return;
+    printDoc(selectedCategory || 'Buch', '', currentBook.text);
+}
+
+// Öffnet den Kapitel-Editor für das Buch der aktuellen Kategorie (neu oder bestehend).
+function openBookEditor() {
+    const entry = currentBook || { id: null, datum: BOOK_DATUM, category: selectedCategory, text: '' };
+    // Wurde gerade vorgelesen und gestoppt? Dann im Editor genau zu dieser Stelle springen.
+    openKapitelEditor(entry, lastSpokenHeading != null ? lastSpokenHeading : undefined);
 }
 
 function displayEntries(list) {
@@ -633,19 +1347,73 @@ function displayEntries(list) {
     if (!list || list.length === 0) {
         c.innerHTML = '<p class="empty-msg">Noch keine Einträge.</p>'; return;
     }
-    c.innerHTML = list.map(e => `
+    c.innerHTML = list.map(e => {
+        const rt = renderRichText(e.text, 'e' + e.id);
+        let toc = '';
+        if (rt.headings.length >= 2) {
+            toc = '<div class="entry-toc"><div class="entry-toc-title">📑 Inhalt</div>' +
+                rt.headings.map(h => `<a class="lvl${h.level}" onclick="scrollToHeading('${h.id}')">${escHtml(h.title)}</a>`).join('') +
+                '</div>';
+        }
+        return `
         <div class="entry">
             <div class="entry-header">
                 <span class="entry-date">📅 ${e.datum}</span>
                 <div class="entry-actions">
                     <button id="speak-${e.id}" class="btn-icon btn-amber speak-btn" onclick="speakEntry('${e.id}')" title="Vorlesen">🔊</button>
                     <button class="btn-icon btn-blue"  onclick="editEntry('${e.id}')" title="Bearbeiten">✏️</button>
+                    <button class="btn-icon btn-dark"  onclick="moveEntry('${e.id}')" title="In andere Kategorie verschieben">📦</button>
+                    <button class="btn-icon btn-dark"  onclick="printEntry('${e.id}')" title="Als Buch drucken">🖨️</button>
                     <button class="btn-icon btn-red"   onclick="deleteEntry('${e.id}','${e.datum}')" title="Löschen">✕</button>
                 </div>
             </div>
-            <div class="entry-text">${escHtml(e.text)}</div>
-        </div>
-    `).join('');
+            <div class="entry-text">${toc}${rt.html}</div>
+        </div>`;
+    }).join('');
+}
+
+// Tageseintrag im Buch-Layout drucken
+function printEntry(id) {
+    const e = entries.find(x => x.id === id);
+    if (!e) return;
+    printDoc(selectedCategory || 'Tagesnotizen', e.datum, e.text);
+}
+
+// Text im Buch-Layout drucken (eigenes sauberes Fenster) – für Tageseinträge UND Bücher
+function printDoc(titel, dateLabel, text) {
+    const rt = renderRichText(text, 'p');
+    let toc = '';
+    if (rt.headings.length >= 2) {
+        toc = '<nav class="toc"><h2>Inhalt</h2>' +
+            rt.headings.map(h => `<div class="toc-l${h.level}">${escHtml(h.title)}</div>`).join('') +
+            '</nav>';
+    }
+    const w = window.open('', '_blank');
+    if (!w) { showToast('Bitte Pop-ups für diese Seite erlauben.', true); return; }
+    w.document.write(
+        '<!doctype html><html lang="de"><head><meta charset="utf-8">' +
+        '<title>' + escHtml(titel) + (dateLabel ? ' – ' + dateLabel : '') + '</title><style>' +
+        'body{font-family:Georgia,"Times New Roman",serif;line-height:1.6;color:#111;max-width:42rem;margin:2rem auto;padding:0 1.5rem;}' +
+        'h1.doc{font-size:1.8rem;border-bottom:2px solid #333;padding-bottom:0.3rem;}' +
+        '.meta{color:#666;font-size:0.9rem;margin-bottom:2rem;}' +
+        'h3{font-size:1.4rem;margin-top:1.6rem;border-bottom:1px solid #ccc;padding-bottom:0.2rem;}' +
+        'h4{font-size:1.15rem;margin-top:1.1rem;}' +
+        'h5{font-size:1rem;margin-top:0.9rem;margin-left:1rem;color:#333;}' +
+        '.rt-text{white-space:pre-wrap;margin:0.4rem 0;}' +
+        'a{color:#1a4f8b;}' +
+        '.toc{background:#f5f5f5;border:1px solid #ddd;border-radius:6px;padding:0.8rem 1rem;margin-bottom:2rem;}' +
+        '.toc h2{font-size:1.1rem;margin:0 0 0.4rem;}' +
+        '.toc-l1{font-weight:600;padding:0.1rem 0;}.toc-l2{padding:0.1rem 0 0.1rem 1.2rem;color:#444;}.toc-l3{padding:0.1rem 0 0.1rem 2.4rem;color:#666;font-size:0.95rem;}' +
+        '@media print{h3{page-break-before:always;}h3:first-of-type{page-break-before:avoid;}.toc{page-break-after:always;}}' +
+        '</style></head><body>' +
+        '<h1 class="doc">' + escHtml(titel) + '</h1>' +
+        (dateLabel ? '<div class="meta">' + escHtml(dateLabel) + '</div>' : '') +
+        toc + rt.html +
+        '</body></html>'
+    );
+    w.document.close();
+    w.focus();
+    setTimeout(() => w.print(), 400);
 }
 
 async function saveEntry(datum, category, text) {
@@ -671,12 +1439,949 @@ async function deleteEntry(id, datum) {
 function editEntry(id) {
     const e = entries.find(x => x.id === id);
     if (!e) return;
+    // Hat der Eintrag Kapitel-Überschriften? Dann den bequemen Kapitel-Editor öffnen.
+    if (/^(#{1,3}\s+|Kapitel\s+|Abschnitt\s+|Unterabschnitt\s+)/im.test(e.text)) {
+        openKapitelEditor(e);
+        return;
+    }
     document.getElementById('entryDate').value = e.datum;
     selectedDate = e.datum;
     document.getElementById('inputText').value = e.text;
     document.getElementById('summarySection').classList.add('hidden');
     currentSummary = '';
+    editingEntryId = id;          // Bearbeiten-Modus: Speichern/KI ERSETZT diesen Eintrag
+    updateEditBanner();
     window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+// Zeigt/versteckt den Bearbeiten-Hinweis
+function updateEditBanner() {
+    const b = document.getElementById('editBanner');
+    if (b) b.classList.toggle('hidden', !editingEntryId);
+}
+// Bearbeiten-Modus verlassen (ohne zu speichern)
+function exitEditMode() { editingEntryId = null; updateEditBanner(); }
+function cancelEdit() {
+    editingEntryId = null;
+    document.getElementById('inputText').value = '';
+    updateEditBanner();
+    showToast('Bearbeiten abgebrochen.');
+}
+
+// ── Block-Editor: Buch aus verschiebbaren Blöcken (Kapitel & Abschnitte) ────────
+// Ein Block: { level: 0=Einleitung | 1=Kapitel | 2=Abschnitt, title, body }
+function parseBlocks(text) {
+    const lines = String(text).split('\n');
+    const intro = [];
+    const blocks = [];
+    let cur = null;
+    for (const raw of lines) {
+        let m, level = 0, title = '';
+        if      ((m = raw.match(/^###\s+(.+)$/)) || (m = raw.match(/^Unterabschnitt\s+(.+)$/i))) { level = 3; title = m[1]; }
+        else if ((m = raw.match(/^##\s+(.+)$/)) || (m = raw.match(/^Abschnitt\s+(.+)$/i))) { level = 2; title = m[1]; }
+        else if ((m = raw.match(/^#\s+(.+)$/))  || (m = raw.match(/^Kapitel\s+(.+)$/i)))   { level = 1; title = m[1]; }
+        if (level) {
+            if (cur) blocks.push(cur);
+            cur = { level, title: title.trim(), body: [] };
+        } else if (cur) {
+            cur.body.push(raw);
+        } else {
+            intro.push(raw);
+        }
+    }
+    if (cur) blocks.push(cur);
+    const trim = (a) => a.join('\n').replace(/^\n+|\n+$/g, '');
+    const result = [];
+    const introText = trim(intro);
+    if (introText) result.push({ level: 0, title: '', body: introText });
+    blocks.forEach(b => result.push({ level: b.level, title: b.title, body: trim(b.body) }));
+    return result;
+}
+
+// kapitelEdit: { id (oder null bei neuem Buch), datum, category }
+let kapitelEdit = null;
+function openKapitelEditor(entry, scrollHeadingIndex) {
+    if (!entry) return;
+    stopSpeaking(); // Vorlesen sofort beenden – friert die zuletzt gelesene Stelle ein
+    kapitelEdit = {
+        id: entry.id || null,
+        datum: entry.datum || BOOK_DATUM,
+        category: entry.category || selectedCategory
+    };
+    // Falls beim letzten Mal etwas nicht in die Datenbank gespeichert wurde: anbieten
+    let sourceText = entry.text || '';
+    let draft = null;
+    try { const k = localDraftKey(); draft = k ? localStorage.getItem(k) : null; } catch (e) {}
+    if (draft && draft.trim() && draft.trim() !== sourceText.trim()) {
+        if (confirm('Es gibt noch nicht gespeicherte Änderungen von zuletzt. Möchtest Du sie weiterbearbeiten?')) sourceText = draft;
+        else clearLocalDraft();
+    }
+    const blocks = parseBlocks(sourceText);
+    document.querySelector('#kapitelModal .modal-title').textContent = '📖 ' + (kapitelEdit.category || 'Buch') + ' · ' + APP_VERSION;
+    setKapStatus('', '');
+    const list = document.getElementById('kapitelList');
+    list.innerHTML = '';
+    if (!blocks.length) addBlockCard(1, '', '');
+    else blocks.forEach(b => addBlockCard(b.level, b.title, b.body));
+    updateBlockUI();
+    clearTimeout(kapAutoTimer);
+    spellDirtyCard = null;
+    kapPinTa = null; kapPinOffset = null; kapPinText = '';
+    kapLastChunkText = ''; setReadBar('');
+    // Gliederung beim Öffnen zugeklappt
+    const _ol = document.getElementById('kapOutline'); if (_ol) _ol.classList.add('hidden');
+    list.classList.remove('hidden');
+    const _ar = document.querySelector('#kapitelModal .kap-addrow'); if (_ar) _ar.classList.remove('hidden');
+    const _ob = document.getElementById('kapOutlineBtn'); if (_ob) _ob.textContent = '📑 Gliederung';
+    const modal = document.getElementById('kapitelModal');
+    if (!modal._spellWired) { modal.addEventListener('click', handleEditorClick, true); modal._spellWired = true; }
+    modal.classList.add('active');
+    // Textfelder auf die volle Texthöhe aufziehen, sobald das Fenster sichtbar ist
+    requestAnimationFrame(() => {
+        growAllBlocks();
+        if (scrollHeadingIndex != null) {
+            const cards = [...document.querySelectorAll('#kapitelList .kap-card')]
+                .filter(c => c.dataset.level !== '0');
+            const target = cards[scrollHeadingIndex];
+            if (target) {
+                const ta = target.querySelector('.kap-body');
+                let pinned = false;
+                if (ta && lastSpokenText) {
+                    // den zuletzt vorgelesenen Satz im Abschnitt wiederfinden = Stelle
+                    const snip = lastSpokenText.trim().slice(0, 40);
+                    const idx = snip ? ta.value.indexOf(snip) : -1;
+                    if (idx >= 0) {
+                        setPin(ta, idx, lastSpokenText.trim());    // 📍 setzen + antippbare Leiste
+                        target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                        try { ta.setSelectionRange(idx, idx); ta._caret = idx; } catch (e) {}
+                        pinned = true;
+                    }
+                }
+                if (!pinned) {
+                    target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    target.classList.add('kap-flash');
+                    setTimeout(() => target.classList.remove('kap-flash'), 2200);
+                    if (ta) { try { ta.setSelectionRange(0, 0); ta._caret = 0; } catch (e) {} }
+                }
+            }
+        }
+    });
+}
+
+// Misst die senkrechte Position (y) einer Zeichen-Stelle im Textfeld
+function caretYInTextarea(ta, offset) {
+    const cs = getComputedStyle(ta);
+    const div = document.createElement('div');
+    ['fontFamily', 'fontSize', 'fontWeight', 'lineHeight', 'letterSpacing', 'textTransform',
+     'paddingTop', 'paddingLeft', 'paddingRight', 'borderTopWidth', 'borderLeftWidth', 'boxSizing']
+        .forEach(p => { div.style[p] = cs[p]; });
+    div.style.position = 'absolute'; div.style.visibility = 'hidden';
+    div.style.whiteSpace = 'pre-wrap'; div.style.wordWrap = 'break-word';
+    div.style.top = '0'; div.style.left = '0'; div.style.width = ta.clientWidth + 'px';
+    div.textContent = ta.value.slice(0, offset);
+    const span = document.createElement('span'); span.textContent = '​'; div.appendChild(span);
+    document.body.appendChild(div);
+    const y = span.offsetTop;
+    document.body.removeChild(div);
+    return y;
+}
+
+// Scrollt die Editor-Liste so, dass die Zeichen-Stelle `offset` im Textfeld sichtbar wird
+function scrollOffsetIntoView(ta, offset) {
+    try {
+        const list = document.getElementById('kapitelList');
+        if (!list) return;
+        const y = caretYInTextarea(ta, offset);
+        const taTopInList = (ta.getBoundingClientRect().top - list.getBoundingClientRect().top) + list.scrollTop;
+        list.scrollTop = Math.max(0, taTopInList + y - 70);
+    } catch (e) {}
+}
+
+// Setzt die 📍-Stecknadel in die linke Spalte, genau neben die Zeile der Stelle
+function placePin(ta, offset) {
+    try {
+        const card = ta.closest('.kap-card');
+        if (!card) return;
+        let pin = card.querySelector('.kap-pin');
+        if (!pin) {
+            pin = document.createElement('div');
+            pin.className = 'kap-pin';
+            pin.textContent = '📍';
+            pin.title = 'Zuletzt vorgelesene Stelle';
+            card.appendChild(pin);
+        }
+        const y = caretYInTextarea(ta, offset);
+        pin.style.top = (ta.offsetTop + y) + 'px';
+        pin.classList.remove('hidden');
+    } catch (e) {}
+}
+
+// Entfernt alle Stecknadeln (es soll immer nur die LETZTE geben)
+function removeAllPins() {
+    document.querySelectorAll('#kapitelList .kap-pin').forEach(p => p.remove());
+}
+
+// Setzt DIE EINE Stecknadel an die Stelle und zeigt die antippbare Leiste
+function setPin(ta, offset, text) {
+    if (!ta) return;
+    removeAllPins();
+    kapPinTa = ta;
+    kapPinOffset = offset;
+    kapPinText = (text || '').trim();
+    placePin(ta, offset);
+    setReadBar(kapPinText || 'die letzte Stelle', true);
+}
+
+// Springt erneut zur gemerkten Stelle (wenn man oben auf den Satz tippt) und blendet die Leiste aus
+function jumpToPin() {
+    if (!kapPinTa || kapPinOffset == null) return;
+    if (kapPinText && kapPinTa.value.indexOf(kapPinText.slice(0, 25)) < 0) {
+        showToast('Stelle nicht mehr auffindbar – bitte neu vorlesen.', true); return;
+    }
+    const idx = Math.min(kapPinOffset, kapPinTa.value.length);
+    try { kapPinTa.focus(); kapPinTa.setSelectionRange(idx, idx); kapPinTa._caret = idx; } catch (e) {}
+    scrollOffsetIntoView(kapPinTa, idx);
+    setReadBar(''); // braune Leiste weg – nur die Nadel bleibt
+}
+
+// Prüft, ob die markierte Stelle noch auffindbar ist: rot 📍 = ja, schwarz ⚫ = verloren
+let pinValidateTimer = null;
+function scheduleValidatePin() { clearTimeout(pinValidateTimer); pinValidateTimer = setTimeout(validatePin, 600); }
+function validatePin() {
+    if (kapPinOffset == null || !kapPinTa) return;
+    // Block (Textfeld) ganz verschwunden? → Stelle verloren
+    if (!document.body.contains(kapPinTa)) {
+        removeAllPins();
+        kapPinTa = null; kapPinOffset = null; kapPinText = '';
+        showToast('Die markierte Stelle gibt es nicht mehr – bitte neu vorlesen.', true);
+        setReadBar('');
+        return;
+    }
+    const pin = kapPinTa.closest('.kap-card') ? kapPinTa.closest('.kap-card').querySelector('.kap-pin') : null;
+    const snip = (kapPinText || '').slice(0, 25);
+    const idx = snip ? kapPinTa.value.indexOf(snip) : -1;
+    if (idx >= 0) {                       // noch auffindbar → rot, an die (evtl. verschobene) Zeile
+        kapPinOffset = idx;
+        if (pin) { pin.textContent = '📍'; pin.title = 'Zuletzt vorgelesene Stelle'; pin.classList.remove('kap-pin-lost'); }
+        placePin(kapPinTa, idx);
+    } else if (pin) {                     // nicht mehr auffindbar → schwarz
+        pin.textContent = '⚫';
+        pin.title = 'Stelle verloren – bitte neu vorlesen';
+        pin.classList.add('kap-pin-lost');
+    }
+}
+
+// Lässt ein Textfeld so hoch werden, dass der ganze Text sichtbar ist (kein inneres Scrollen)
+function autoGrow(ta) {
+    if (!ta) return;
+    ta.style.height = 'auto';
+    ta.style.height = Math.max(ta.scrollHeight + 4, 0) + 'px';
+}
+function growAllBlocks() {
+    document.querySelectorAll('#kapitelList .kap-body').forEach(autoGrow);
+}
+
+function miniBtn(label, title, fn) {
+    const b = document.createElement('button');
+    b.className = 'kap-mini'; b.textContent = label; b.title = title;
+    b.onclick = fn; return b;
+}
+
+// Fügt einen Block (Kapitel/Abschnitt/Einleitung) hinzu. afterCard: optional einfügen danach.
+function addBlockCard(level, title, body, afterCard) {
+    const list = document.getElementById('kapitelList');
+    const card = document.createElement('div');
+    card.className = 'kap-card' + (level === 2 ? ' is-abschnitt' : (level === 3 ? ' is-unter' : ''));
+    card.dataset.level = String(level);
+
+    const head = document.createElement('div');
+    head.className = 'kap-card-head';
+
+    if (level === 0) {
+        const lbl = document.createElement('span'); lbl.className = 'kap-num'; lbl.textContent = '📝';
+        const t = document.createElement('div'); t.className = 'kap-title kap-introlabel'; t.textContent = 'Einleitung (vor dem ersten Kapitel)';
+        head.appendChild(lbl); head.appendChild(t);
+    } else {
+        const cb = document.createElement('input');
+        cb.type = 'checkbox'; cb.className = 'kap-sel'; cb.title = 'Auswählen (zum Zusammenführen/Löschen)';
+        cb.onchange = updateBlockUI;
+
+        const lvlLabel = (lv) => lv === 1 ? '📖 Kapitel' : (lv === 2 ? '📑 Abschnitt' : '📄 Unterabschnitt');
+        const lvlBtn = document.createElement('button');
+        lvlBtn.className = 'kap-num kap-lvl';
+        lvlBtn.textContent = lvlLabel(level);
+        lvlBtn.title = 'Ebene umschalten: Kapitel → Abschnitt → Unterabschnitt';
+        lvlBtn.onclick = () => {
+            const next = card.dataset.level === '1' ? 2 : (card.dataset.level === '2' ? 3 : 1);
+            card.dataset.level = String(next);
+            lvlBtn.textContent = lvlLabel(next);
+            card.classList.toggle('is-abschnitt', next === 2);
+            card.classList.toggle('is-unter', next === 3);
+            scheduleAutosave();
+        };
+
+        const titleInput = document.createElement('input');
+        titleInput.className = 'kap-title'; titleInput.placeholder = 'Überschrift'; titleInput.value = title || '';
+        titleInput.addEventListener('input', scheduleAutosave);
+
+        const up   = miniBtn('⬆️', 'Nach oben schieben',  () => moveBlock(card, -1));
+        const down = miniBtn('⬇️', 'Nach unten schieben', () => moveBlock(card, 1));
+        const insK = miniBtn('➕📖', 'Neues Kapitel direkt darunter einfügen',        () => insertBlockAfter(card, 1));
+        const insA = miniBtn('➕📑', 'Neuen Abschnitt direkt darunter einfügen',      () => insertBlockAfter(card, 2));
+        const insU = miniBtn('➕📄', 'Neuen Unterabschnitt direkt darunter einfügen', () => insertBlockAfter(card, 3));
+        insK.classList.add('kap-ins'); insA.classList.add('kap-ins'); insU.classList.add('kap-ins');
+        const del  = miniBtn('🗑', 'Diesen Block löschen', () => {
+            if (confirm('Diesen Block wirklich löschen?')) { card.remove(); updateBlockUI(); validatePin(); scheduleAutosave(); }
+        });
+        del.classList.add('kap-delmini');
+
+        head.appendChild(cb); head.appendChild(lvlBtn); head.appendChild(titleInput);
+        head.appendChild(up); head.appendChild(down); head.appendChild(insK); head.appendChild(insA); head.appendChild(insU); head.appendChild(del);
+    }
+    card.appendChild(head);
+
+    const row = document.createElement('div');
+    row.style.cssText = 'display:flex;gap:0.5rem;align-items:flex-start;';
+    const ta = document.createElement('textarea');
+    ta.className = 'kap-body';
+    ta.placeholder = level === 0 ? 'Optionaler Text vor dem ersten Kapitel…' : 'Hier hineinsprechen oder schreiben…';
+    ta.value = body || '';
+    ta.addEventListener('input', scheduleAutosave);
+    ta.addEventListener('input', () => { autoGrow(ta); markSpellDirty(card); if (ta === kapPinTa) scheduleValidatePin(); });
+    // Cursor-Stelle merken (auch wenn der Fokus später zum Knopf wandert) – für „ab Cursor vorlesen"
+    ['keyup', 'mouseup', 'click', 'select', 'focus'].forEach(ev =>
+        ta.addEventListener(ev, () => { ta._caret = ta.selectionStart; }));
+
+    // Rechte Spalte: oben großes Mikrofon, darunter die einzelnen Knöpfe
+    const side = document.createElement('div');
+    side.className = 'kap-side';
+    const micBtn = document.createElement('button');
+    micBtn.className = 'btn-amber kap-mic'; micBtn.textContent = '🎤'; micBtn.title = 'In diesen Block sprechen';
+    micBtn.onclick = () => toggleKapitelMic(ta, micBtn);
+    const mk = (label, title, fn, aiOnly) => {
+        const b = document.createElement('button');
+        b.className = 'btn-dark kap-tool' + (aiOnly ? ' ai-only' : ''); b.textContent = label; b.title = title;
+        if (aiOnly) b.disabled = AI_FEATURES_DISABLED;
+        b.onclick = () => fn(b); return b;
+    };
+    side.appendChild(micBtn);
+    side.appendChild(mk('🔊', 'Vorlesen ab Cursor', () => speakKapitel(ta)));
+    side.appendChild(mk('↩', 'Letzte Änderung zurücknehmen', () => kapitelUndo(ta)));
+    side.appendChild(mk('✖', 'Feld leeren', () => kapitelClear(ta)));
+    side.appendChild(mk('📝', 'KI pausiert – GitHub Models aktuell nicht verfügbar', (b) => kapitelSpell(ta, b), true));
+    side.appendChild(mk('🪄', 'KI pausiert – GitHub Models aktuell nicht verfügbar', (b) => kapitelKI(ta, b), true));
+    row.appendChild(ta); row.appendChild(side);
+    card.appendChild(row);
+
+    if (afterCard && afterCard.parentNode === list) list.insertBefore(card, afterCard.nextSibling);
+    else list.appendChild(card);
+    updateBlockUI();
+    if (level !== 0 && !title && !body) ta.focus();
+    return card;
+}
+
+// Fügt direkt unter `card` ein neues Kapitel (1) oder einen Abschnitt (2) ein
+function insertBlockAfter(card, level) {
+    const neu = addBlockCard(level, '', '', card);
+    neu.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    neu.classList.add('kap-flash');
+    setTimeout(() => neu.classList.remove('kap-flash'), 1400);
+    const t = neu.querySelector('.kap-title');
+    if (t) t.focus();
+    scheduleAutosave();
+}
+
+// ── Gliederung / Inhaltsverzeichnis (kompakt: verschieben & einfügen) ───────────
+function toggleOutline() {
+    const o = document.getElementById('kapOutline');
+    const list = document.getElementById('kapitelList');
+    const addrow = document.querySelector('#kapitelModal .kap-addrow');
+    const btn = document.getElementById('kapOutlineBtn');
+    const show = o.classList.contains('hidden');
+    if (show) {
+        buildOutline();
+        o.classList.remove('hidden');
+        list.classList.add('hidden');
+        if (addrow) addrow.classList.add('hidden');
+        if (btn) btn.textContent = '📝 Bearbeiten';
+    } else {
+        o.classList.add('hidden');
+        list.classList.remove('hidden');
+        if (addrow) addrow.classList.remove('hidden');
+        if (btn) btn.textContent = '📑 Gliederung';
+        requestAnimationFrame(growAllBlocks); // Felder wieder auf volle Höhe
+    }
+}
+
+function buildOutline() {
+    const o = document.getElementById('kapOutline');
+    if (!o) return;
+    o.innerHTML = '';
+    const cards = [...document.querySelectorAll('#kapitelList .kap-card')];
+    const olBtn = (label, title, fn) => {
+        const b = document.createElement('button');
+        b.textContent = label; b.title = title; b.onclick = fn; return b;
+    };
+    cards.forEach(card => {
+        const level = card.dataset.level;
+        const titleEl = card.querySelector('.kap-title');
+        const ta = card.querySelector('.kap-body');
+        let title = titleEl ? (titleEl.value || '').trim() : '';
+        if (!title) title = level === '0' ? 'Einleitung' : '(ohne Überschrift)';
+        const hasText = !!(ta && ta.value.trim());
+        const icon = level === '1' ? '📖' : (level === '2' ? '📑' : (level === '3' ? '📄' : '📝'));
+        const dot = hasText ? '🟢' : '⚪';
+        const row = document.createElement('div');
+        row.className = 'kap-ol-row' + (level === '2' ? ' is-abschnitt' : (level === '3' ? ' is-unter' : ''));
+        row.style.marginLeft = (level === '2' ? 1.6 : level === '3' ? 3.4 : 0) + 'rem'; // Stufen-Einrückung sicherstellen
+        const titleBtn = document.createElement('button');
+        titleBtn.className = 'kap-ol-title';
+        titleBtn.textContent = icon + ' ' + title + '  ' + dot;
+        titleBtn.title = 'Zum Bearbeiten springen';
+        titleBtn.onclick = () => jumpToCardFromOutline(card);
+        row.appendChild(titleBtn);
+        if (level !== '0') {
+            row.appendChild(olBtn('⬆️', 'Nach oben', () => { moveBlock(card, -1); buildOutline(); }));
+            row.appendChild(olBtn('⬇️', 'Nach unten', () => { moveBlock(card, 1); buildOutline(); }));
+            row.appendChild(olBtn('➕📖', 'Kapitel darunter', () => { addBlockCard(1, '', '', card); scheduleAutosave(); buildOutline(); }));
+            row.appendChild(olBtn('➕📑', 'Abschnitt darunter', () => { addBlockCard(2, '', '', card); scheduleAutosave(); buildOutline(); }));
+            row.appendChild(olBtn('➕📄', 'Unterabschnitt darunter', () => { addBlockCard(3, '', '', card); scheduleAutosave(); buildOutline(); }));
+        }
+        o.appendChild(row);
+    });
+    if (!cards.length) { o.innerHTML = '<p class="tip">Noch keine Kapitel oder Abschnitte.</p>'; }
+    const addRow = document.createElement('div');
+    addRow.className = 'kap-ol-add';
+    addRow.appendChild(olBtn('➕ Kapitel', '', () => { addBlockCard(1, '', ''); scheduleAutosave(); buildOutline(); }));
+    addRow.appendChild(olBtn('➕ Abschnitt', '', () => { addBlockCard(2, '', ''); scheduleAutosave(); buildOutline(); }));
+    addRow.appendChild(olBtn('➕ Unterabschnitt', '', () => { addBlockCard(3, '', ''); scheduleAutosave(); buildOutline(); }));
+    o.appendChild(addRow);
+}
+
+// Aus der Gliederung zum Block springen (Gliederung schließen, hinscrollen, Überschrift fokussieren)
+function jumpToCardFromOutline(card) {
+    toggleOutline();
+    requestAnimationFrame(() => {
+        card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        card.classList.add('kap-flash');
+        setTimeout(() => card.classList.remove('kap-flash'), 1400);
+        const t = card.querySelector('.kap-title') || card.querySelector('.kap-body');
+        if (t) t.focus();
+    });
+}
+
+// Block verschieben (−1 = hoch, +1 = runter)
+function moveBlock(card, dir) {
+    const list = card.parentNode;
+    if (dir < 0) { const prev = card.previousElementSibling; if (prev) list.insertBefore(card, prev); }
+    else         { const next = card.nextElementSibling;     if (next) list.insertBefore(next, card); }
+    card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    card.classList.add('kap-flash');
+    setTimeout(() => card.classList.remove('kap-flash'), 1200);
+    scheduleAutosave();
+}
+
+// Neuen Block am Ende anlegen (level 1 = Kapitel, 2 = Abschnitt)
+function addNewBlock(level) {
+    const card = addBlockCard(level, '', '');
+    card.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    const t = card.querySelector('.kap-title'); if (t) t.focus();
+}
+
+// Markierte Blöcke zusammenführen: in den ersten markierten Block hineinziehen
+function mergeSelectedBlocks() {
+    const sel = [...document.querySelectorAll('#kapitelList .kap-card')]
+        .filter(c => { const cb = c.querySelector('.kap-sel'); return cb && cb.checked; });
+    if (sel.length < 2) { showToast('Bitte mindestens zwei Blöcke auswählen.', true); return; }
+    const first = sel[0];
+    const firstTa = first.querySelector('.kap-body');
+    pushKapHistory(firstTa);
+    const parts = [];
+    sel.forEach((c, i) => {
+        const t = c.querySelector('.kap-title') ? (c.querySelector('.kap-title').value || '').trim() : '';
+        const b = (c.querySelector('.kap-body').value || '').trim();
+        if (i === 0) { if (b) parts.push(b); }
+        else { if (t) parts.push(t); if (b) parts.push(b); }
+    });
+    firstTa.value = parts.join('\n\n');
+    autoGrow(firstTa);
+    sel.slice(1).forEach(c => c.remove());
+    const cb0 = first.querySelector('.kap-sel'); if (cb0) cb0.checked = false;
+    updateBlockUI();
+    validatePin();
+    scheduleAutosave();
+    showToast('Zusammengeführt. Mit 🪄 kannst Du jetzt alles neu schreiben lassen.');
+    firstTa.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
+function deleteSelectedBlocks() {
+    const sel = [...document.querySelectorAll('#kapitelList .kap-card')]
+        .filter(c => { const cb = c.querySelector('.kap-sel'); return cb && cb.checked; });
+    if (!sel.length) return;
+    if (!confirm(sel.length + ' markierte(n) Block/Blöcke wirklich löschen?')) return;
+    sel.forEach(c => c.remove());
+    updateBlockUI();
+    validatePin();
+    scheduleAutosave();
+}
+
+// Aktualisiert die Auswahl-Leiste (Zusammenführen/Löschen) je nach markierten Blöcken
+function updateBlockUI() {
+    const sel = [...document.querySelectorAll('#kapitelList .kap-card .kap-sel')].filter(cb => cb.checked);
+    const bar = document.getElementById('kapitelBatch');
+    const mergeBtn = document.getElementById('kapMergeBtn');
+    const delBtn = document.getElementById('kapDelBtn');
+    if (bar) bar.classList.toggle('hidden', sel.length === 0);
+    if (mergeBtn) mergeBtn.disabled = sel.length < 2;
+    if (delBtn) delBtn.disabled = sel.length < 1;
+}
+
+// Verlauf je Kapitel-Feld für ↩ Rückgängig
+function pushKapHistory(ta) { if (!ta._hist) ta._hist = []; ta._hist.push(ta.value); }
+function kapitelUndo(ta) {
+    if (ta._hist && ta._hist.length) { ta.value = ta._hist.pop(); autoGrow(ta); scheduleAutosave(); }
+    else { showToast('Nichts zum Rückgängigmachen.', true); }
+}
+function kapitelClear(ta) {
+    if (!(ta.value || '').trim()) return;
+    pushKapHistory(ta);
+    ta.value = '';
+    ta.focus();
+    autoGrow(ta);
+    scheduleAutosave();
+}
+
+// 📝 Rechtschreibung: korrigiert NUR Rechtschreibung/Zeichensetzung – Inhalt & Wortwahl bleiben
+// Kern: prüft das Textfeld und schreibt das Ergebnis zurück. Gibt true bei Änderung.
+// Reiner Rechtschreib-Lauf für einen Text-String (gibt korrigierten Text zurück)
+async function spellCheckString(text, model) {
+    const sysPrompt =
+        'Du bist ein Korrektor für deutsche Rechtschreibung (geltende deutsche Rechtschreibung in Deutschland). ' +
+        'Korrigiere AUSSCHLIESSLICH Rechtschreibung, Groß- und Kleinschreibung, Zeichensetzung und offensichtliche, ' +
+        'durch Spracherkennung entstandene Verhörer (z. B. falsch erkannte oder zusammengeschriebene Wörter). ' +
+        'Ändere NICHT den Inhalt, NICHT die Wortwahl, NICHT den Satzbau und NICHT den Stil. ' +
+        'Füge NICHTS hinzu und lasse NICHTS weg. Behalte alle Namen und Zahlen exakt bei. ' +
+        'Gib nur den korrigierten Text zurück, ohne Einleitung oder Kommentar.';
+    const prompt = 'Korrigiere nur die deutsche Rechtschreibung und Zeichensetzung dieses Textes, ' +
+        'ohne Inhalt oder Formulierung zu verändern:\n\n' + text;
+    return await callGithubModels(prompt, sysPrompt, 0.1, 2000, model);
+}
+
+async function spellCheckTextarea(ta) {
+    const text = (ta.value || '').trim();
+    if (!text) return false;
+    if (!getGithubPat()) { showToast('Bitte zuerst den GitHub-Token im Abschnitt „KI" eingeben.', true); return false; }
+    pushKapHistory(ta);
+    setKapStatus('📝 Rechtschreibung wird geprüft …', 'pending');
+    const res = await spellCheckString(text);
+    if (res) { ta.value = res; autoGrow(ta); validatePin(); return true; }
+    return false;
+}
+
+// Knopf 📝: Rechtschreibung dieses Blocks prüfen
+async function kapitelSpell(ta, btn) {
+    if (!(ta.value || '').trim()) { showToast('Bitte zuerst etwas schreiben oder sprechen.', true); return; }
+    const card = ta.closest('.kap-card');
+    if (card && spellDirtyCard === card) spellDirtyCard = null;
+    const old = btn.textContent;
+    btn.disabled = true; btn.textContent = '⏳ …';
+    try {
+        const ok = await spellCheckTextarea(ta);
+        if (ok) { await autoSaveKapitel(); showToast('✓ Rechtschreibung geprüft & gesichert.'); }
+        else if (getGithubPat()) showToast('Die KI hat keinen Text geliefert.', true);
+    } catch (e) {
+        showToast('Fehler: ' + e.message, true);
+    } finally {
+        btn.disabled = false; btn.textContent = old;
+    }
+}
+
+// „Abschluss" eines Blocks: Rechtschreibung prüfen, anzeigen und sichern.
+// Wird ausgelöst, sobald nach dem Diktieren ein ANDERER Knopf gedrückt wird (nicht die Mikrofontaste).
+let spellDirtyCard = null;            // Block mit noch nicht abgeschlossenem Diktat
+function markSpellDirty(card) { if (card) spellDirtyCard = card; }
+
+async function finalizeSpell(card) {
+    if (!card || card._spellBusy) return;
+    const ta = card.querySelector('.kap-body');
+    if (!ta) return;
+    if (spellDirtyCard === card) spellDirtyCard = null;
+    if (!(ta.value || '').trim()) { scheduleAutosave(); return; }
+    card._spellBusy = true;
+    try {
+        const ok = await spellCheckTextarea(ta);
+        if (ok) { await autoSaveKapitel(); showToast('✓ Abschnitt gesichert – Rechtschreibung geprüft.'); }
+        else { scheduleAutosave(); }
+    } catch (e) {
+        scheduleAutosave(); // bei Fehler wenigstens den Text sichern
+    } finally {
+        card._spellBusy = false;
+    }
+}
+
+// Reagiert auf Knopfdrücke im Editor: schließt den zuletzt diktierten Block ab
+// (Rechtschreibung + sichern) – außer es ist die Mikrofontaste DESSELBEN Blocks.
+function handleEditorClick(ev) {
+    const card = spellDirtyCard;
+    if (!card) return;
+    const btn = ev.target.closest('button');
+    if (!btn) return;
+    if (btn.classList.contains('kap-readstop')) return; // Stopp-Knopf der Vorlese-Leiste: nie Abschluss
+    // Knöpfe INNERHALB des aktiven Blocks lösen keinen Abschluss aus
+    // (Mikrofon + Werkzeuge 📝/🪄/🔊/↩/🧹 macht sie selbst bzw. soll nichts auslösen)
+    if (card.contains(btn) && (btn.classList.contains('kap-mic') || btn.classList.contains('kap-tool'))) {
+        const t = btn.textContent || '';
+        if (t.startsWith('📝') || t.startsWith('🪄')) spellDirtyCard = null; // verarbeitet den Block selbst
+        return;
+    }
+    // Jeder andere Knopf (anderer Block, Verschieben, Speichern …) → Abschluss: Rechtschreibung + sichern
+    finalizeSpell(card);
+}
+
+// 🪄 KI: öffnet das Auswahlfenster (Modell + Stil + nur Markiertes)
+let kiDialogTa = null, kiSelStart = 0, kiSelEnd = 0, kiCurStyle = 'normal';
+
+function kapitelKI(ta, btn) { openKiDialog(ta); }
+
+function openKiDialog(ta) {
+    if (!(ta.value || '').trim()) { showToast('Bitte zuerst etwas ins Feld schreiben oder sprechen.', true); return; }
+    if (!getGithubPat()) { showToast('Bitte zuerst den GitHub-Token im Abschnitt „KI" eingeben.', true); return; }
+    kiDialogTa = ta;
+    kiSelStart = ta.selectionStart || 0;
+    kiSelEnd = ta.selectionEnd || 0;
+    const hasSel = kiSelEnd > kiSelStart;
+    const m = document.getElementById('kiOptModel');
+    if (m) m.value = localStorage.getItem('tagesnotizen-model') || GH_MODEL_DEFAULT;
+    setKiStyle(localStorage.getItem('tagesnotizen-ki-style') || 'normal');
+    const selBox = document.getElementById('kiOptSel');
+    selBox.checked = hasSel; selBox.disabled = !hasSel;
+    selBox.parentElement.style.opacity = hasSel ? '1' : '0.5';
+    document.getElementById('kiOptSpell').checked = true;
+    document.getElementById('kiOptModal').classList.add('active');
+}
+function setKiStyle(s) {
+    kiCurStyle = s;
+    document.querySelectorAll('#kiOptStyle .ki-style').forEach(b =>
+        b.classList.toggle('active', b.dataset.style === s));
+}
+function closeKiDialog() { document.getElementById('kiOptModal').classList.remove('active'); }
+
+async function runKiDialog() {
+    const ta = kiDialogTa; if (!ta) { closeKiDialog(); return; }
+    const model = document.getElementById('kiOptModel').value;
+    const style = kiCurStyle;
+    const onlySel = document.getElementById('kiOptSel').checked && kiSelEnd > kiSelStart;
+    const doSpell = document.getElementById('kiOptSpell').checked;
+    localStorage.setItem('tagesnotizen-model', model);
+    localStorage.setItem('tagesnotizen-ki-style', style);
+    const top = document.getElementById('modelSelect'); if (top) top.value = model;
+    closeKiDialog();
+    await runKiOnTextarea(ta, { model, style, onlySel, doSpell });
+}
+
+function kiSysPrompt(style) {
+    const base =
+        'Du bist ein einfühlsamer Schriftsteller, der aus Stichworten und Notizen lebendige, gut lesbare Prosa macht. ' +
+        'Die schreibende Person ist immer "ich" und wird niemals durch einen Namen ersetzt. ' +
+        'Norbert ist der Ehemann der schreibenden Person. Alle anderen genannten Namen sind reale Personen. ' +
+        'Behalte alle Details, Namen, Orte und Ereignisse — nichts darf erfunden werden. ' +
+        'Füge insbesondere KEINE Politiker oder Personen des öffentlichen Lebens und KEINE historischen oder ' +
+        'politischen Ereignisse hinzu, die nicht ausdrücklich in den Notizen genannt sind. ';
+    const styleLine = style === 'schlicht'
+        ? 'Schreibe schlicht, nüchtern und sachlich, in klaren, einfachen Sätzen, ohne Schnörkel. '
+        : style === 'blumig'
+            ? 'Schreibe lebendig, warm und bildhaft, mit abwechslungsreicher, gefühlvoller Wortwahl. '
+            : 'Schreibe in einem natürlichen, angenehmen Ton. ';
+    return base + styleLine +
+        'Schreibe einen zusammenhängenden Fließtext ohne Überschriften. ' +
+        'Antworte nur mit dem fertigen Text, ohne Einleitung oder Kommentar.';
+}
+function kiTemp(style) { return style === 'schlicht' ? 0.2 : style === 'blumig' ? 0.6 : 0.35; }
+
+async function runKiOnTextarea(ta, opt) {
+    const start = opt.onlySel ? kiSelStart : 0;
+    const end = opt.onlySel ? kiSelEnd : ta.value.length;
+    let text = ta.value.substring(start, end).trim();
+    if (!text) { showToast('Kein Text ausgewählt.', true); return; }
+    pushKapHistory(ta);
+    try {
+        let working = text;
+        if (opt.doSpell) {
+            setKapStatus('📝 Rechtschreibung …', 'pending');
+            const corrected = await spellCheckString(working, opt.model);
+            if (corrected) working = corrected;
+        }
+        setKapStatus('🪄 schön schreiben …', 'pending');
+        const styled = await callGithubModels(
+            'Mach aus diesem Text einen schönen, zusammenhängenden Text in Prosa:\n\n' + working,
+            kiSysPrompt(opt.style), kiTemp(opt.style), 2000, opt.model);
+        if (styled) {
+            ta.value = ta.value.substring(0, start) + styled + ta.value.substring(end);
+            autoGrow(ta); validatePin(); scheduleAutosave();
+            showToast('✓ ' + (opt.onlySel ? 'Markierter Teil' : 'Abschnitt') + ' neu geschrieben.');
+        } else {
+            setKapStatus('', '');
+            showToast('Die KI hat keinen Text geliefert.', true);
+        }
+    } catch (e) {
+        setKapStatus('', '');
+        showToast('Fehler: ' + e.message, true);
+    }
+}
+
+// Vorlesen eines einzelnen Kapitel-Feldes
+let kapSpeakTimer = null;
+let kapLastChunkText = '';   // zuletzt vorgelesener Satz (für die Anzeige-Leiste)
+let kapReadTa = null;        // Textfeld, das gerade vorgelesen wird
+let kapReadCurStart = 0;     // Anfang des aktuellen Satzes (für „hier weitermachen")
+let kapPinTa = null;         // Textfeld mit der gemerkten Stelle (📍)
+let kapPinText = '';         // Satz an der gemerkten Stelle (zum Anzeigen)
+let kapPinOffset = null;     // Zeichen-Stelle der Stecknadel
+// Zeigt oben deutlich, welcher Satz gerade gelesen wird – mit großem ⏹-Stopp-Knopf
+function setReadBar(text, stopped) {
+    const el = document.getElementById('kapReadBar');
+    if (!el) return;
+    if (!text) { el.classList.add('hidden'); el.innerHTML = ''; return; }
+    el.classList.remove('hidden');
+    if (stopped) {
+        el.innerHTML = '<span class="kap-readtext">📍 Stelle (antippen): ' + escHtml(text) + '</span>';
+        el.onclick = jumpToPin;
+        el.style.cursor = 'pointer';
+        return;
+    } else {
+        el.onclick = null; el.style.cursor = '';
+        el.innerHTML = '<span class="kap-readtext">🔊 ' + escHtml(text) + '</span>' +
+            '<button class="kap-readstop" onclick="stopKapReading()">⏹ Stopp</button>';
+    }
+}
+// Stoppt das Vorlesen im Editor: setzt die NEUE Stecknadel an die gestoppte Stelle (ersetzt die alte)
+function stopKapReading() {
+    stopSpeaking();
+    if (kapSpeakTimer) { clearInterval(kapSpeakTimer); kapSpeakTimer = null; }
+    if (kapReadTa) {
+        try { kapReadTa.setSelectionRange(kapReadCurStart, kapReadCurStart); } catch (e) {}
+        kapReadTa._caret = kapReadCurStart; // nächstes 🔊 liest ab hier weiter
+        setPin(kapReadTa, kapReadCurStart, kapLastChunkText); // 📍 an die neue Stelle
+    }
+}
+// Zerlegt Text ab startPos in Satz-Häppchen und merkt sich die genaue Stelle (a..b) im Text
+function chunkWithRanges(text, startPos) {
+    const chunks = [];
+    const re = /[^.!?\n]*[.!?]+|[^.!?\n]+|\n+/g;
+    re.lastIndex = Math.max(0, startPos || 0);
+    let curStart = -1, curEnd = -1, curLen = 0, m;
+    while ((m = re.exec(text)) !== null) {
+        const piece = m[0];
+        if (piece === '') { re.lastIndex++; continue; }
+        if (/^\n+$/.test(piece) || !piece.trim()) continue;
+        const pStart = m.index, pEnd = m.index + piece.length;
+        if (curStart !== -1 && (curLen + piece.trim().length) > 200) {
+            chunks.push({ a: curStart, b: curEnd }); curStart = -1; curLen = 0;
+        }
+        if (curStart === -1) curStart = pStart;
+        curEnd = pEnd; curLen += piece.trim().length;
+    }
+    if (curStart !== -1) chunks.push({ a: curStart, b: curEnd });
+    return chunks;
+}
+// Liest einen Abschnitt vor – ab der Cursor-Stelle (falls gesetzt) und markiert den aktuellen Satz.
+function speakKapitel(ta) {
+    const synth = window.speechSynthesis;
+    if (speakingId !== null || synth.speaking || synth.pending) {   // läuft → stoppen (Stelle bleibt sichtbar)
+        stopKapReading();
+        return;
+    }
+    const full = ta.value || '';
+    if (!full.trim()) { showToast('Dieser Abschnitt ist noch leer.', true); return; }
+    let startPos = (ta._caret != null) ? ta._caret : (ta.selectionStart || 0);
+    if (startPos >= full.length || startPos < 0) startPos = 0;     // Cursor am Ende → von vorne
+    const chunks = chunkWithRanges(full, startPos);
+    if (!chunks.length) return;
+    kapReadTa = ta;
+    speakingId = 'kapitel';
+    updateSpeakUI();
+    let i = 0;
+    const speakNext = () => {
+        if (speakingId !== 'kapitel') return;
+        if (i >= chunks.length) {
+            if (speakResumeTimer) { clearInterval(speakResumeTimer); speakResumeTimer = null; }
+            speakingId = null; updateSpeakUI(); setReadBar(''); return;
+        }
+        const ch = chunks[i++];
+        kapReadCurStart = ch.a;
+        try { ta.setSelectionRange(ch.a, ch.b); } catch (e) {}   // aktuellen Satz markieren
+        kapLastChunkText = full.slice(ch.a, ch.b).trim();
+        setReadBar(kapLastChunkText);                            // oben deutlich anzeigen
+        speakChunkSegments(full.slice(ch.a, ch.b), speakNext, 'kapitel'); // ggf. mehrsprachig
+    };
+    speakNext();
+    if (speakResumeTimer) clearInterval(speakResumeTimer);
+    speakResumeTimer = setInterval(() => { if (synth.paused && speakingId) synth.resume(); }, 4000);
+}
+
+// Diktieren in ein bestimmtes Kapitel-Feld (eigenes Mikrofon je Kapitel)
+function toggleKapitelMic(ta, btn) {
+    if (isRecording && micTargetEl === ta) { stopMic(); return; }
+    if (isRecording) stopMic();
+    const pos = ta.selectionStart != null ? ta.selectionStart : ta.value.length;
+    micBefore = ta.value.substring(0, pos);
+    micAfter  = ta.value.substring(pos);
+    micDone   = '';
+    startMic(ta, btn);
+}
+
+// ── Automatisches Speichern ─────────────────────────────────────────────────
+// Setzt den gesamten Buch-Text aus allen Blöcken zusammen.
+function assembleBookText() {
+    const parts = [];
+    document.querySelectorAll('#kapitelList .kap-card').forEach(card => {
+        const level = card.dataset.level;
+        const ta = card.querySelector('.kap-body');
+        const body = (ta ? ta.value : '').trim();
+        if (level === '0') {
+            if (body) parts.push(body);
+            return;
+        }
+        const titleEl = card.querySelector('.kap-title');
+        const title = (titleEl ? titleEl.value : '').trim();
+        if (!title && !body) return;
+        const kw = level === '3' ? 'Unterabschnitt ' : (level === '2' ? 'Abschnitt ' : 'Kapitel ');
+        let block = title ? kw + title : '';
+        if (body) block += (block ? '\n' : '') + body;
+        parts.push(block);
+    });
+    return parts.join('\n\n');
+}
+
+let kapAutoTimer = null;
+let kapSaving = false;
+
+function setKapStatus(txt, cls) {
+    const el = document.getElementById('kapSaveStatus');
+    if (!el) return;
+    el.textContent = txt;
+    el.className = 'kap-status' + (cls ? ' ' + cls : '');
+}
+
+// Sicherungskopie im Gerät (falls Speichern in der Datenbank scheitert)
+function localDraftKey() {
+    if (!kapitelEdit) return null;
+    return 'buchEntwurf_' + (kapitelEdit.id || (kapitelEdit.category + '_' + kapitelEdit.datum));
+}
+function saveLocalDraft(text) {
+    try { const k = localDraftKey(); if (k) localStorage.setItem(k, text); } catch (e) {}
+}
+function clearLocalDraft() {
+    try { const k = localDraftKey(); if (k) localStorage.removeItem(k); } catch (e) {}
+}
+
+// Plant ein automatisches Speichern kurz nach der letzten Änderung
+function scheduleAutosave() {
+    if (!kapitelEdit) return;
+    clearTimeout(kapAutoTimer);
+    setKapStatus('• nicht gespeichert', 'pending');
+    kapAutoTimer = setTimeout(() => { autoSaveKapitel(); }, 1800);
+}
+
+// Speichert das Buch automatisch in die Datenbank
+async function autoSaveKapitel() {
+    if (!kapitelEdit || kapSaving) return false;
+    clearTimeout(kapAutoTimer);
+    const newText = assembleBookText();
+    if (!newText.trim()) { setKapStatus('', ''); return false; }
+    kapSaving = true;
+    setKapStatus('💾 speichert …', 'pending');
+    const preKey = localDraftKey();           // Schlüssel VOR dem Einfügen merken
+    try { if (preKey) localStorage.setItem(preKey, newText); } catch (e) {} // erst lokal sichern
+    try {
+        if (kapitelEdit.id) {
+            const { error } = await sb.from('tagesnotizen_entries')
+                .update({ text: newText, updated_at: new Date().toISOString() }).eq('id', kapitelEdit.id);
+            if (error) throw error;
+        } else {
+            const { data, error } = await sb.from('tagesnotizen_entries')
+                .insert({ datum: kapitelEdit.datum, category: kapitelEdit.category, text: newText })
+                .select('id').single();
+            if (error) throw error;
+            if (data && data.id) kapitelEdit.id = data.id;
+        }
+        try { if (preKey) localStorage.removeItem(preKey); } catch (e) {}
+        clearLocalDraft();
+        kapitelEdit._dirty = false;
+        setKapStatus('✓ Gespeichert', 'ok');
+        return true;
+    } catch (err) {
+        setKapStatus('⚠ Sicherung im Gerät', 'warn'); // bleibt lokal erhalten, neuer Versuch bei nächster Änderung
+        return false;
+    } finally {
+        kapSaving = false;
+    }
+}
+
+// Manuelles Speichern (Knopf): speichert und bleibt im Editor
+async function saveKapitelEditor() {
+    if (!kapitelEdit) { closeKapitelEditor(); return; }
+    if (isRecording) stopMic();
+    const ok = await autoSaveKapitel();
+    if (ok) showToast('✅ Gespeichert.');
+    else if (!assembleBookText().trim()) showToast('Das Buch ist noch leer.', true);
+}
+
+async function closeKapitelEditor() {
+    if (isRecording) stopMic();
+    try { stopSpeaking(); } catch(e) {}
+    if (kapSpeakTimer) { clearInterval(kapSpeakTimer); kapSpeakTimer = null; }
+    if (kapitelEdit) await autoSaveKapitel(); // beim Schließen sicher speichern
+    document.getElementById('kapitelModal').classList.remove('active');
+    kapitelEdit = null;
+    try { await renderEntries(); } catch (e) {}
+}
+
+// Verschiebt einen Eintrag in eine andere Kategorie ("umziehen").
+let moveEntryId = null;
+function moveEntry(id) {
+    const e = entries.find(x => x.id === id);
+    if (!e) return;
+    const targets = categories.filter(c => c !== selectedCategory);
+    if (targets.length === 0) { alert('Es gibt keine andere Kategorie zum Verschieben.'); return; }
+    moveEntryId = id;
+    document.getElementById('moveEntryInfo').textContent =
+        `Eintrag vom ${e.datum} aus „${selectedCategory}" verschieben.`;
+    const box = document.getElementById('moveEntryTargets');
+    box.innerHTML = '';
+    targets.forEach(c => {
+        const btn = document.createElement('button');
+        btn.className = 'btn-dark';
+        btn.style.cssText = 'width:100%;text-align:left;font-size:1rem;padding:0.6rem 0.8rem;';
+        btn.textContent = '#' + c + (isProtectedCategory(c) ? ' 🔒' : '');
+        btn.onclick = () => doMoveEntry(c);
+        box.appendChild(btn);
+    });
+    document.getElementById('moveEntryModal').classList.add('active');
+}
+function closeMoveEntryModal() {
+    document.getElementById('moveEntryModal').classList.remove('active');
+    moveEntryId = null;
+}
+async function doMoveEntry(target) {
+    const id = moveEntryId;
+    const e = entries.find(x => x.id === id);
+    if (!e) { closeMoveEntryModal(); return; }
+    closeMoveEntryModal();
+    try {
+        // Pro Tag und Kategorie ist nur ein Eintrag erlaubt – Ziel prüfen
+        const { data: existing } = await sb.from('tagesnotizen_entries')
+            .select('id').eq('datum', e.datum).eq('category', target).maybeSingle();
+        if (existing) {
+            alert(`In „${target}" gibt es für den ${e.datum} bereits einen Eintrag.\nBitte dort zuerst Platz schaffen oder die Texte von Hand zusammenführen.`);
+            return;
+        }
+        const { error } = await sb.from('tagesnotizen_entries')
+            .update({ category: target }).eq('id', id);
+        if (error) throw error;
+        showToast(`✅ Eintrag nach „${target}" verschoben.`);
+        await renderEntries();
+    } catch (err) { alert('Fehler beim Verschieben: ' + err.message); }
 }
 
 // ── Voice (Mikrofon – bleibt dauerhaft an) ────────────────────────────────────
@@ -689,11 +2394,16 @@ function toggleMic() {
         micBefore = ta.value.substring(0, pos); // Text vor dem Cursor
         micAfter  = ta.value.substring(pos);    // Text nach dem Cursor
         micDone   = '';
-        startMic();
+        startMic(ta, document.getElementById('micBtn'));
     }
 }
 
-function startMic() {
+// startMic(target, btn): diktiert in das Feld `target`. Ohne Argumente (Neustart
+// nach onend) werden die zuletzt gesetzten micTargetEl/micBtnEl weiterverwendet.
+function startMic(target, btn) {
+    if (target) micTargetEl = target;
+    if (btn)    micBtnEl    = btn;
+    const ta = micTargetEl || document.getElementById('inputText');
     const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!SR) {
         alert('Spracherkennung nicht verfügbar.\nBitte Chrome verwenden.');
@@ -709,17 +2419,16 @@ function startMic() {
     recognition.continuous = false;
     recognition.interimResults = true;
 
-    const ta = document.getElementById('inputText');
     let curInterim = '';
 
     recognition.onstart = () => {
-        document.getElementById('micBtn').classList.add('recording');
+        if (micBtnEl) micBtnEl.classList.add('recording');
         ta.readOnly = true;   // kein händisches Editieren während Aufnahme
         setRecStatus(true);
     };
 
     recognition.onresult = (ev) => {
-        if (micReset) return;
+        if (micReset || micTargetEl !== ta) return; // nur ins eigene, noch aktive Feld schreiben
         let final = '', interim = '';
         for (let i = ev.resultIndex; i < ev.results.length; i++) {
             if (ev.results[i].isFinal) final += ev.results[i][0].transcript;
@@ -734,10 +2443,13 @@ function startMic() {
         const sep = (micDone || micBefore) && curInterim ? ' ' : '';
         ta.value = micBefore + micDone + sep + curInterim + micAfter;
         if (curInterim) setRecStatus(true);
+        if (ta.classList && ta.classList.contains('kap-body')) markSpellDirty(ta.closest('.kap-card'));
     };
 
     recognition.onend = () => {
         curInterim = '';
+        // Wurde inzwischen auf ein anderes Feld gewechselt? Dann altes Feld NICHT anfassen.
+        if (micTargetEl !== ta) return;
         if (!micReset) {
             ta.value = micBefore + micDone + micAfter;
         }
@@ -746,7 +2458,7 @@ function startMic() {
             setTimeout(() => { if (isRecording) startMic(); }, 80);
         } else {
             ta.readOnly = false;
-            document.getElementById('micBtn').classList.remove('recording');
+            if (micBtnEl) micBtnEl.classList.remove('recording');
             setRecStatus(false);
         }
     };
@@ -754,7 +2466,7 @@ function startMic() {
     recognition.onerror = (ev) => {
         if (ev.error === 'not-allowed') {
             isRecording = false;
-            document.getElementById('micBtn').classList.remove('recording');
+            if (micBtnEl) micBtnEl.classList.remove('recording');
             setRecStatus(false);
             alert('Mikrofon-Zugriff verweigert.\nBitte in den Browser-Einstellungen erlauben.');
         }
@@ -768,9 +2480,11 @@ function startMic() {
 function stopMic() {
     isRecording = false;
     try { recognition && recognition.stop(); } catch(e){}
-    document.getElementById('inputText').readOnly = false;
-    document.getElementById('micBtn').classList.remove('recording');
+    if (micTargetEl) micTargetEl.readOnly = false;
+    if (micBtnEl) micBtnEl.classList.remove('recording');
     setRecStatus(false);
+    // Diktat in einen Buch-Block beendet → automatisch speichern
+    if (micTargetEl && micTargetEl.classList && micTargetEl.classList.contains('kap-body')) scheduleAutosave();
 }
 
 function setRecStatus(active) {
@@ -782,6 +2496,7 @@ function setRecStatus(active) {
 function addToBuffer() {
     const text = document.getElementById('inputText').value.trim();
     if (!text) return;
+    exitEditMode(); // Zwischenspeichern = neue Notiz sammeln, kein Bearbeiten mehr
     buffer.push(text);
     renderBuffer();
     persistBufferStorage();
@@ -833,6 +2548,7 @@ function clearInput() {
     micReset = true;
     micBefore = micAfter = micDone = '';
     document.getElementById('inputText').value = '';
+    exitEditMode();
     if (isRecording) {
         isRecording = false;
         try { recognition && recognition.stop(); } catch(e) {}
@@ -845,6 +2561,9 @@ function clearInput() {
 // ── KI (GitHub Models API) ────────────────────────────────────────────────────
 function loadKiPat() {
     updateKiStatus();
+    populateVoiceSelect();
+    // Manche Browser laden die Stimmen erst verzögert
+    setTimeout(populateVoiceSelect, 400);
 }
 
 function toggleTokenPanel() {
@@ -852,14 +2571,33 @@ function toggleTokenPanel() {
     const isHidden = panel.classList.toggle('hidden');
     if (!isHidden) {
         const pat = localStorage.getItem('tagesnotizen-github-pat');
-        document.getElementById('githubPatInput').value = pat ? '••••••••••••••••' : '';
-        document.getElementById('githubPatInput').focus();
+        const input = document.getElementById('githubPatInput');
+        const note = document.getElementById('tokenSavedNote');
+        if (pat) {
+            input.value = '••••••••••••••••';
+            if (note) { note.textContent = '✓ Token ist gespeichert – Du musst ihn nicht neu eingeben.'; note.className = 'ki-status ok'; }
+        } else {
+            input.value = '';
+            input.focus();
+            if (note) { note.textContent = 'Noch kein Token gespeichert.'; note.className = 'ki-status'; }
+        }
     }
 }
 
 function saveGithubPat() {
     const val = document.getElementById('githubPatInput').value.trim();
-    if (!val || val.startsWith('•')) { showToast('Bitte gültigen Token eingeben.', true); return; }
+    const existing = localStorage.getItem('tagesnotizen-github-pat');
+    // Im Feld stehen nur die Punkte (Maskierung) → der echte Token ist schon gespeichert
+    if (val.startsWith('•')) {
+        if (existing) {
+            showToast('✓ Token ist bereits gespeichert.');
+            document.getElementById('tokenPanel').classList.add('hidden');
+        } else {
+            showToast('Bitte gültigen Token eingeben.', true);
+        }
+        return;
+    }
+    if (!val) { showToast('Bitte gültigen Token eingeben.', true); return; }
     localStorage.setItem('tagesnotizen-github-pat', val);
     document.getElementById('githubPatInput').value = '••••••••••••••••';
     updateKiStatus();
@@ -887,7 +2625,7 @@ function updateKiStatus() {
 
 function getGithubPat() { return localStorage.getItem('tagesnotizen-github-pat') || ''; }
 
-async function callGithubModels(prompt, systemPrompt, temperature = 0.1, maxTokens = 1500) {
+async function callGithubModels(prompt, systemPrompt, temperature = 0.1, maxTokens = 1500, modelOverride) {
     const pat = getGithubPat();
     if (!pat) throw new Error('Kein GitHub Token gesetzt. Bitte unten eingeben.');
 
@@ -902,7 +2640,7 @@ async function callGithubModels(prompt, systemPrompt, temperature = 0.1, maxToke
             'Authorization': 'Bearer ' + pat
         },
         body: JSON.stringify({
-            model:       getGhModel(),
+            model:       modelOverride || getGhModel(),
             max_tokens:  maxTokens,
             temperature: temperature,
             messages
@@ -954,7 +2692,10 @@ async function generateTagesgeschichte() {
             'Alle anderen genannten Personen sind reale Menschen im Text. ' +
             'Fasse alle Kategorien zu einer einzigen fließenden Geschichte zusammen. ' +
             'Behalte alle Details, Orte, Namen und Ereignisse — nichts darf erfunden werden. ' +
-            'Schreibe ohne Überschriften, ohne Kategorienamen, nur als fließenden literarischen Text in Prosa. ' +
+            'Wenn die Vorlage Überschriften enthält (Zeilen, die mit "Kapitel", "Abschnitt" oder "#" beginnen), ' +
+            'übernimm jede dieser Überschriften unverändert als eigene Zeile und schreibe darunter die zugehörige Prosa. ' +
+            'Erfinde keine zusätzlichen Überschriften und verwende keine Kategorienamen als Überschriften. ' +
+            'Enthält die Vorlage keine Überschriften, schreibe einen durchgehenden Fließtext. ' +
             'Antworte nur mit dem fertigen Text, ohne Einleitung oder Kommentar.';
         const prompt = `Schreibe aus diesen Tagebucheinträgen vom ${datum} eine Geschichte in Prosa:\n\n${inputText}`;
 
@@ -1008,7 +2749,10 @@ async function generateZeitraumGeschichte() {
             'Alle anderen genannten Personen sind reale Menschen im Text. ' +
             'Fasse alle Einträge zu einer einzigen fließenden Geschichte zusammen, die den gesamten Zeitraum als Ganzes erlebbar macht. ' +
             'Behalte alle Details, Namen und Ereignisse — erfinde nichts hinzu. ' +
-            'Schreibe ohne Überschriften als fließenden literarischen Text in Prosa. ' +
+            'Wenn die Vorlage Überschriften enthält (Zeilen, die mit "Kapitel", "Abschnitt" oder "#" beginnen), ' +
+            'übernimm jede dieser Überschriften unverändert als eigene Zeile und schreibe darunter die zugehörige Prosa. ' +
+            'Erfinde keine zusätzlichen Überschriften. ' +
+            'Enthält die Vorlage keine Überschriften, schreibe einen durchgehenden Fließtext. ' +
             'Antworte nur mit dem fertigen Text.';
         const prompt = `Schreibe aus diesen Einträgen vom ${from} bis ${to} eine zusammenhängende Geschichte in Prosa:\n\n${inputText}`;
 
@@ -1028,26 +2772,69 @@ async function saveDirectly() {
     if (!text) { showToast('Bitte Text eingeben.', true); return; }
     if (!selectedCategory) { showToast('Bitte zuerst eine Kategorie wählen.', true); return; }
     try {
-        const { data: ex } = await sb.from('tagesnotizen_entries')
-            .select('id, text').eq('datum', selectedDate).eq('category', selectedCategory).maybeSingle();
-        const textToSave = (ex && ex.text.trim()) ? ex.text.trim() + '\n\n' + text : text;
+        let textToSave;
+        if (editingEntryId) {
+            // Bearbeiten-Modus: den gespeicherten Eintrag ERSETZEN (nicht anhängen)
+            textToSave = text;
+        } else {
+            const { data: ex } = await sb.from('tagesnotizen_entries')
+                .select('id, text').eq('datum', selectedDate).eq('category', selectedCategory).maybeSingle();
+            textToSave = (ex && ex.text.trim()) ? ex.text.trim() + '\n\n' + text : text;
+        }
         await saveEntry(selectedDate, selectedCategory, textToSave);
         buffer = [];
         if (selectedCategory) bufferByCategory[selectedCategory] = [];
         persistBufferStorage();
         document.getElementById('inputText').value = '';
+        exitEditMode();
         renderBuffer();
         showToast('✅ Gespeichert.');
         await renderEntries();
     } catch(e) { showToast('Fehler: ' + e.message, true); }
 }
 
+// Setzt das markierte Wort in deutsche Anführungszeichen „…" (oder fügt leere ein)
+function wrapQuotesInput() {
+    const ta = document.getElementById('inputText');
+    const s = ta.selectionStart, e = ta.selectionEnd, v = ta.value;
+    if (e > s) {
+        ta.value = v.slice(0, s) + '„' + v.slice(s, e) + '"' + v.slice(e);
+        ta.selectionStart = s; ta.selectionEnd = e + 2;
+    } else {
+        ta.value = v.slice(0, s) + '„"' + v.slice(s);
+        ta.selectionStart = ta.selectionEnd = s + 1;
+    }
+    ta.focus();
+}
+
+// 📝 Nur Rechtschreibung des Eingabetextes prüfen (Inhalt bleibt exakt)
+async function spellCheckInput() {
+    const ta = document.getElementById('inputText');
+    const text = (ta.value || '').trim();
+    if (!text) { showToast('Bitte zuerst etwas schreiben oder sprechen.', true); return; }
+    if (!getGithubPat()) { showToast('Bitte zuerst den GitHub-Token im Abschnitt „KI" eingeben.', true); return; }
+    const btn = document.getElementById('spellInputBtn');
+    const old = btn ? btn.textContent : '';
+    if (btn) { btn.disabled = true; btn.textContent = '⏳'; }
+    try {
+        const res = await Promise.race([
+            spellCheckString(text),
+            new Promise((_, rej) => setTimeout(() => rej(new Error('Zeitüberschreitung – das Modell hat nicht geantwortet. Bitte oben ein anderes Modell wählen (z. B. gpt-4o-mini) und nochmal.')), 30000))
+        ]);
+        if (res) { ta.value = res; showToast('✓ Rechtschreibung geprüft.'); }
+        else showToast('Die KI hat keinen Text geliefert.', true);
+    } catch (e) {
+        showToast('Rechtschreibung: ' + e.message, true);
+    } finally {
+        if (btn) { btn.disabled = false; btn.textContent = old || '📝'; }
+    }
+}
+
 async function summarizeText() {
     // Datum immer frisch aus dem Eingabefeld lesen, falls es nach editEntry() geändert wurde
     selectedDate = document.getElementById('entryDate').value;
 
-    const allText = collectText();
-    if (!allText) { alert('Bitte Text eingeben oder diktieren.'); return; }
+    if (!collectText()) { alert('Bitte Text eingeben oder diktieren.'); return; }
 
     if (!getGithubPat()) {
         alert('Bitte zuerst den GitHub Token im Abschnitt "KI-ANALYSE" unten eingeben.');
@@ -1061,7 +2848,10 @@ async function summarizeText() {
     btn.textContent = '⏳';
 
     try {
-        const { data: existing } = await sb.from('tagesnotizen_entries')
+        const allText = collectText();
+
+        // Im Bearbeiten-Modus NICHT mit dem gespeicherten Eintrag mischen (sonst Verdopplung/Namensverwirrung)
+        const { data: existing } = editingEntryId ? { data: null } : await sb.from('tagesnotizen_entries')
             .select('text').eq('datum', selectedDate).eq('category', selectedCategory)
             .maybeSingle();
 
@@ -1130,6 +2920,7 @@ async function saveSummary() {
         document.getElementById('summarySection').classList.add('hidden');
         currentSummary = '';
         savedInputText = '';
+        exitEditMode();
         await renderEntries();
         showToast('✅ Eintrag gespeichert!');
     } catch (e) { showToast('❌ ' + e.message, true); }
@@ -1143,6 +2934,62 @@ function backToInput() {
 }
 
 // ── TTS (Vorlesen) ────────────────────────────────────────────────────────────
+// Stimmen-Auswahl: pro Gerät die verfügbaren (deutschen) Stimmen anbieten und merken.
+function germanVoices() {
+    const all = window.speechSynthesis ? window.speechSynthesis.getVoices() : [];
+    const de = all.filter(v => (v.lang || '').toLowerCase().startsWith('de'));
+    return de.length ? de : all;
+}
+function populateVoiceSelect() {
+    const sel = document.getElementById('voiceSelect');
+    if (!sel) return;
+    const voices = germanVoices();
+    const saved = localStorage.getItem('tagesnotizen-voice') || '';
+    // schön sortieren: Google-Stimmen zuerst, dann alphabetisch
+    voices.sort((a, b) => {
+        const ga = /google/i.test(a.name) ? 0 : 1;
+        const gb = /google/i.test(b.name) ? 0 : 1;
+        if (ga !== gb) return ga - gb;
+        return a.name.localeCompare(b.name);
+    });
+    sel.innerHTML = '<option value="">Standard-Stimme des Geräts</option>' +
+        voices.map(v => {
+            const label = v.name + (/(de-DE)/i.test(v.lang) ? '' : ' [' + v.lang + ']');
+            return `<option value="${escHtml(v.name)}">${escHtml(label)}</option>`;
+        }).join('');
+    if (saved && voices.some(v => v.name === saved)) sel.value = saved;
+}
+function saveVoiceChoice() {
+    const sel = document.getElementById('voiceSelect');
+    if (!sel) return;
+    localStorage.setItem('tagesnotizen-voice', sel.value);
+    showToast(sel.value ? 'Stimme: ' + sel.value : 'Standard-Stimme des Geräts');
+}
+function getSelectedVoice() {
+    const voices = window.speechSynthesis ? window.speechSynthesis.getVoices() : [];
+    const saved = localStorage.getItem('tagesnotizen-voice') || '';
+    if (saved) { const v = voices.find(x => x.name === saved); if (v) return v; }
+    // sonst: bevorzugt eine deutsche Google-Stimme
+    return voices.find(v => /google/i.test(v.name) && /^de/i.test(v.lang))
+        || voices.find(v => /^de/i.test(v.lang)) || null;
+}
+function applyVoice(utt) {
+    const v = getSelectedVoice();
+    if (v) { utt.voice = v; utt.lang = v.lang || 'de-DE'; }
+}
+function testVoice() {
+    const synth = window.speechSynthesis;
+    if (!synth) return;
+    synth.cancel();
+    const u = new SpeechSynthesisUtterance('Guten Tag! So klingt diese Stimme beim Vorlesen Ihres Buches.');
+    u.lang = 'de-DE';
+    applyVoice(u);
+    synth.speak(u);
+}
+if (window.speechSynthesis) {
+    window.speechSynthesis.onvoiceschanged = populateVoiceSelect;
+}
+
 function stopSpeaking() {
     if (speakResumeTimer) { clearInterval(speakResumeTimer); speakResumeTimer = null; }
     window.speechSynthesis.cancel();
@@ -1152,11 +2999,155 @@ function stopSpeaking() {
 
 function updateSpeakUI() {
     document.querySelectorAll('.speak-btn').forEach(b => b.classList.remove('speaking'));
+    // Buch-Knopf zeigt deutlich ⏹ während des Vorlesens, sonst 🔊
+    const bookBtn = document.getElementById('speak-book');
+    if (bookBtn) {
+        const reading = speakingId !== null;
+        bookBtn.textContent = reading ? '⏹' : '🔊';
+        bookBtn.title = reading ? 'Vorlesen stoppen' : 'Alles vorlesen';
+    }
     if (!speakingId) return;
     const btn = speakingId === 'summary'
         ? document.getElementById('speakSummaryBtn')
         : document.getElementById('speak-' + speakingId);
     if (btn) btn.classList.add('speaking');
+}
+
+// ── Aussprache-Liste (Wort → Sprache und/oder lautmalerisch) ─────────────────────
+// Eintrag: { word, lang: ''|'en'|'fr'|... , say: "lautmalerischer Ersatz" }
+function getPronList() {
+    try {
+        const raw = localStorage.getItem('tagesnotizen-aussprache');
+        if (raw) return JSON.parse(raw);
+    } catch (e) {}
+    // Voreinstellung: Roger französisch, mit lautmalerischem Notnagel
+    const def = [{ word: 'Roger', lang: 'fr', say: 'Ro scheee' }];
+    localStorage.setItem('tagesnotizen-aussprache', JSON.stringify(def));
+    return def;
+}
+function savePronList(list) { localStorage.setItem('tagesnotizen-aussprache', JSON.stringify(list)); }
+function escapeRegExp(s) { return String(s).replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); }
+
+const PRON_LANGS = { '': 'lautmalerisch', en: 'Englisch', fr: 'Französisch', es: 'Spanisch', it: 'Italienisch', nl: 'Niederländisch', da: 'Dänisch', pt: 'Portugiesisch', tr: 'Türkisch' };
+function langCode(l) {
+    const m = { en: 'en-US', fr: 'fr-FR', es: 'es-ES', it: 'it-IT', nl: 'nl-NL', da: 'da-DK', pt: 'pt-PT', tr: 'tr-TR', de: 'de-DE' };
+    return m[l] || '';
+}
+// Gibt eine installierte Stimme für die Sprache zurück (oder null)
+function voiceForLang(code) {
+    if (!code) return null;
+    const pre = code.slice(0, 2).toLowerCase();
+    const voices = window.speechSynthesis ? window.speechSynthesis.getVoices() : [];
+    return voices.find(v => (v.lang || '').toLowerCase().startsWith(pre)) || null;
+}
+
+// Zerlegt einen Text in Sprach-Segmente: Wörter mit eigener Sprache (und vorhandener Stimme)
+// bekommen ihre Sprache; lautmalerische Wörter werden ersetzt; Rest ist Deutsch.
+function buildLangSegments(text) {
+    let t = String(text || '');
+    const langEntries = [];
+    for (const e of getPronList()) {
+        if (!e.word) continue;
+        const code = e.lang ? langCode(e.lang) : '';
+        if (code && voiceForLang(code)) {
+            langEntries.push({ word: e.word, code });
+        } else if (e.say) {
+            try { t = t.replace(new RegExp('\\b' + escapeRegExp(e.word) + '\\b', 'gi'), e.say); } catch (x) {}
+        }
+    }
+    if (!langEntries.length) return [{ text: t, lang: 'de-DE' }];
+    const map = {}; langEntries.forEach(e => { map[e.word.toLowerCase()] = e.code; });
+    const pattern = langEntries.map(e => escapeRegExp(e.word)).sort((a, b) => b.length - a.length).join('|');
+    let re; try { re = new RegExp('\\b(' + pattern + ')\\b', 'gi'); } catch (x) { return [{ text: t, lang: 'de-DE' }]; }
+    const segs = []; let last = 0, m;
+    while ((m = re.exec(t)) !== null) {
+        if (m.index > last) segs.push({ text: t.slice(last, m.index), lang: 'de-DE' });
+        segs.push({ text: m[0], lang: map[m[0].toLowerCase()] || 'de-DE' });
+        last = m.index + m[0].length;
+    }
+    if (last < t.length) segs.push({ text: t.slice(last), lang: 'de-DE' });
+    return segs.filter(s => s.text.trim());
+}
+
+// Spricht den Text eines Häppchens – ggf. in mehreren Sprachen nacheinander.
+// Ruft done() auf, wenn alle Segmente gelesen sind. id = aktuelle speakingId.
+function speakChunkSegments(chunkText, done, id) {
+    const segs = buildLangSegments(chunkText);
+    if (!segs.length) { done(); return; }
+    // Alle Segmente sofort in die Warteschlange legen → kleinere Pause beim Sprachwechsel
+    segs.forEach((s, k) => {
+        const u = new SpeechSynthesisUtterance(s.text);
+        u.lang = s.lang || 'de-DE';
+        if (u.lang === 'de-DE') applyVoice(u);
+        else { const v = voiceForLang(u.lang); if (v) u.voice = v; }
+        if (k === segs.length - 1) { u.onend = done; u.onerror = done; } // weiter zum nächsten Häppchen
+        window.speechSynthesis.speak(u);
+    });
+}
+
+// (Behalten für evtl. andere Aufrufer – reine lautmalerische Ersetzung)
+function applyPronunciation(text) {
+    let out = String(text || '');
+    for (const e of getPronList()) {
+        if (!e.word || !e.say || (e.lang && voiceForLang(langCode(e.lang)))) continue;
+        try { out = out.replace(new RegExp('\\b' + escapeRegExp(e.word) + '\\b', 'gi'), e.say); } catch (x) {}
+    }
+    return out;
+}
+
+function openPron() { renderPronList(); document.getElementById('pronModal').classList.add('active'); }
+function closePron() { document.getElementById('pronModal').classList.remove('active'); }
+function langOptions(sel) {
+    return Object.keys(PRON_LANGS).map(k =>
+        `<option value="${k}"${k === (sel || '') ? ' selected' : ''}>${PRON_LANGS[k]}</option>`).join('');
+}
+function renderPronList() {
+    const box = document.getElementById('pronList');
+    const list = getPronList();
+    if (!list.length) { box.innerHTML = '<p class="tip" style="margin:0;">Noch keine Einträge.</p>'; return; }
+    box.innerHTML = list.map((e, i) =>
+        `<div style="display:flex;align-items:center;gap:0.4rem;flex-wrap:wrap;background:#0f172a;border:1px solid #334155;border-radius:0.4rem;padding:0.4rem 0.5rem;">
+            <b style="flex:none;">${escHtml(e.word)}</b>
+            <select onchange="updatePronLang(${i}, this.value)" style="flex:none;background:#1e293b;color:#e2e8f0;border:1px solid #475569;border-radius:0.3rem;padding:0.25rem;">${langOptions(e.lang)}</select>
+            <input id="pronsay-${i}" value="${escHtml(e.say || '')}" onchange="updatePron(${i}, this.value)" placeholder="lautmalerisch (Ersatz)" style="flex:1;min-width:6rem;margin-bottom:0;">
+            <button class="btn-amber" style="flex:none;padding:0.25rem 0.5rem;" onclick="testPron(${i})" title="anhören">▶︎</button>
+            <button class="media-card-del" onclick="delPron(${i})" title="Löschen" style="font-size:1rem;">✕</button>
+        </div>`).join('');
+}
+function updatePron(i, val) {
+    const list = getPronList(); if (!list[i]) return;
+    list[i].say = String(val).trim(); savePronList(list);
+}
+function updatePronLang(i, val) {
+    const list = getPronList(); if (!list[i]) return;
+    list[i].lang = val; savePronList(list);
+}
+function addPron() {
+    const w = document.getElementById('pronWord').value.trim();
+    const lang = document.getElementById('pronLang').value;
+    const s = document.getElementById('pronSay').value.trim();
+    if (!w) { showToast('Bitte ein Wort eingeben.', true); return; }
+    if (!lang && !s) { showToast('Bitte eine Sprache wählen oder eine lautmalerische Form eingeben.', true); return; }
+    const list = getPronList();
+    list.push({ word: w, lang: lang, say: s });
+    savePronList(list);
+    document.getElementById('pronWord').value = '';
+    document.getElementById('pronSay').value = '';
+    renderPronList();
+}
+function delPron(i) {
+    const list = getPronList(); list.splice(i, 1); savePronList(list); renderPronList();
+}
+function testPron(i) {
+    const list = getPronList(); const e = list[i]; if (!e) return;
+    const fld = document.getElementById('pronsay-' + i);
+    if (fld) { e.say = fld.value.trim(); list[i].say = e.say; savePronList(list); }
+    try { window.speechSynthesis.cancel(); } catch (x) {}
+    const code = e.lang ? langCode(e.lang) : '';
+    const v = code ? voiceForLang(code) : null;
+    const u = new SpeechSynthesisUtterance(v ? e.word : (e.say || e.word));
+    if (v) { u.lang = code; u.voice = v; } else { u.lang = 'de-DE'; applyVoice(u); }
+    window.speechSynthesis.speak(u);
 }
 
 function stripMarkdown(text) {
@@ -1166,22 +3157,95 @@ function stripMarkdown(text) {
         .replace(/^#{1,6}\s+/gm, '');
 }
 
-function startSpeaking(text, id) {
+// Zerlegt einen Text in kleine, satzweise Häppchen (gegen den Browser-Fehler bei langen Texten)
+function chunkText(text) {
+    const t = stripMarkdown(String(text || '')).replace(/\s+\n/g, '\n').trim();
+    if (!t) return [];
+    // an Satzenden und Zeilenumbrüchen trennen
+    const pieces = t.match(/[^.!?\n]+[.!?]*|\n+/g) || [t];
+    const chunks = [];
+    let cur = '';
+    for (const p of pieces) {
+        const piece = p.replace(/\n+/g, ' ').trim();
+        if (!piece) continue;
+        if ((cur + ' ' + piece).trim().length > 200 && cur) { chunks.push(cur.trim()); cur = piece; }
+        else cur = (cur ? cur + ' ' : '') + piece;
+    }
+    if (cur.trim()) chunks.push(cur.trim());
+    return chunks;
+}
+
+// Baut Vorlese-Häppchen, die jeweils ihre Überschrift (h) UND ihre Zeichen-Position (pos) kennen.
+// So wissen wir beim Stoppen, wo gerade gelesen wurde – und können „ab dieser Stelle" starten.
+function buildSpeechChunks(text) {
+    const lines = String(text).split('\n');
+    const isHead = (l) => /^#{1,3}\s+.+/.test(l) || /^(Kapitel|Abschnitt|Unterabschnitt)\s+.+/i.test(l);
+    const segments = [];
+    let h = -1, buf = [], bufStart = 0, pos = 0;
+    const flush = () => { const t = buf.join('\n'); if (t.trim()) segments.push({ h, text: t, start: bufStart }); buf = []; };
+    for (const raw of lines) {
+        if (isHead(raw)) {
+            flush(); h++;
+            const mlen = raw.length - raw.replace(/^#{1,3}\s+/, '').replace(/^(Kapitel|Abschnitt|Unterabschnitt)\s+/i, '').length;
+            segments.push({ h, text: raw.slice(mlen), start: pos + mlen });
+            buf = []; bufStart = pos + raw.length + 1;
+        } else {
+            if (!buf.length) bufStart = pos;
+            buf.push(raw);
+        }
+        pos += raw.length + 1;
+    }
+    flush();
+    const chunks = [];
+    for (const seg of segments) {
+        let cur = 0;
+        for (const piece of chunkText(seg.text)) {
+            const probe = piece.slice(0, Math.min(piece.length, 12));
+            let at = seg.text.indexOf(probe, cur);
+            if (at < 0) at = cur;
+            chunks.push({ text: piece, h: seg.h, pos: seg.start + at });
+            cur = at + piece.length;
+        }
+    }
+    return chunks;
+}
+
+function startSpeaking(text, id, startHeading, startCharOffset) {
     const synth = window.speechSynthesis;
-    const utt   = new SpeechSynthesisUtterance(stripMarkdown(text));
-    utt.lang    = 'de-DE';
-    utt.onend = utt.onerror = () => {
-        if (speakResumeTimer) { clearInterval(speakResumeTimer); speakResumeTimer = null; }
-        speakingId = null;
-        updateSpeakUI();
-    };
+    synth.cancel();
+    const chunks = buildSpeechChunks(text);
+    if (!chunks.length) return;
+    let i = 0;
+    if (startCharOffset != null) {
+        let idx = chunks.findIndex(c => c.pos >= startCharOffset - 6);
+        if (idx < 0) idx = chunks.length - 1;
+        i = Math.max(0, idx);
+    } else if (startHeading != null) {
+        const idx = chunks.findIndex(c => c.h === startHeading);
+        if (idx >= 0) i = idx;
+    }
     speakingId = id;
     updateSpeakUI();
-    synth.speak(utt);
-    // Workaround: Android/Chrome pausiert TTS automatisch – alle 5 s fortsetzen
+    const speakNext = () => {
+        if (speakingId !== id) return;            // wurde gestoppt/gewechselt
+        if (i >= chunks.length) {                 // alle Häppchen gelesen
+            if (speakResumeTimer) { clearInterval(speakResumeTimer); speakResumeTimer = null; }
+            speakingId = null;
+            lastSpokenHeading = null; lastSpokenText = '';  // ganz durchgelesen → keine offene Stelle
+            updateSpeakUI();
+            return;
+        }
+        const ch = chunks[i++];
+        if (ch.h >= 0) lastSpokenHeading = ch.h;  // Position merken
+        lastSpokenText = ch.text;                 // Satz merken (zum Wiederfinden im Editor)
+        speakChunkSegments(ch.text, speakNext, id); // ggf. mehrsprachig vorlesen
+    };
+    speakNext();
+    // Workaround: Android/Chrome pausiert TTS automatisch – regelmäßig fortsetzen
+    if (speakResumeTimer) clearInterval(speakResumeTimer);
     speakResumeTimer = setInterval(() => {
         if (synth.paused && speakingId) synth.resume();
-    }, 5000);
+    }, 4000);
 }
 
 function speakEntry(id) {
@@ -1486,6 +3550,262 @@ function downloadExport(content, filename) {
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
+}
+
+// ── Media ─────────────────────────────────────────────────────────────────────
+const MEDIA_BUCKET = 'tagesnotizen-media';
+
+async function loadMediaForDate(datum) {
+    const label = document.getElementById('mediaDateLabel');
+    if (datum) {
+        const d = new Date(datum + 'T12:00:00');
+        label.textContent = ' — ' + d.toLocaleDateString('de-DE', { weekday: 'short', day: 'numeric', month: 'long', year: 'numeric' });
+    } else {
+        label.textContent = '';
+    }
+    const grid = document.getElementById('mediaGrid');
+    if (!datum) { grid.innerHTML = '<p class="empty-msg" style="font-size:0.85rem;">Kein Datum gewählt.</p>'; return; }
+
+    grid.innerHTML = '<p class="media-progress">Lade Medien…</p>';
+    try {
+        const { data, error } = await sb.from('tagesnotizen_media')
+            .select('*').eq('datum', datum).is('category', null).order('created_at');
+        if (error) throw error;
+        renderMediaGrid(data || []);
+    } catch (e) {
+        grid.innerHTML = `<p class="media-progress" style="color:#f87171;">Fehler: ${escHtml(e.message)}</p>`;
+    }
+}
+
+function renderMediaGrid(items) {
+    const grid = document.getElementById('mediaGrid');
+    if (items.length === 0) {
+        grid.innerHTML = '<p class="empty-msg" style="font-size:0.85rem;">Noch keine Medien für diesen Tag.</p>';
+        return;
+    }
+    grid.innerHTML = items.map(mediaCardHtml).join('');
+}
+
+// Baut die HTML-Karte für ein Medium (für Tag UND Buch-Kapitel verwendet)
+function mediaCardHtml(item, isBook) {
+        const url = `${SUPABASE_URL}/storage/v1/object/public/${MEDIA_BUCKET}/${item.storage_path}`;
+        const dlUrl = `${url}?download=${encodeURIComponent(item.filename)}`;
+        const desc = item.description ? escHtml(item.description) : escHtml(item.filename);
+        const dlBtn = `<a class="media-card-dl" href="${dlUrl}" title="Herunterladen" download>⬇️</a>`;
+        const mvBtn = isBook ? `<button class="media-card-mv" onclick="openMoveMedia('${item.id}')" title="Zu anderer Überschrift verschieben">↪</button>` : '';
+        const delBtn = `<button class="media-card-del" onclick="deleteMedia('${item.id}','${item.storage_path}')" title="Löschen">✕</button>`;
+        const footer = `
+                <div class="media-card-footer">
+                    ${dlBtn}${mvBtn}
+                    <span class="media-card-desc" title="${desc}">${desc}</span>
+                    ${delBtn}
+                </div>`;
+        if (item.type === 'image') {
+            return `
+            <div class="media-card" id="mc-${item.id}">
+                <img src="${url}" alt="${desc}" loading="lazy" onclick="openLightbox('${url}')">${footer}
+            </div>`;
+        } else if (item.type === 'video') {
+            return `
+            <div class="media-card" id="mc-${item.id}">
+                <video controls src="${url}" style="width:100%;display:block;"></video>${footer}
+            </div>`;
+        } else if (item.type === 'audio') {
+            return `
+            <div class="media-card" id="mc-${item.id}">
+                <div style="padding:0.5rem;font-size:1.5rem;text-align:center;">🎤</div>
+                <audio controls src="${url}"></audio>${footer}
+            </div>`;
+        } else {
+            const icon = docIcon(item.filename);
+            return `
+            <div class="media-card" id="mc-${item.id}">
+                <a href="${url}" target="_blank" rel="noopener" style="display:block;text-decoration:none;">
+                    <div style="padding:1.4rem 0.5rem;font-size:2.4rem;text-align:center;">${icon}</div>
+                </a>${footer}
+            </div>`;
+        }
+}
+
+// Passendes Symbol je nach Dateiendung des Dokuments.
+function docIcon(filename) {
+    const ext = (filename.split('.').pop() || '').toLowerCase();
+    if (ext === 'pdf') return '📕';
+    if (['doc','docx','odt','rtf'].includes(ext)) return '📘';
+    if (['xls','xlsx','csv'].includes(ext)) return '📗';
+    if (['ppt','pptx'].includes(ext)) return '📙';
+    if (['txt','md'].includes(ext)) return '📄';
+    return '📎';
+}
+
+async function uploadMediaFiles(files) {
+    if (!files || files.length === 0) return;
+    if (!selectedDate) { showToast('Bitte zuerst ein Datum wählen.', true); return; }
+
+    const progress = document.getElementById('mediaUploadProgress');
+    progress.classList.remove('hidden');
+    let ok = 0, fail = 0;
+
+    for (const file of Array.from(files)) {
+        progress.textContent = `Lade hoch: ${file.name}…`;
+        const ext = file.name.split('.').pop().toLowerCase();
+        const uid = crypto.randomUUID();
+        const path = `${selectedDate}/${uid}.${ext}`;
+        let type = 'file';
+        if (file.type.startsWith('image/'))      type = 'image';
+        else if (file.type.startsWith('audio/')) type = 'audio';
+        else if (file.type.startsWith('video/')) type = 'video';
+
+        try {
+            const { error: upErr } = await sb.storage.from(MEDIA_BUCKET).upload(path, file, {
+                cacheControl: '3600', upsert: false, contentType: file.type
+            });
+            if (upErr) throw upErr;
+
+            const { error: dbErr } = await sb.from('tagesnotizen_media').insert({
+                datum: selectedDate, type, filename: file.name, storage_path: path
+            });
+            if (dbErr) throw dbErr;
+            ok++;
+        } catch (e) {
+            fail++;
+            showToast(`Fehler bei ${file.name}: ${e.message}`, true);
+        }
+    }
+
+    progress.classList.add('hidden');
+    document.getElementById('mediaFileInput').value = '';
+    document.getElementById('mediaCameraInput').value = '';
+
+    if (ok > 0) showToast(`✅ ${ok} Datei${ok > 1 ? 'en' : ''} hochgeladen.`);
+    await loadMediaForDate(selectedDate);
+}
+
+async function deleteMedia(id, storagePath) {
+    if (!confirm('Dieses Medium löschen?')) return;
+    try {
+        const { error: stErr } = await sb.storage.from(MEDIA_BUCKET).remove([storagePath]);
+        if (stErr) throw stErr;
+        const { error: dbErr } = await sb.from('tagesnotizen_media').delete().eq('id', id);
+        if (dbErr) throw dbErr;
+        document.getElementById('mc-' + id)?.remove();
+        showToast('✅ Gelöscht.');
+        if (categoryKind[selectedCategory] === 'buch') await loadBookMedia(selectedCategory);
+        else await loadMediaForDate(selectedDate);
+    } catch (e) { showToast('Fehler: ' + e.message, true); }
+}
+
+// ── Buch-Medien: Fotos/Dateien pro Kapitel/Abschnitt/Unterabschnitt ─────────────
+// Lädt alle Medien eines Buchs und verteilt sie auf die Kapitel-Bereiche (nach Überschrift).
+async function loadBookMedia(cat) {
+    const boxes = [...document.querySelectorAll('#entriesContainer .ch-media')];
+    if (!boxes.length) return;
+    let items = [];
+    try {
+        const { data, error } = await sb.from('tagesnotizen_media')
+            .select('*').eq('category', cat).order('created_at');
+        if (error) throw error;
+        items = data || [];
+    } catch (e) { /* still */ }
+    const byAnchor = {};
+    items.forEach(it => { (byAnchor[it.anchor || ''] = byAnchor[it.anchor || ''] || []).push(it); });
+    const known = new Set();
+    boxes.forEach(box => {
+        const anchor = box.dataset.anchor || '';
+        known.add(anchor);
+        const grid = box.querySelector('.ch-media-grid');
+        const list = byAnchor[anchor] || [];
+        grid.innerHTML = list.map(it => mediaCardHtml(it, true)).join('');
+    });
+    // Medien, deren Überschrift es nicht (mehr) gibt → gesammelt anzeigen
+    const orphan = document.getElementById('bookOrphan');
+    if (orphan) {
+        const lost = items.filter(it => !known.has(it.anchor || ''));
+        if (lost.length) {
+            orphan.innerHTML = '<div class="entry-toc-title" style="margin-top:0.6rem;">📦 Noch nicht zugeordnete Medien (Überschrift umbenannt?) – mit ↪ zuordnen</div>' +
+                '<div class="ch-media-grid">' + lost.map(it => mediaCardHtml(it, true)).join('') + '</div>';
+            orphan.classList.remove('hidden');
+        } else { orphan.innerHTML = ''; orphan.classList.add('hidden'); }
+    }
+}
+
+// Überschriften des aktuellen Buchs ermitteln (für den Zuordnen-Dialog)
+function getBookHeadings() {
+    if (!currentBook || !currentBook.text) return [];
+    return renderRichText(currentBook.text, 'mv').headings; // [{level,title,id}]
+}
+
+let moveMediaId = null;
+function openMoveMedia(id) {
+    moveMediaId = id;
+    const list = document.getElementById('moveMediaList');
+    const heads = getBookHeadings();
+    if (!heads.length) { showToast('Dieses Buch hat noch keine Überschriften.', true); return; }
+    list.innerHTML = heads.map(h => {
+        const indent = h.level === 2 ? 1.3 : h.level === 3 ? 2.6 : 0;
+        const icon = h.level === 1 ? '📖' : h.level === 2 ? '📑' : '📄';
+        return `<button class="btn-dark" style="text-align:left;margin-left:${indent}rem;" onclick="doMoveMedia(${JSON.stringify(h.title)})">${icon} ${escHtml(h.title)}</button>`;
+    }).join('');
+    document.getElementById('moveMediaModal').classList.add('active');
+}
+function closeMoveMedia() {
+    document.getElementById('moveMediaModal').classList.remove('active');
+    moveMediaId = null;
+}
+async function doMoveMedia(anchor) {
+    if (!moveMediaId) { closeMoveMedia(); return; }
+    try {
+        const { error } = await sb.from('tagesnotizen_media').update({ anchor }).eq('id', moveMediaId);
+        if (error) throw error;
+        closeMoveMedia();
+        showToast('✅ Zugeordnet zu „' + anchor + '".');
+        await loadBookMedia(selectedCategory);
+    } catch (e) { showToast('Fehler: ' + e.message, true); }
+}
+
+// Lädt Dateien zu einem Kapitel/Abschnitt hoch (anchor = Überschrift)
+async function uploadChapterMedia(files, labelEl) {
+    if (!files || files.length === 0) return;
+    const box = labelEl.closest('.ch-media');
+    const anchor = box ? box.dataset.anchor : '';
+    const cat = selectedCategory;
+    if (!cat) { showToast('Kein Buch gewählt.', true); return; }
+    const progress = document.getElementById('mediaUploadProgress');
+    if (progress) { progress.classList.remove('hidden'); }
+    let ok = 0;
+    for (const file of Array.from(files)) {
+        if (progress) progress.textContent = `Lade hoch: ${file.name}…`;
+        const ext = (file.name.split('.').pop() || 'dat').toLowerCase();
+        const uid = crypto.randomUUID();
+        const path = `buch/${uid}.${ext}`;
+        let type = 'file';
+        if (file.type.startsWith('image/'))      type = 'image';
+        else if (file.type.startsWith('audio/')) type = 'audio';
+        else if (file.type.startsWith('video/')) type = 'video';
+        try {
+            const { error: upErr } = await sb.storage.from(MEDIA_BUCKET).upload(path, file, {
+                cacheControl: '3600', upsert: false, contentType: file.type
+            });
+            if (upErr) throw upErr;
+            const { error: dbErr } = await sb.from('tagesnotizen_media').insert({
+                datum: BOOK_DATUM, category: cat, anchor, type, filename: file.name, storage_path: path
+            });
+            if (dbErr) throw dbErr;
+            ok++;
+        } catch (e) { showToast(`Fehler bei ${file.name}: ${e.message}`, true); }
+    }
+    if (progress) progress.classList.add('hidden');
+    if (ok > 0) showToast(`✅ ${ok} Datei${ok > 1 ? 'en' : ''} hinzugefügt.`);
+    await loadBookMedia(cat);
+}
+
+function openLightbox(url) {
+    document.getElementById('mediaLightboxImg').src = url;
+    document.getElementById('mediaLightbox').classList.add('active');
+}
+function closeLightbox() {
+    document.getElementById('mediaLightbox').classList.remove('active');
+    document.getElementById('mediaLightboxImg').src = '';
 }
 </script>
 </body>
