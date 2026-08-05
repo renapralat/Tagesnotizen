@@ -612,16 +612,6 @@
         </div>
         <p id="kiStatus" class="ki-status"></p>
         <div style="margin-top:0.5rem;">
-            <label style="font-size:0.8rem;color:#aaa;display:block;margin-bottom:0.25rem;">KI-Modell — zum Vergleichen einfach umschalten:</label>
-            <select id="modelSelect" onchange="saveModelChoice()" style="width:100%;padding:0.45rem 0.5rem;background:#2a2a2a;color:#eee;border:1px solid #444;border-radius:6px;font-size:0.9rem;">
-                <option value="gpt-4o-mini">gpt-4o-mini (OpenAI)</option>
-                <option value="gpt-4o">gpt-4o (OpenAI)</option>
-                <option value="Phi-4">Phi-4 (Microsoft)</option>
-                <option value="Llama-3.3-70B-Instruct">Llama-3.3-70B-Instruct (Meta)</option>
-                <option value="Ministral-3B">Ministral-3B (Mistral)</option>
-            </select>
-        </div>
-        <div style="margin-top:0.5rem;">
             <label style="font-size:0.8rem;color:#aaa;display:block;margin-bottom:0.25rem;">🔊 Vorlese-Stimme (auf diesem Gerät):</label>
             <div style="display:flex;gap:0.4rem;">
                 <select id="voiceSelect" onchange="saveVoiceChoice()" style="flex:1;min-width:0;padding:0.45rem 0.5rem;background:#2a2a2a;color:#eee;border:1px solid #444;border-radius:6px;font-size:0.9rem;">
@@ -640,8 +630,8 @@
                 <button class="btn-blue" onclick="saveGithubPat()">Speichern</button>
             </div>
             <div class="tip" style="margin-top:0.4rem;">
-                GitHub → Einstellungen → Developer settings → Personal access tokens (Classic) → Generate.<br>
-                Keine Berechtigungen nötig. Nur lokal gespeichert. Du musst ihn nur einmal eingeben.
+                GitHub Models stellt aktuell keine kostenlosen KI-Modelle mehr bereit – alle KI-Buttons in der App sind deshalb ausgegraut.<br>
+                Der Token bleibt hier gespeichert, falls die Anbindung (oder ein anderer Anbieter) später wieder aktiviert wird.
             </div>
         </div>
     </div>
@@ -668,7 +658,7 @@
             <input type="date" id="exportTo"   style="flex:1;margin-bottom:0;font-size:0.78rem;padding:0.3rem 0.25rem;">
             <button class="btn-dark btn-icon" onclick="exportRange()" title="Zeitraum herunterladen">📥</button>
             <button class="btn-red  btn-icon" onclick="deleteRange()"  title="Zeitraum löschen">🗑️</button>
-            <button class="btn-blue btn-icon" onclick="generateZeitraumGeschichte()" title="Zeitraum als Prosa">📖</button>
+            <button class="btn-blue btn-icon ai-only" onclick="generateZeitraumGeschichte()" title="KI pausiert – GitHub Models aktuell nicht verfügbar">📖</button>
         </div>
         <!-- Zeile 2: Kategorie-Auswahl | Tag-Export -->
         <div style="display:flex;gap:0.35rem;align-items:center;margin-bottom:0.5rem;">
@@ -685,7 +675,7 @@
             <input type="date" id="exportDayDate" style="flex:1;margin-bottom:0;font-size:0.78rem;padding:0.3rem 0.25rem;">
             <button class="btn-dark btn-icon" onclick="exportDay()" title="Tag herunterladen">📥</button>
             <button class="btn-red  btn-icon" onclick="deleteDay()"  title="Tag löschen">🗑️</button>
-            <button class="btn-blue btn-icon" onclick="generateTagesgeschichte()" title="Tagesgeschichte als Prosa">📖</button>
+            <button class="btn-blue btn-icon ai-only" onclick="generateTagesgeschichte()" title="KI pausiert – GitHub Models aktuell nicht verfügbar">📖</button>
         </div>
         <!-- Eintragsdatum + Kategorie verwalten -->
         <div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.5rem;flex-wrap:wrap;">
@@ -733,13 +723,14 @@
             <div class="input-side">
                 <button id="micBtn" class="btn-amber mic-btn side-btn" onclick="toggleMic()" title="Aufnahme starten / stoppen">🎤</button>
                 <span id="recDot" class="rec-dot" style="align-self:center;"></span>
-                <button class="btn-purple side-btn" id="summarizeBtn" onclick="summarizeText()" title="Zusammenfassen (Rechtschreibung läuft vorher)" style="font-size:1.2rem;">🪄</button>
-                <button class="btn-dark side-btn" id="spellInputBtn" onclick="spellCheckInput()" title="Nur Rechtschreibung prüfen – Inhalt bleibt gleich" style="font-size:1rem;">📝</button>
-                <button class="btn-dark side-btn" onclick="wrapQuotesInput()" title="Wort in Anführungszeichen setzen (erst markieren)" style="font-size:1rem;">„"</button>
-                <button id="headingsToggle" onclick="toggleHeadings()" class="btn-dark side-btn" title="Überschriften / Fließtext" style="font-size:0.8rem;">UE</button>
                 <button class="btn-green side-btn" onclick="addToBuffer()" title="Zwischenspeichern" style="font-size:1.3rem;">+</button>
                 <button class="btn-gray side-btn" onclick="clearInput()" title="Text löschen" style="font-size:1.1rem;">−</button>
-                <button class="btn-green side-btn" onclick="saveDirectly()" title="Direkt speichern (ohne KI)" style="font-size:1rem;">💾</button>
+                <button class="btn-green side-btn" onclick="saveDirectly()" title="Direkt speichern" style="font-size:1rem;">💾</button>
+                <button class="btn-blue side-btn" onclick="copyToClipboard()" title="Text in Zwischenablage kopieren – zum Einfügen in Claude o.ä." style="font-size:1.1rem;">📋</button>
+                <button class="btn-dark side-btn" onclick="wrapQuotesInput()" title="Wort in Anführungszeichen setzen (erst markieren)" style="font-size:1rem;">„"</button>
+                <button class="btn-purple side-btn ai-only" id="summarizeBtn" onclick="summarizeText()" title="KI pausiert – GitHub Models aktuell nicht verfügbar" style="font-size:1.2rem;">🪄</button>
+                <button class="btn-dark side-btn ai-only" id="spellInputBtn" onclick="spellCheckInput()" title="KI pausiert – GitHub Models aktuell nicht verfügbar" style="font-size:1rem;">📝</button>
+                <button id="headingsToggle" onclick="toggleHeadings()" class="btn-dark side-btn ai-only" title="KI pausiert – nur für KI-Zusammenfassung relevant" style="font-size:0.8rem;">UE</button>
             </div>
         </div>
         <div id="bufferContainer" class="buffer-box hidden">
@@ -787,10 +778,15 @@ const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZ
 const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 // GitHub Models API
-const APP_VERSION = 'v40';   // sichtbare Versions-Nummer (zur Kontrolle, ob die neue Fassung geladen ist)
+const APP_VERSION = 'v41';   // sichtbare Versions-Nummer (zur Kontrolle, ob die neue Fassung geladen ist)
+// GitHub Models bietet aktuell keine kostenlosen Modelle mehr an — die KI-Buttons
+// (Klasse "ai-only") sind deshalb ausgegraut. Token bleibt gespeichert für später.
+// Sobald wieder ein Anbieter verfügbar ist: hier auf false setzen.
+const AI_FEATURES_DISABLED = true;
 const GH_MODELS_URL = 'https://models.inference.ai.azure.com/chat/completions';
 const GH_MODEL_DEFAULT = 'Llama-3.3-70B-Instruct';
 function getGhModel() { return localStorage.getItem('tagesnotizen-model') || GH_MODEL_DEFAULT; }
+const BUFFER_STORAGE_KEY = 'tagesnotizen-buffer';
 
 // ── State ─────────────────────────────────────────────────────────────────────
 let selectedDate     = getTodayDate();
@@ -834,6 +830,8 @@ window.addEventListener('DOMContentLoaded', async () => {
     const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
     document.getElementById('exportFrom').value = `${y}-${m}-01`;
     document.getElementById('exportTo').value   = `${y}-${m}-${pad(lastDay)}`;
+    applyAiFeatureState();
+    loadBufferStorage();
     loadKiPat();
     const _loggedIn = await checkAuth();      // ohne Anmeldung kein Zugriff (Daten sind geschützt)
     if (_loggedIn) {
@@ -1070,6 +1068,34 @@ function setConnBadge(ok, msg) {
     b.innerHTML = `<span class="conn-dot"></span>&nbsp;${msg}`;
 }
 
+// ── KI-Buttons ausgrauen ──────────────────────────────────────────────────────
+function applyAiFeatureState() {
+    document.querySelectorAll('.ai-only').forEach(el => { el.disabled = AI_FEATURES_DISABLED; });
+}
+
+// ── Zwischenspeicher persistieren (überlebt Neuladen/Verlassen der App) ───────
+function loadBufferStorage() {
+    try {
+        bufferByCategory = JSON.parse(localStorage.getItem(BUFFER_STORAGE_KEY) || '{}') || {};
+    } catch (e) { bufferByCategory = {}; }
+}
+function persistBufferStorage() {
+    if (selectedCategory) bufferByCategory[selectedCategory] = [...buffer];
+    localStorage.setItem(BUFFER_STORAGE_KEY, JSON.stringify(bufferByCategory));
+}
+
+// ── Zwischenablage (für externe KI wie Claude) ────────────────────────────────
+async function copyToClipboard() {
+    const text = collectText();
+    if (!text) { showToast('Kein Text zum Kopieren.', true); return; }
+    try {
+        await navigator.clipboard.writeText(text);
+        showToast('📋 Kopiert – jetzt z.B. bei Claude einfügen.');
+    } catch (e) {
+        showToast('Kopieren fehlgeschlagen: ' + e.message, true);
+    }
+}
+
 // ── Date ──────────────────────────────────────────────────────────────────────
 function onDateChange() {
     selectedDate = document.getElementById('entryDate').value;
@@ -1118,9 +1144,7 @@ function renderCategories() {
 }
 
 function selectCategory(cat) {
-    if (selectedCategory && categoryKind[selectedCategory] !== 'buch') {
-        bufferByCategory[selectedCategory] = [...buffer];
-    }
+    if (selectedCategory && categoryKind[selectedCategory] !== 'buch') persistBufferStorage();
     selectedCategory = cat;
     if (typeof exitEditMode === 'function') exitEditMode(); // Kategorie gewechselt → kein Bearbeiten-Modus mehr
     const isBook = categoryKind[cat] === 'buch';
@@ -1204,6 +1228,7 @@ async function deleteSelectedCategory() {
         if (error) throw error;
         categories = categories.filter(c => c !== cat);
         delete bufferByCategory[cat];
+        localStorage.setItem(BUFFER_STORAGE_KEY, JSON.stringify(bufferByCategory));
         selectedCategory = null;
         document.getElementById('currentTagDisplay').textContent = '—';
         document.getElementById('inputSection').classList.add('hidden');
@@ -1733,17 +1758,18 @@ function addBlockCard(level, title, body, afterCard) {
     const micBtn = document.createElement('button');
     micBtn.className = 'btn-amber kap-mic'; micBtn.textContent = '🎤'; micBtn.title = 'In diesen Block sprechen';
     micBtn.onclick = () => toggleKapitelMic(ta, micBtn);
-    const mk = (label, title, fn) => {
+    const mk = (label, title, fn, aiOnly) => {
         const b = document.createElement('button');
-        b.className = 'btn-dark kap-tool'; b.textContent = label; b.title = title;
+        b.className = 'btn-dark kap-tool' + (aiOnly ? ' ai-only' : ''); b.textContent = label; b.title = title;
+        if (aiOnly) b.disabled = AI_FEATURES_DISABLED;
         b.onclick = () => fn(b); return b;
     };
     side.appendChild(micBtn);
-    side.appendChild(mk('📝', 'Rechtschreibung prüfen – Inhalt bleibt gleich', (b) => kapitelSpell(ta, b)));
-    side.appendChild(mk('🪄', 'KI schön schreiben (diesen Block)', (b) => kapitelKI(ta, b)));
     side.appendChild(mk('🔊', 'Vorlesen ab Cursor', () => speakKapitel(ta)));
     side.appendChild(mk('↩', 'Letzte Änderung zurücknehmen', () => kapitelUndo(ta)));
     side.appendChild(mk('✖', 'Feld leeren', () => kapitelClear(ta)));
+    side.appendChild(mk('📝', 'KI pausiert – GitHub Models aktuell nicht verfügbar', (b) => kapitelSpell(ta, b), true));
+    side.appendChild(mk('🪄', 'KI pausiert – GitHub Models aktuell nicht verfügbar', (b) => kapitelKI(ta, b), true));
     row.appendChild(ta); row.appendChild(side);
     card.appendChild(row);
 
@@ -2473,6 +2499,7 @@ function addToBuffer() {
     exitEditMode(); // Zwischenspeichern = neue Notiz sammeln, kein Bearbeiten mehr
     buffer.push(text);
     renderBuffer();
+    persistBufferStorage();
     micReset = true;
     micBefore = micAfter = micDone = '';
     document.getElementById('inputText').value = '';
@@ -2491,13 +2518,14 @@ function addToBuffer() {
     }
 }
 
-function removeFromBuffer(idx) { buffer.splice(idx, 1); renderBuffer(); }
+function removeFromBuffer(idx) { buffer.splice(idx, 1); renderBuffer(); persistBufferStorage(); }
 
 function editBufferItem(idx) {
     const ta = document.getElementById('inputText');
     const text = buffer[idx];
     buffer.splice(idx, 1);
     renderBuffer();
+    persistBufferStorage();
     const cur = ta.value.trim();
     ta.value = cur ? cur + '\n' + text : text;
 }
@@ -2533,8 +2561,6 @@ function clearInput() {
 // ── KI (GitHub Models API) ────────────────────────────────────────────────────
 function loadKiPat() {
     updateKiStatus();
-    const sel = document.getElementById('modelSelect');
-    if (sel) sel.value = localStorage.getItem('tagesnotizen-model') || GH_MODEL_DEFAULT;
     populateVoiceSelect();
     // Manche Browser laden die Stimmen erst verzögert
     setTimeout(populateVoiceSelect, 400);
@@ -2556,12 +2582,6 @@ function toggleTokenPanel() {
             if (note) { note.textContent = 'Noch kein Token gespeichert.'; note.className = 'ki-status'; }
         }
     }
-}
-
-function saveModelChoice() {
-    const val = document.getElementById('modelSelect').value;
-    localStorage.setItem('tagesnotizen-model', val);
-    showToast('Modell gewechselt: ' + val);
 }
 
 function saveGithubPat() {
@@ -2596,15 +2616,11 @@ function updateKiStatus() {
     const pat = localStorage.getItem('tagesnotizen-github-pat');
     const dot = document.getElementById('kiDot');
     const msg = document.getElementById('kiStatus');
-    if (pat) {
-        dot.className = 'ki-dot active';
-        msg.className = 'ki-status ok';
-        msg.textContent = 'KI-Analyse aktiv – Zusammenfassung verfügbar.';
-    } else {
-        dot.className = 'ki-dot';
-        msg.className = 'ki-status';
-        msg.textContent = 'Kein Token – bitte unten eingeben.';
-    }
+    dot.className = 'ki-dot';
+    msg.className = 'ki-status';
+    msg.textContent = pat
+        ? 'KI pausiert (GitHub Models aktuell nicht verfügbar) – Token bleibt gespeichert.'
+        : 'KI pausiert (GitHub Models aktuell nicht verfügbar).';
 }
 
 function getGithubPat() { return localStorage.getItem('tagesnotizen-github-pat') || ''; }
@@ -2768,6 +2784,7 @@ async function saveDirectly() {
         await saveEntry(selectedDate, selectedCategory, textToSave);
         buffer = [];
         if (selectedCategory) bufferByCategory[selectedCategory] = [];
+        persistBufferStorage();
         document.getElementById('inputText').value = '';
         exitEditMode();
         renderBuffer();
@@ -2897,6 +2914,7 @@ async function saveSummary() {
         await saveEntry(currentSummaryDate, selectedCategory, textToSave);
         buffer = [];
         if (selectedCategory) bufferByCategory[selectedCategory] = [];
+        persistBufferStorage();
         renderBuffer();
         document.getElementById('inputText').value = '';
         document.getElementById('summarySection').classList.add('hidden');

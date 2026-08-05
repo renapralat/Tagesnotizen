@@ -9,11 +9,14 @@ Läuft komplett im Browser, ohne Installation — optimiert für Android.
 
 - **Notizen erfassen** — per Mikrofon (Sprache) oder Tastatur
 - **Kategorien** — eigene Themengebiete anlegen (z. B. Tagesprotokoll, Gedanken, Familie)
-- **Zwischenspeichern** — mehrere Sprachaufnahmen sammeln, bevor man zusammenfasst
-- **KI-Zusammenfassung** — rohe Notizen werden zu einem sauberen Tagebucheintrag umgeschrieben
+- **Zwischenspeichern** — mehrere Sprachaufnahmen sammeln, bevor man speichert; bleibt pro Kategorie erhalten, auch wenn man die App verlässt
+- **KI-Zusammenfassung** — rohe Notizen werden zu einem sauberen Tagebucheintrag umgeschrieben *(aktuell pausiert, siehe unten)*
+- **In Zwischenablage kopieren** — Text für eine externe KI (z. B. Claude) kopieren, dort verbessern lassen und wieder einfügen
 - **Vorlesen** — Einträge per Text-to-Speech anhören (ganzer Eintrag oder ab Cursor-Position)
 - **Globale Suche** — über alle Kategorien und alle Tage, mit Wildcard-Unterstützung
 - **Export & Löschen** — nach Tag oder Zeitraum, gefiltert nach Kategorie, als `.txt`-Datei
+
+> **Status KI-Funktion:** GitHub Models stellt aktuell keine kostenlosen Modelle mehr bereit. Alle darauf angewiesenen Buttons (🪄, 📖, ÜE/FT) sind deshalb ausgegraut, aber nicht entfernt — sie lassen sich reaktivieren, sobald wieder ein Anbieter zur Verfügung steht (Flag `AI_FEATURES_DISABLED` in `index.html`). Der GitHub-Token bleibt gespeichert. Bis dahin: Text über den 📋-Button in die Zwischenablage kopieren und manuell bei Claude o. ä. verbessern lassen.
 
 ---
 
@@ -26,10 +29,12 @@ Erst eine Kategorie antippen → dann erscheint das Eingabefeld.
 | Symbol | Funktion |
 |--------|----------|
 | 🎤 | Aufnahme starten / stoppen |
-| ÜE / FT | Zusammenfassung **mit Überschriften** oder als **Fließtext** |
-| + | Aufnahme zwischenspeichern (mehrere sammeln) |
+| + | Aufnahme zwischenspeichern (mehrere sammeln, wird an Vorheriges angehängt) |
 | − | Eingabefeld leeren |
-| 🪄 | KI-Zusammenfassung erstellen |
+| 💾 | Direkt speichern |
+| 📋 | Text in Zwischenablage kopieren (für externe KI wie Claude) |
+| 🪄 *(pausiert)* | KI-Zusammenfassung erstellen |
+| ÜE / FT *(pausiert)* | Zusammenfassung **mit Überschriften** oder als **Fließtext** |
 
 ### Zusammenfassungs-Bereich (rechte Spalte)
 | Symbol | Funktion |

@@ -2,7 +2,9 @@
 
 **Kurz:** Meine eigene Tagebuch- & Buch-App. Ziel: **alles an einem Ort** – Notizen, Bücher (Lebenslauf/Erinnerungen), Bilder, Dokumente. Für den **Nachlass**: später alles aufs Papier + Bilder auf ein separates Medium.
 
-**Aktuelle Version:** v40 (oben im Buch/Editor sichtbar als „· vNN" – zum Prüfen, ob die neueste Fassung geladen ist).
+**Aktuelle Version:** v41 (oben im Buch/Editor sichtbar als „· vNN" – zum Prüfen, ob die neueste Fassung geladen ist).
+
+**Neu in v41:** GitHub Models liefert aktuell keine kostenlosen KI-Modelle mehr – **alle KI-Knöpfe sind deshalb ausgegraut** (🪄, 📝 Rechtschreibung, 📖 Prosa-Geschichten, überall in Tagesnotizen und im Buch-Editor), statt kaputte Fehlermeldungen zu zeigen. Sie stehen weiterhin an ihrem Platz (nur ans Ende der Knopf-Leisten gerückt) und können reaktiviert werden, sobald wieder ein Anbieter läuft (`AI_FEATURES_DISABLED` in `index.html`). Der GitHub-Token bleibt gespeichert, die Modell-Auswahl wurde entfernt (war ohne funktionierende KI ohne Nutzen). **Neu:** 📋-Knopf bei den Tagesnotizen kopiert den aktuellen Text in die echte System-Zwischenablage, um ihn manuell z. B. bei Claude einfügen/verbessern zu lassen. Der Zwischenspeicher (Diktate vor dem Speichern) bleibt jetzt außerdem über Neuladen/Verlassen der App hinweg erhalten.
 
 **Neu in v40:** Bearbeiten-Modus bei Tagesnotizen/Protokollen – wird ein **gespeicherter** Eintrag über ✏️ geöffnet, ERSETZT Speichern/KI ihn (kein Anhängen/Vermischen mehr, keine Namensverwirrung). Brauner Hinweis-Balken + „Abbrechen".
 
@@ -32,9 +34,10 @@ Eine Buch-Kategorie = ein Buch mit **drei Ebenen**: 📖 Kapitel → 📑 Abschn
 - **Verschieben** ⬆️⬇️ (blinkt + rückt in Bildmitte), **einfügen** ➕📖/➕📑/➕📄 direkt darunter, **zusammenführen** 🔗 (ankreuzen).
 - **📑 Gliederung:** kompakte Ansicht zum Verschieben/Einfügen, 🟢 = hat Inhalt / ⚪ = leer, Titel antippen = zum Block.
 
-## 3) KI
-- GitHub Models (Token im Bereich „🤖 KI-Analyse"). Modelle: gpt-4o-mini, gpt-4o, Phi-4, Llama-3.3-70B, **Ministral-3B**.
-- gpt-4o-mini & Ministral-3B bleiben am ehesten beim Inhalt. KI erfindet **keine** Politiker/Ereignisse (so eingestellt).
+## 3) KI — **aktuell pausiert** (seit v41)
+- GitHub Models stellt keine kostenlosen Modelle mehr bereit → alle KI-Knöpfe (🪄, 📝, 📖) sind ausgegraut, nicht entfernt. Token bleibt gespeichert (Bereich „🤖 KI-Analyse"), Modell-Auswahl vorerst entfernt.
+- Übergangslösung: 📋-Knopf kopiert den Text in die Zwischenablage, um ihn manuell bei Claude o. ä. verbessern zu lassen und wieder einzufügen.
+- Frühere KI-Anbindung (für später, falls reaktiviert): GitHub Models, Modelle gpt-4o-mini, gpt-4o, Phi-4, Llama-3.3-70B, Ministral-3B. gpt-4o-mini & Ministral-3B blieben am ehesten beim Inhalt. KI erfindet **keine** Politiker/Ereignisse (so eingestellt).
 - Vorlese-Stimme **pro Gerät** auswählbar (Stimmen sind geräteabhängig).
 - **Rechtschreibung** auch bei Tagesnotizen: 📝-Knopf (Inhalt bleibt exakt). „"-Knopf zum Setzen von Anführungszeichen. (Der 🪄-Zauberstab macht KEINE Auto-Rechtschreibung mehr – das hatte ihn blockiert.)
 - **🗣️ Aussprache-Liste (schwarzer Knopf):** pro Wort eine **Sprache** wählbar (Englisch/Französisch/…) → wird **in echter Sprachstimme** vorgelesen, *falls die Stimme auf dem Gerät installiert ist*. Sonst greift die **lautmalerische Ersatz-Schreibweise** (z. B. Roger → „Ro scheee"). Vorlesen erfolgt **segmentweise mehrsprachig** (Deutsch drumherum + Fremdwort in seiner Sprache). Voreingestellt: **Roger → Französisch** (Ersatz „Ro scheee"). Im Text bleibt immer das Original.
