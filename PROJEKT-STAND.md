@@ -2,7 +2,9 @@
 
 **Kurz:** Meine eigene Tagebuch- & Buch-App. Ziel: **alles an einem Ort** – Notizen, Bücher (Lebenslauf/Erinnerungen), Bilder, Dokumente. Für den **Nachlass**: später alles aufs Papier + Bilder auf ein separates Medium.
 
-**Aktuelle Version:** v41 (oben im Buch/Editor sichtbar als „· vNN" – zum Prüfen, ob die neueste Fassung geladen ist).
+**Aktuelle Version:** v42 (oben im Buch/Editor sichtbar als „· vNN" – zum Prüfen, ob die neueste Fassung geladen ist).
+
+**Neu in v42:** Der 📋-Knopf kann jetzt pro Kategorie eine eigene KI-Anweisung voranstellen (neuer Knopf 📋⚙️ neben der Kategorie-Verwaltung, z. B. „Tagebuchnotiz. Bitte Rechtschreibung prüfen, in chronologische Form bringen und den Text in freundlichem Ton formulieren."), nur auf dem Gerät gespeichert. Außerdem robusterer Kopiervorgang mit Fallback (`execCommand`), falls die moderne Zwischenablage-API mal keinen Fokus hat und der Text sonst verschwinden würde.
 
 **Neu in v41:** GitHub Models liefert aktuell keine kostenlosen KI-Modelle mehr – **alle KI-Knöpfe sind deshalb ausgegraut** (🪄, 📝 Rechtschreibung, 📖 Prosa-Geschichten, überall in Tagesnotizen und im Buch-Editor), statt kaputte Fehlermeldungen zu zeigen. Sie stehen weiterhin an ihrem Platz (nur ans Ende der Knopf-Leisten gerückt) und können reaktiviert werden, sobald wieder ein Anbieter läuft (`AI_FEATURES_DISABLED` in `index.html`). Der GitHub-Token bleibt gespeichert, die Modell-Auswahl wurde entfernt (war ohne funktionierende KI ohne Nutzen). **Neu:** 📋-Knopf bei den Tagesnotizen kopiert den aktuellen Text in die echte System-Zwischenablage, um ihn manuell z. B. bei Claude einfügen/verbessern zu lassen. Der Zwischenspeicher (Diktate vor dem Speichern) bleibt jetzt außerdem über Neuladen/Verlassen der App hinweg erhalten.
 

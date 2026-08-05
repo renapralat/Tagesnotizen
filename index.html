@@ -479,6 +479,27 @@
         </div>
     </div>
 
+    <!-- CATEGORY AI-PROMPT MODAL -->
+    <div id="catPromptModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <span class="modal-title">📋 KI-Anweisung – <span id="catPromptCatName"></span></span>
+                <button class="modal-close" onclick="closeCatPromptModal()">✕</button>
+            </div>
+            <label class="form-label">Wird beim 📋-Kopieren automatisch vor den Text gesetzt:</label>
+            <textarea id="catPromptInput"
+                      placeholder="z. B.: Tagebuchnotiz. Bitte Rechtschreibung prüfen, in chronologische Form bringen und den Text in freundlichem Ton formulieren."
+                      style="height:110px;"></textarea>
+            <div class="btn-row" style="margin-top:0;">
+                <button class="btn-gray" onclick="clearCatPrompt()">Löschen</button>
+                <button class="btn-blue" onclick="saveCatPrompt()">Speichern</button>
+            </div>
+            <div class="tip" style="margin-top:0.6rem;">
+                Nur auf diesem Gerät gespeichert (wie der GitHub-Token). Jede Kategorie kann eine eigene Anweisung haben.
+            </div>
+        </div>
+    </div>
+
     <!-- MOVE ENTRY MODAL -->
     <div id="moveEntryModal" class="modal">
         <div class="modal-content">
@@ -686,6 +707,7 @@
             <button class="btn-icon btn-dark" onclick="deleteSelectedCategory()" title="Gewählte Kategorie löschen" style="font-size:0.85rem;">−🏷️</button>
             <button class="btn-icon btn-dark" onclick="moveCategory(-1)" title="Gewählte Kategorie nach links" style="font-size:0.85rem;">◀</button>
             <button class="btn-icon btn-dark" onclick="moveCategory(1)" title="Gewählte Kategorie nach rechts" style="font-size:0.85rem;">▶</button>
+            <button class="btn-icon btn-dark" onclick="openCatPromptModal()" title="KI-Anweisung für gewählte Kategorie (wird beim 📋-Kopieren vorangestellt)" style="font-size:0.85rem;">📋⚙️</button>
             <span style="flex:1;min-width:0.5rem;"></span>
             <button class="btn-icon" onclick="openGoogleCalendar()" title="Diesen Tag im Google-Kalender öffnen" style="background:#1a73e8;color:#fff;flex:none;">📆 Kalender</button>
         </div>
@@ -778,7 +800,7 @@ const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZ
 const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 // GitHub Models API
-const APP_VERSION = 'v41';   // sichtbare Versions-Nummer (zur Kontrolle, ob die neue Fassung geladen ist)
+const APP_VERSION = 'v42';   // sichtbare Versions-Nummer (zur Kontrolle, ob die neue Fassung geladen ist)
 // GitHub Models bietet aktuell keine kostenlosen Modelle mehr an — die KI-Buttons
 // (Klasse "ai-only") sind deshalb ausgegraut. Token bleibt gespeichert für später.
 // Sobald wieder ein Anbieter verfügbar ist: hier auf false setzen.
@@ -832,6 +854,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     document.getElementById('exportTo').value   = `${y}-${m}-${pad(lastDay)}`;
     applyAiFeatureState();
     loadBufferStorage();
+    loadCategoryPrompts();
     loadKiPat();
     const _loggedIn = await checkAuth();      // ohne Anmeldung kein Zugriff (Daten sind geschützt)
     if (_loggedIn) {
@@ -1086,14 +1109,81 @@ function persistBufferStorage() {
 
 // ── Zwischenablage (für externe KI wie Claude) ────────────────────────────────
 async function copyToClipboard() {
-    const text = collectText();
-    if (!text) { showToast('Kein Text zum Kopieren.', true); return; }
+    const body = collectText();
+    if (!body) { showToast('Kein Text zum Kopieren.', true); return; }
+    const prefix = selectedCategory ? (categoryPrompts[selectedCategory] || '') : '';
+    const text = prefix ? (prefix.trim() + '\n\n' + body) : body;
+    const ok = await writeClipboardRobust(text);
+    if (ok) showToast('📋 Kopiert – jetzt z. B. bei Claude einfügen.');
+    else showToast('Kopieren fehlgeschlagen – bitte Text manuell markieren und kopieren.', true);
+}
+
+// Versucht zuerst die moderne Clipboard-API; schlägt die (z.B. wegen fehlendem
+// Fokus in der PWA) fehl, folgt ein execCommand-Fallback über ein verstecktes
+// Textfeld, der auf mobilen Browsern zuverlässiger funktioniert.
+async function writeClipboardRobust(text) {
     try {
-        await navigator.clipboard.writeText(text);
-        showToast('📋 Kopiert – jetzt z.B. bei Claude einfügen.');
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+            await navigator.clipboard.writeText(text);
+            return true;
+        }
+    } catch (e) { /* weiter zum Fallback */ }
+    try {
+        const ta = document.createElement('textarea');
+        ta.value = text;
+        ta.style.position = 'fixed';
+        ta.style.top = '0';
+        ta.style.left = '-9999px';
+        document.body.appendChild(ta);
+        ta.focus();
+        ta.select();
+        const ok = document.execCommand('copy');
+        document.body.removeChild(ta);
+        return ok;
     } catch (e) {
-        showToast('Kopieren fehlgeschlagen: ' + e.message, true);
+        return false;
     }
+}
+
+// ── KI-Anweisung pro Kategorie (wird beim 📋-Kopieren vorangestellt) ──────────
+const CAT_PROMPT_STORAGE_KEY = 'tagesnotizen-cat-prompts';
+let categoryPrompts = {};
+
+function loadCategoryPrompts() {
+    try {
+        categoryPrompts = JSON.parse(localStorage.getItem(CAT_PROMPT_STORAGE_KEY) || '{}') || {};
+    } catch (e) { categoryPrompts = {}; }
+}
+
+function openCatPromptModal() {
+    if (!selectedCategory) { showToast('Bitte zuerst eine Kategorie wählen.', true); return; }
+    if (categoryKind[selectedCategory] === 'buch') {
+        showToast('Gilt nur für Tag-Kategorien (bei Büchern gibt es keinen 📋-Knopf).', true);
+        return;
+    }
+    document.getElementById('catPromptCatName').textContent = '#' + selectedCategory;
+    document.getElementById('catPromptInput').value = categoryPrompts[selectedCategory] || '';
+    document.getElementById('catPromptModal').classList.add('active');
+    setTimeout(() => document.getElementById('catPromptInput').focus(), 120);
+}
+function closeCatPromptModal() { document.getElementById('catPromptModal').classList.remove('active'); }
+
+function saveCatPrompt() {
+    if (!selectedCategory) return;
+    const val = document.getElementById('catPromptInput').value.trim();
+    if (val) categoryPrompts[selectedCategory] = val;
+    else delete categoryPrompts[selectedCategory];
+    localStorage.setItem(CAT_PROMPT_STORAGE_KEY, JSON.stringify(categoryPrompts));
+    closeCatPromptModal();
+    showToast('✅ KI-Anweisung gespeichert.');
+}
+
+function clearCatPrompt() {
+    if (!selectedCategory) return;
+    delete categoryPrompts[selectedCategory];
+    localStorage.setItem(CAT_PROMPT_STORAGE_KEY, JSON.stringify(categoryPrompts));
+    document.getElementById('catPromptInput').value = '';
+    showToast('KI-Anweisung gelöscht.');
 }
 
 // ── Date ──────────────────────────────────────────────────────────────────────
