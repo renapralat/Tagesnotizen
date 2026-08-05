@@ -2,7 +2,11 @@
 
 **Kurz:** Meine eigene Tagebuch- & Buch-App. Ziel: **alles an einem Ort** – Notizen, Bücher (Lebenslauf/Erinnerungen), Bilder, Dokumente. Für den **Nachlass**: später alles aufs Papier + Bilder auf ein separates Medium.
 
-**Aktuelle Version:** v42 (oben im Buch/Editor sichtbar als „· vNN" – zum Prüfen, ob die neueste Fassung geladen ist).
+**Aktuelle Version:** v43 (oben im Buch/Editor sichtbar als „· vNN" – zum Prüfen, ob die neueste Fassung geladen ist).
+
+**Neu in v43:** Zwei Ursachen für verschwundenen/verlorenen Text behoben bzw. abgesichert:
+- Mikrofon läuft nach 📝-Zwischenspeichern (+) nicht mehr automatisch weiter – es geht bewusst aus, statt sich (mit kurzer Verzögerung) neu zu starten. Das dürfte die Fälle erklären, in denen das Kopieren in die Zwischenablage nicht zuverlässig war.
+- **Löschabfragen überall dort ergänzt, wo vorher keine war:** Entfernen eines Zwischenspeicher-Eintrags (✕ in der Liste) und Eingabefeld leeren (−) fragen jetzt nach, sofern Text vorhanden ist – jeweils **mit Vorschau des betroffenen Textes**. Das Löschen eines gespeicherten Eintrags (✕ in der Einträge-Liste) zeigt jetzt ebenfalls eine Textvorschau in der Rückfrage. (Kategorie-, Tag-, Zeitraum- und Medien-Löschen hatten bereits eine Sicherheitsabfrage.)
 
 **Neu in v42:** Der 📋-Knopf kann jetzt pro Kategorie eine eigene KI-Anweisung voranstellen (neuer Knopf 📋⚙️ neben der Kategorie-Verwaltung, z. B. „Tagebuchnotiz. Bitte Rechtschreibung prüfen, in chronologische Form bringen und den Text in freundlichem Ton formulieren."), nur auf dem Gerät gespeichert. Außerdem robusterer Kopiervorgang mit Fallback (`execCommand`), falls die moderne Zwischenablage-API mal keinen Fokus hat und der Text sonst verschwinden würde.
 
