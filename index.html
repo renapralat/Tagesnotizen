@@ -800,7 +800,7 @@ const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZ
 const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 // GitHub Models API
-const APP_VERSION = 'v42';   // sichtbare Versions-Nummer (zur Kontrolle, ob die neue Fassung geladen ist)
+const APP_VERSION = 'v43';   // sichtbare Versions-Nummer (zur Kontrolle, ob die neue Fassung geladen ist)
 // GitHub Models bietet aktuell keine kostenlosen Modelle mehr an — die KI-Buttons
 // (Klasse "ai-only") sind deshalb ausgegraut. Token bleibt gespeichert für später.
 // Sobald wieder ein Anbieter verfügbar ist: hier auf false setzen.
@@ -953,6 +953,13 @@ function escHtml(s) {
     return String(s)
         .replace(/&/g,'&amp;').replace(/</g,'&lt;')
         .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// Kurzer Textausschnitt für Lösch-Rückfragen, damit man vor dem Bestätigen
+// sieht, WAS gerade verschwinden würde (nicht nur Datum/Kategorie).
+function previewText(s, max = 120) {
+    const t = String(s || '').replace(/\s+/g, ' ').trim();
+    return t.length > max ? t.slice(0, max) + '…' : t;
 }
 
 // Text sicher anzeigen UND Web-Adressen (https://…) in anklickbare Links wandeln
@@ -1520,7 +1527,9 @@ async function saveEntry(datum, category, text) {
 }
 
 async function deleteEntry(id, datum) {
-    if (!confirm(`Eintrag vom ${datum} löschen?`)) return;
+    const e = entries.find(x => x.id === id);
+    const snippet = e ? `\n\n„${previewText(e.text)}"` : '';
+    if (!confirm(`Eintrag vom ${datum} wirklich endgültig löschen?${snippet}`)) return;
     const { error } = await sb.from('tagesnotizen_entries').delete().eq('id', id);
     if (error) { alert('Fehler: ' + error.message); return; }
     await renderEntries();
@@ -2593,22 +2602,20 @@ function addToBuffer() {
     micReset = true;
     micBefore = micAfter = micDone = '';
     document.getElementById('inputText').value = '';
-    if (isRecording) {
-        isRecording = false;
-        try { recognition && recognition.stop(); } catch(e) {}
-        setTimeout(() => {
-            const ta2 = document.getElementById('inputText');
-            micBefore = ta2.value;
-            micAfter = '';
-            micDone = '';
-            startMic();
-        }, 400);
-    } else {
-        micReset = false;
-    }
+    // Mikrofon bewusst NICHT neu starten: Zwischengespeicherter Text soll sicher
+    // abgelegt sein, bevor irgendetwas anderes (z.B. Kopieren) passiert.
+    if (isRecording) stopMic();
+    else micReset = false;
 }
 
-function removeFromBuffer(idx) { buffer.splice(idx, 1); renderBuffer(); persistBufferStorage(); }
+function removeFromBuffer(idx) {
+    const text = buffer[idx];
+    if (!text) return;
+    if (!confirm(`Diesen zwischengespeicherten Text wirklich entfernen?\n\n„${previewText(text)}"`)) return;
+    buffer.splice(idx, 1);
+    renderBuffer();
+    persistBufferStorage();
+}
 
 function editBufferItem(idx) {
     const ta = document.getElementById('inputText');
@@ -2635,9 +2642,11 @@ function renderBuffer() {
 }
 
 function clearInput() {
+    const ta = document.getElementById('inputText');
+    if (ta.value.trim() && !confirm(`Eingabe wirklich löschen (noch nicht gespeichert)?\n\n„${previewText(ta.value)}"`)) return;
     micReset = true;
     micBefore = micAfter = micDone = '';
-    document.getElementById('inputText').value = '';
+    ta.value = '';
     exitEditMode();
     if (isRecording) {
         isRecording = false;
