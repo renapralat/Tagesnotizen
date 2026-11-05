@@ -2,7 +2,9 @@
 
 **Kurz:** Meine eigene Tagebuch- & Buch-App. Ziel: **alles an einem Ort** – Notizen, Bücher (Lebenslauf/Erinnerungen), Bilder, Dokumente. Für den **Nachlass**: später alles aufs Papier + Bilder auf ein separates Medium.
 
-**Aktuelle Version:** v43 (oben im Buch/Editor sichtbar als „· vNN" – zum Prüfen, ob die neueste Fassung geladen ist).
+**Aktuelle Version:** v44 (oben im Buch/Editor sichtbar als „· vNN" – zum Prüfen, ob die neueste Fassung geladen ist).
+
+**Neu in v44:** ✨-Absprung in die **Claude-Werkstatt** (KI über Claude statt GitHub Models): Knopf „✨ Werkstatt" neben dem Eintragsdatum öffnet diesen Tag, ✨ in der Von–Bis-Zeile den Zeitraum. In der Werkstatt: alle Einträge des Tages/Zeitraums (ohne Buch-Kategorien), 📝 Rechtschreibung, 📖 Prosa, 🪄 Zusammenfassen, Speichern zurück nach Supabase (mit Rückfrage vor dem Ersetzen). Werkstatt-Adresse: https://claude.ai/artifact/EoBeFGhcjndNoFrUEYJsMh (#tag-JJJJ-MM-TT bzw. #von-…-bis-…). Von–Bis-Zeile bricht auf dem Handy jetzt um.
 
 **Neu in v43:** Zwei Ursachen für verschwundenen/verlorenen Text behoben bzw. abgesichert:
 - Mikrofon läuft nach 📝-Zwischenspeichern (+) nicht mehr automatisch weiter – es geht bewusst aus, statt sich (mit kurzer Verzögerung) neu zu starten. Das dürfte die Fälle erklären, in denen das Kopieren in die Zwischenablage nicht zuverlässig war.

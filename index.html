@@ -673,13 +673,14 @@
     <!-- EXPORT + DATE + CATEGORIES -->
     <div class="section">
         <!-- Zeile 1: Von–Bis -->
-        <div style="display:flex;gap:0.35rem;align-items:center;margin-bottom:0.35rem;">
+        <div style="display:flex;flex-wrap:wrap;gap:0.35rem;align-items:center;margin-bottom:0.35rem;">
             <span class="exp-icon" style="min-width:1.5rem;">📅</span>
             <input type="date" id="exportFrom" style="flex:1;margin-bottom:0;font-size:0.78rem;padding:0.3rem 0.25rem;">
             <input type="date" id="exportTo"   style="flex:1;margin-bottom:0;font-size:0.78rem;padding:0.3rem 0.25rem;">
             <button class="btn-dark btn-icon" onclick="exportRange()" title="Zeitraum herunterladen">📥</button>
             <button class="btn-red  btn-icon" onclick="deleteRange()"  title="Zeitraum löschen">🗑️</button>
             <button class="btn-blue btn-icon ai-only" onclick="generateZeitraumGeschichte()" title="KI pausiert – GitHub Models aktuell nicht verfügbar">📖</button>
+            <button class="btn-icon" onclick="openWerkstatt('range')" title="Diesen Zeitraum in der Claude-Werkstatt öffnen (Rechtschreibung, Prosa, Zusammenfassung)" style="background:#e0b25a;color:#1a1406;flex:none;">✨</button>
         </div>
         <!-- Zeile 2: Kategorie-Auswahl | Tag-Export -->
         <div style="display:flex;gap:0.35rem;align-items:center;margin-bottom:0.5rem;">
@@ -702,6 +703,7 @@
         <div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.5rem;flex-wrap:wrap;">
             <span>📅</span>
             <input type="date" id="entryDate" onchange="onDateChange()" style="flex:none;width:8.5rem;margin-bottom:0;">
+            <button class="btn-icon" onclick="openWerkstatt('day')" title="Diesen Tag in der Claude-Werkstatt öffnen (Rechtschreibung, Prosa, Zusammenfassung)" style="background:#e0b25a;color:#1a1406;flex:none;font-weight:700;">✨ Werkstatt</button>
             <span style="flex:1;min-width:0.5rem;"></span>
             <button class="btn-icon btn-dark" onclick="openNewCatModal()" title="Neue Kategorie anlegen" style="font-size:0.85rem;">+🏷️</button>
             <button class="btn-icon btn-dark" onclick="deleteSelectedCategory()" title="Gewählte Kategorie löschen" style="font-size:0.85rem;">−🏷️</button>
@@ -800,7 +802,7 @@ const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZ
 const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 // GitHub Models API
-const APP_VERSION = 'v43';   // sichtbare Versions-Nummer (zur Kontrolle, ob die neue Fassung geladen ist)
+const APP_VERSION = 'v44';   // sichtbare Versions-Nummer (zur Kontrolle, ob die neue Fassung geladen ist)
 // GitHub Models bietet aktuell keine kostenlosen Modelle mehr an — die KI-Buttons
 // (Klasse "ai-only") sind deshalb ausgegraut. Token bleibt gespeichert für später.
 // Sobald wieder ein Anbieter verfügbar ist: hier auf false setzen.
@@ -2994,6 +2996,24 @@ async function summarizeText() {
         btn.disabled = false;
         btn.textContent = '🪄';
     }
+}
+
+// ✨ Absprung in die Claude-Werkstatt (KI über Claude) – nimmt Tag bzw. Zeitraum mit
+const WERKSTATT_URL = 'https://claude.ai/artifact/EoBeFGhcjndNoFrUEYJsMh';
+function openWerkstatt(kind) {
+    let hash = '';
+    if (kind === 'range') {
+        const from = document.getElementById('exportFrom').value;
+        const to   = document.getElementById('exportTo').value;
+        if (!from || !to) { showToast('Bitte oben Von- und Bis-Datum wählen.', true); return; }
+        if (from > to)    { showToast('Von-Datum muss vor dem Bis-Datum liegen.', true); return; }
+        hash = '#von-' + from + '-bis-' + to;
+    } else {
+        const day = document.getElementById('entryDate').value;
+        if (!day) { showToast('Bitte ein Datum wählen.', true); return; }
+        hash = '#tag-' + day;
+    }
+    window.open(WERKSTATT_URL + hash, '_blank');
 }
 
 let toastTimer = null;
