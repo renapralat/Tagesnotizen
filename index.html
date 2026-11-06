@@ -802,7 +802,7 @@ const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZ
 const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 // GitHub Models API
-const APP_VERSION = 'v44';   // sichtbare Versions-Nummer (zur Kontrolle, ob die neue Fassung geladen ist)
+const APP_VERSION = 'v45';   // sichtbare Versions-Nummer (zur Kontrolle, ob die neue Fassung geladen ist)
 // GitHub Models bietet aktuell keine kostenlosen Modelle mehr an — die KI-Buttons
 // (Klasse "ai-only") sind deshalb ausgegraut. Token bleibt gespeichert für später.
 // Sobald wieder ein Anbieter verfügbar ist: hier auf false setzen.
@@ -1459,6 +1459,7 @@ function displayEntries(list) {
             <div class="entry-header">
                 <span class="entry-date">📅 ${e.datum}</span>
                 <div class="entry-actions">
+                    <button class="btn-icon" onclick="openWerkstattDay('${e.datum}')" title="Diesen Tag in der Claude-Werkstatt öffnen" style="background:#e0b25a;color:#1a1406;">✨</button>
                     <button id="speak-${e.id}" class="btn-icon btn-amber speak-btn" onclick="speakEntry('${e.id}')" title="Vorlesen">🔊</button>
                     <button class="btn-icon btn-blue"  onclick="editEntry('${e.id}')" title="Bearbeiten">✏️</button>
                     <button class="btn-icon btn-dark"  onclick="moveEntry('${e.id}')" title="In andere Kategorie verschieben">📦</button>
@@ -3015,6 +3016,11 @@ function openWerkstatt(kind) {
     }
     window.open(WERKSTATT_URL + hash, '_blank');
 }
+// ✨ an einem einzelnen Eintrag / Suchtreffer: genau diesen Tag öffnen
+function openWerkstattDay(datum) {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(datum || '')) { showToast('Datum nicht erkannt.', true); return; }
+    window.open(WERKSTATT_URL + '#tag-' + datum, '_blank');
+}
 
 let toastTimer = null;
 function showToast(msg, isErr = false) {
@@ -3464,6 +3470,7 @@ async function globalSearch() {
                 <div class="global-result-meta">
                     <span class="global-result-cat">${row.category}</span>
                     <span class="global-result-date">${row.datum}</span>
+                    <button class="btn-icon" onclick="openWerkstattDay('${row.datum}')" title="Diesen Tag in der Claude-Werkstatt öffnen" style="background:#e0b25a;color:#1a1406;font-size:0.8rem;padding:0.15rem 0.45rem;">✨</button>
                 </div>
                 <div class="global-result-snippet">${extractSnippet(row.text, makeRe())}</div>
             </div>`;
