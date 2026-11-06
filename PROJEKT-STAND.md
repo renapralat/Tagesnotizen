@@ -2,7 +2,9 @@
 
 **Kurz:** Meine eigene Tagebuch- & Buch-App. Ziel: **alles an einem Ort** – Notizen, Bücher (Lebenslauf/Erinnerungen), Bilder, Dokumente. Für den **Nachlass**: später alles aufs Papier + Bilder auf ein separates Medium.
 
-**Aktuelle Version:** v45 (oben im Buch/Editor sichtbar als „· vNN" – zum Prüfen, ob die neueste Fassung geladen ist).
+**Aktuelle Version:** v46 (oben im Buch/Editor sichtbar als „· vNN" – zum Prüfen, ob die neueste Fassung geladen ist).
+
+**Neu in v46:** ✨ an jeder Buch-Überschrift (neben 🔊 ✏️) öffnet genau diesen Abschnitt in der Claude-Werkstatt. Dort: 📝 Rechtschreibung / 📖 Prosa / 🪄, eigene Änderungen; Speichern ersetzt NUR den Text dieses Abschnitts (Überschriften, andere Abschnitte und Fotos bleiben), mit Prüfung, ob der Abschnitt inzwischen anderswo geändert wurde.
 
 **Neu in v45:** ✨-Knopf an jedem Tageseintrag und an jedem Suchtreffer öffnet genau diesen Tag in der Claude-Werkstatt (Bücher ausgenommen).
 

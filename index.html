@@ -802,7 +802,7 @@ const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZ
 const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 // GitHub Models API
-const APP_VERSION = 'v45';   // sichtbare Versions-Nummer (zur Kontrolle, ob die neue Fassung geladen ist)
+const APP_VERSION = 'v46';   // sichtbare Versions-Nummer (zur Kontrolle, ob die neue Fassung geladen ist)
 // GitHub Models bietet aktuell keine kostenlosen Modelle mehr an — die KI-Buttons
 // (Klasse "ai-only") sind deshalb ausgegraut. Token bleibt gespeichert für später.
 // Sobald wieder ein Anbieter verfügbar ist: hier auf false setzen.
@@ -1009,6 +1009,7 @@ function renderRichText(text, idPrefix, withControls) {
                 html += `<div class="rt-hrow">${head}` +
                     `<button class="rt-htool" onclick="speakFromHeading(${hi})" title="Ab hier vorlesen">🔊</button>` +
                     `<button class="rt-htool" onclick="editSection(${hi})" title="Diesen Abschnitt bearbeiten">✏️</button>` +
+                    `<button class="rt-htool" onclick="openWerkstattBook(${hi})" title="Diesen Abschnitt in der Claude-Werkstatt öffnen (Rechtschreibung, Prosa)" style="background:#e0b25a;color:#1a1406;">✨</button>` +
                     `</div>` +
                     `<div class="ch-media" data-anchor="${escHtml(title)}">` +
                         `<div class="ch-media-grid"></div>` +
@@ -3015,6 +3016,13 @@ function openWerkstatt(kind) {
         hash = '#tag-' + day;
     }
     window.open(WERKSTATT_URL + hash, '_blank');
+}
+// ✨ an einer Buch-Überschrift: Buch + Abschnitt (Kategorie als Hex, damit Umlaute/Leerzeichen sicher ankommen)
+function openWerkstattBook(hIndex) {
+    const cat = selectedCategory;
+    if (!cat) { showToast('Kein Buch gewählt.', true); return; }
+    const hex = Array.from(new TextEncoder().encode(cat)).map(b => b.toString(16).padStart(2, '0')).join('');
+    window.open(WERKSTATT_URL + '#buch-' + hex + '-' + hIndex, '_blank');
 }
 // ✨ an einem einzelnen Eintrag / Suchtreffer: genau diesen Tag öffnen
 function openWerkstattDay(datum) {
